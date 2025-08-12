@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,13 +38,41 @@ interface Badge {
   name: string;
   description: string;
   criteria: string;
-  imageUrl: string;
+  imageUrl: string; // Will be a base64 Data URI
 }
+
+// Helper to convert file to base64
+const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+});
+
 
 export function BadgeManager() {
   const [isLoading, setIsLoading] = useState(false);
   const [createdBadges, setCreatedBadges] = useState<Badge[]>([]);
   const { toast } = useToast();
+
+  // Load badges from localStorage on initial client-side render
+  useEffect(() => {
+    try {
+        const item = window.localStorage.getItem('createdBadges');
+        if (item) {
+            setCreatedBadges(JSON.parse(item));
+        }
+    } catch (error) {
+        console.error("Failed to parse badges from localStorage", error);
+    }
+  }, []);
+
+  // Save badges to localStorage whenever they change
+  useEffect(() => {
+    if(createdBadges.length > 0) {
+        window.localStorage.setItem('createdBadges', JSON.stringify(createdBadges));
+    }
+  }, [createdBadges]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -58,27 +86,37 @@ export function BadgeManager() {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     
-    const file = values.image[0];
-    const imageUrl = URL.createObjectURL(file);
+    try {
+        const file = values.image[0];
+        const imageUrl = await toBase64(file);
 
-    const newBadge: Badge = {
-      id: `badge-${Date.now()}`,
-      name: values.name,
-      description: values.description,
-      criteria: values.criteria,
-      imageUrl: imageUrl,
-    };
+        const newBadge: Badge = {
+          id: `badge-${Date.now()}`,
+          name: values.name,
+          description: values.description,
+          criteria: values.criteria,
+          imageUrl: imageUrl,
+        };
 
-    setCreatedBadges(prev => [newBadge, ...prev]);
-    
-    toast({
-        title: "Badge Created!",
-        description: `The "${values.name}" badge is now available.`,
-    })
-    
-    setIsLoading(false);
-    form.reset();
-    form.setValue('image', new FileList());
+        setCreatedBadges(prev => [newBadge, ...prev]);
+        
+        toast({
+            title: "Badge Created!",
+            description: `The "${values.name}" badge is now available.`,
+        })
+        
+        form.reset();
+        form.setValue('image', new FileList());
+    } catch (error) {
+        console.error("Error creating badge:", error);
+        toast({
+            title: "Error",
+            description: "Failed to create the badge image.",
+            variant: "destructive",
+        })
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   return (
@@ -207,4 +245,3 @@ export function BadgeManager() {
     </div>
   );
 }
-
