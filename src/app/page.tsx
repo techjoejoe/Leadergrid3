@@ -44,7 +44,7 @@ export default function Home() {
           <div className="flex-1" />
           <nav className="flex items-center gap-2">
             <Button asChild variant="ghost">
-              <Link href="/login">Student Login</Link>
+              <Link href="/student-login">Student Login</Link>
             </Button>
             <Button asChild>
               <Link href="/login">Admin Login</Link>
