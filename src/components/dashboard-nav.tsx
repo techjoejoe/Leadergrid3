@@ -22,7 +22,6 @@ const links = [
     { href: "/dashboard/qrcodes", label: "QR Codes", icon: QrCode },
     { href: "/dashboard/classes", label: "Classes", icon: Users },
     { href: "/dashboard/badges", label: "Badges", icon: Badge },
-    { href: "/dashboard/ai-recommendations", label: "AI Tools", icon: Bot },
     { href: "/dashboard/buzzer", label: "Live Buzzer", icon: Zap },
 ];
 
