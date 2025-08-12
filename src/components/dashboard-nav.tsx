@@ -20,7 +20,7 @@ const links = [
     { href: "/dashboard", label: "Overview", icon: Grip },
     { href: "/dashboard/reports", label: "Reporting", icon: BarChart },
     { href: "/dashboard/qrcodes", label: "QR Codes", icon: QrCode },
-    { href: "/dashboard/groups", label: "Groups", icon: Users },
+    { href: "/dashboard/classes", label: "Classes", icon: Users },
     { href: "/dashboard/badges", label: "Badges", icon: Badge },
     { href: "/dashboard/ai-recommendations", label: "AI Tools", icon: Bot },
     { href: "/dashboard/buzzer", label: "Live Buzzer", icon: Zap },
