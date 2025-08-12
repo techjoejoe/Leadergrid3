@@ -71,6 +71,27 @@ export function QrCodeGenerator() {
     form.reset();
   }
 
+  const downloadQRCode = () => {
+    const svgEl = document.querySelector('#qr-code-svg');
+    if(svgEl) {
+        const serializer = new XMLSerializer();
+        let source = serializer.serializeToString(svgEl);
+        if(!source.match(/^<svg[^>]+xmlns="http\\:\\/\\/www\\.w3\\.org\\/2000\\/svg"/)){
+            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        if(!source.match(/^<svg[^>]+"http\\:\\/\\/www\\.w3\\.org\\/1999\\/xlink"/)){
+            source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+        }
+        const url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(source);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = url;
+        downloadLink.download = `${generatedCode?.name.replace(/\s+/g, '-').toLowerCase()}-qrcode.svg`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+  }
+
   return (
     <div className="grid gap-8 md:grid-cols-2">
       <Card>
@@ -155,7 +176,8 @@ export function QrCodeGenerator() {
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center space-y-4">
                 <div className="p-4 bg-white rounded-lg">
-                    <QRCodeSVG 
+                    <QRCodeSVG
+                        id="qr-code-svg" 
                         value={generatedCode.value} 
                         size={256}
                         includeMargin={true}
@@ -164,26 +186,7 @@ export function QrCodeGenerator() {
                 <div className='text-lg font-bold text-primary'>{generatedCode.points} Points</div>
             </CardContent>
              <CardFooter>
-                <Button variant="outline" className='w-full' onClick={() => {
-                    const svgEl = document.querySelector('svg');
-                    if(svgEl) {
-                        const serializer = new XMLSerializer();
-                        let source = serializer.serializeToString(svgEl);
-                        if(!source.match(/^<svg[^>]+xmlns="http\\:\\/\\/www\\.w3\\.org\\/2000\\/svg"/)){
-                            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
-                        }
-                        if(!source.match(/^<svg[^>]+"http\\:\\/\\/www\\.w3\\.org\\/1999\\/xlink"/)){
-                            source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w.org/1999/xlink"');
-                        }
-                        const url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(source);
-                        const downloadLink = document.createElement("a");
-                        downloadLink.href = url;
-                        downloadLink.download = `${generatedCode.name.replace(/\s+/g, '-').toLowerCase()}-qrcode.svg`;
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                    }
-                }}>
+                <Button variant="outline" className='w-full' onClick={downloadQRCode}>
                     Download QR Code
                 </Button>
             </CardFooter>
@@ -193,4 +196,3 @@ export function QrCodeGenerator() {
     </div>
   );
 }
-
