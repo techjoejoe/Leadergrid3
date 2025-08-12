@@ -1,46 +1,168 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Award } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Award, QrCode, BarChart, Users, Star, ShieldCheck } from 'lucide-react';
 
 export default function Home() {
+  const features = [
+    {
+      icon: QrCode,
+      title: 'Scan QR Codes',
+      description: 'Easily award points for activities, attendance, and participation by scanning unique QR codes.',
+      delay: '0.2s',
+    },
+    {
+      icon: Star,
+      title: 'Earn Points & Badges',
+      description: 'Students collect points and earn digital badges for their achievements, fostering a sense of accomplishment.',
+      delay: '0.3s',
+    },
+    {
+      icon: BarChart,
+      title: 'Climb the Leaderboard',
+      description: 'A live leaderboard creates friendly competition among students, classes, and groups.',
+      delay: '0.4s',
+    },
+    {
+      icon: Users,
+      title: 'Manage Classes & Groups',
+      description: 'Organize students into classes or custom groups for targeted activities and competitions.',
+      delay: '0.5s',
+    },
+  ];
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full bg-accent/10 -z-10">
-         <div className="absolute bottom-0 left-0 right-0 top-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:2rem_2rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
-         {/* Floating trophies for decoration */}
-         <Award className="absolute top-[10%] left-[10%] w-8 h-8 text-primary/20 animate-pulse-slow" />
-         <Award className="absolute top-[20%] right-[15%] w-6 h-6 text-primary/10 animate-pulse-medium" />
-         <Award className="absolute bottom-[15%] left-[25%] w-10 h-10 text-primary/20 animate-pulse-fast" />
-         <Award className="absolute bottom-[25%] right-[20%] w-5 h-5 text-primary/10 animate-pulse-slow" />
-         <Award className="absolute top-[40%] left-[40%] w-4 h-4 text-primary/5 animate-pulse-medium" />
-      </div>
-      <div className="animate-fade-in-up">
-        <Card className="w-full max-w-md shadow-2xl">
-            <CardHeader className="text-center">
-            <div className="mx-auto bg-primary text-primary-foreground p-3 rounded-full w-fit mb-4 animate-fade-in-up [animation-delay:0.2s]">
-                <Award className="h-8 w-8" />
-            </div>
-            <CardTitle className="font-headline text-4xl animate-fade-in-up [animation-delay:0.3s]">LeaderGrid3</CardTitle>
-            <CardDescription className="pt-2 animate-fade-in-up [animation-delay:0.4s]">
-                Engage, Compete, and Achieve. Your gamified school experience starts here.
-            </CardDescription>
-            </CardHeader>
-            <CardContent className="animate-fade-in-up [animation-delay:0.5s]">
-            <p className="text-center text-muted-foreground">
-                Scan QR codes, earn points, and climb the leaderboard.
+    <div className="flex flex-col min-h-dvh bg-background text-foreground">
+      {/* Header */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 max-w-screen-2xl items-center">
+          <Link href="/" className="flex items-center gap-2 mr-6 font-headline">
+            <Award className="w-6 h-6 text-primary" />
+            <span className="font-bold">LeaderGrid3</span>
+          </Link>
+          <div className="flex-1" />
+          <nav className="flex items-center gap-2">
+            <Button asChild variant="ghost">
+              <Link href="/login">Student Login</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/login">Admin Login</Link>
+            </Button>
+          </nav>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative py-20 md:py-32">
+          <div className="absolute inset-0 -z-10 bg-accent/10">
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:2rem_2rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+            <Award className="absolute top-[10%] left-[10%] w-8 h-8 text-primary/20 animate-pulse-slow" />
+            <Award className="absolute top-[20%] right-[15%] w-6 h-6 text-primary/10 animate-pulse-medium" />
+            <Award className="absolute bottom-[15%] left-[25%] w-10 h-10 text-primary/20 animate-pulse-fast" />
+            <Award className="absolute bottom-[25%] right-[20%] w-5 h-5 text-primary/10 animate-pulse-slow" />
+            <Award className="absolute top-[40%] left-[40%] w-4 h-4 text-primary/5 animate-pulse-medium" />
+          </div>
+          <div className="container text-center animate-fade-in-up">
+            <h1 className="text-4xl font-extrabold tracking-tight font-headline sm:text-5xl md:text-6xl lg:text-7xl">
+              Gamify Learning. Inspire Growth.
+            </h1>
+            <p className="max-w-3xl mx-auto mt-6 text-lg text-muted-foreground sm:text-xl">
+              LeaderGrid3 is a powerful platform that transforms your school's engagement through gamification. Motivate students, track progress, and build a vibrant learning community.
             </p>
-            </CardContent>
-            <CardFooter className="flex flex-col sm:flex-row gap-4 animate-fade-in-up [animation-delay:0.6s]">
-            <Button asChild className="w-full" size="lg">
-                <Link href="/login">Student Login</Link>
-            </Button>
-            <Button asChild className="w-full" variant="outline" size="lg">
-                <Link href="/login">Admin Login</Link>
-            </Button>
-            </CardFooter>
-        </Card>
-      </div>
-    </main>
+            <div className="mt-8 flex justify-center gap-4">
+              <Button asChild size="lg">
+                <Link href="/login">Get Started</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/leaderboard">View Leaderboard</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="py-20 md:py-32">
+          <div className="container">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold font-headline sm:text-4xl">Why LeaderGrid3?</h2>
+              <p className="mt-4 text-lg text-muted-foreground">
+                Everything you need to create a fun and competitive learning environment.
+              </p>
+            </div>
+            <div className="grid gap-8 mt-12 md:grid-cols-2 lg:grid-cols-4">
+              {features.map((feature, i) => (
+                <div key={i} className="animate-fade-in-up" style={{ animationDelay: feature.delay }}>
+                  <Card className="h-full text-center hover:border-primary/50 hover:shadow-lg transition-all">
+                    <CardHeader>
+                      <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
+                        <feature.icon className="w-8 h-8" />
+                      </div>
+                      <CardTitle className="font-headline pt-4">{feature.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">{feature.description}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* How it works Section */}
+        <section className="py-20 bg-accent/10 md:py-32">
+            <div className="container">
+                <div className="text-center">
+                    <h2 className="text-3xl font-bold font-headline sm:text-4xl">Simple to Start</h2>
+                    <p className="mt-4 text-lg text-muted-foreground">
+                        Get up and running in just a few clicks.
+                    </p>
+                </div>
+                <div className="grid gap-8 mt-12 md:grid-cols-3">
+                     <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 border-2 rounded-full border-primary text-primary">
+                            <span className="text-2xl font-bold">1</span>
+                        </div>
+                        <h3 className="text-xl font-bold font-headline">Create</h3>
+                        <p className="mt-2 text-muted-foreground">Admins create QR codes for various activities and achievements.</p>
+                    </div>
+                     <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 border-2 rounded-full border-primary text-primary">
+                             <span className="text-2xl font-bold">2</span>
+                        </div>
+                        <h3 className="text-xl font-bold font-headline">Scan</h3>
+                        <p className="mt-2 text-muted-foreground">Students scan codes with their devices to instantly earn points.</p>
+                    </div>
+                     <div className="text-center animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                        <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 border-2 rounded-full border-primary text-primary">
+                            <span className="text-2xl font-bold">3</span>
+                        </div>
+                        <h3 className="text-xl font-bold font-headline">Compete</h3>
+                        <p className="mt-2 text-muted-foreground">Watch the leaderboards and see who comes out on top!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t">
+        <div className="container flex flex-col items-center justify-between gap-4 py-6 md:h-20 md:flex-row md:py-0">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-muted-foreground" />
+            <p className="text-sm text-center text-muted-foreground md:text-left">
+              &copy; {new Date().getFullYear()} LeaderGrid3. All rights reserved.
+            </p>
+          </div>
+          <nav className="flex gap-4">
+              <Link href="/leaderboard" className="text-sm text-muted-foreground hover:text-primary">Leaderboard</Link>
+              <Link href="/login" className="text-sm text-muted-foreground hover:text-primary">Login</Link>
+          </nav>
+        </div>
+      </footer>
+    </div>
   );
 }
