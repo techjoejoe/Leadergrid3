@@ -76,10 +76,10 @@ export function QrCodeGenerator() {
     if(svgEl) {
         const serializer = new XMLSerializer();
         let source = serializer.serializeToString(svgEl);
-        if(!source.match(/^<svg[^>]+xmlns="http\\:\\/\\/www\\.w3\\.org\\/2000\\/svg"/)){
+        if(!source.match(/^<svg[^>]+xmlns="http:\/\/www.w3.org\/2000\/svg"/)){
             source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
         }
-        if(!source.match(/^<svg[^>]+"http\\:\\/\\/www\\.w3\\.org\\/1999\\/xlink"/)){
+        if(!source.match(/^<svg[^>]+"http:\/\/www.w3.org\/1999\/xlink"/)){
             source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
         }
         const url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(source);
@@ -90,7 +90,7 @@ export function QrCodeGenerator() {
         downloadLink.click();
         document.body.removeChild(downloadLink);
     }
-  }
+  };
 
   return (
     <div className="grid gap-8 md:grid-cols-2">
