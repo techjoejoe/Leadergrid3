@@ -33,15 +33,17 @@ export function DashboardNav() {
         <SidebarMenu>
             {links.map((link) => (
                 <SidebarMenuItem key={link.href}>
-                    <Link href={link.href} legacyBehavior passHref>
-                        <SidebarMenuButton
-                            isActive={pathname === link.href}
-                            className="w-full"
-                        >
+                    <SidebarMenuButton
+                        asChild
+                        isActive={pathname === link.href}
+                        className="w-full"
+                        tooltip={link.label}
+                    >
+                        <Link href={link.href}>
                             <link.icon className="h-4 w-4" />
                             <span>{link.label}</span>
-                        </SidebarMenuButton>
-                    </Link>
+                        </Link>
+                    </SidebarMenuButton>
                 </SidebarMenuItem>
             ))}
         </SidebarMenu>
