@@ -25,6 +25,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface GeneratedQrCode {
+    id: string;
     value: string;
     name: string;
     description: string;
@@ -55,7 +56,8 @@ export function QrCodeGenerator() {
         points: values.points
     });
 
-    const newCode = {
+    const newCode: GeneratedQrCode = {
+        id: qrId,
         value: qrCodeValue,
         name: values.name,
         description: values.description,
@@ -74,27 +76,35 @@ export function QrCodeGenerator() {
   }
 
   const downloadQRCode = (code: GeneratedQrCode) => {
-    const svg = document.getElementById(`qr-code-svg-${code.value}`);
-    if (!svg) {
+    const svgEl = document.getElementById(`qr-code-svg-${code.id}`);
+    if (!svgEl) {
         console.error("QR Code SVG not found");
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not find the QR code image to download."
+        });
         return;
     }
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const img = new Image();
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL("image/png");
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `${code.name.replace(/\s+/g, '-').toLowerCase()}-qrcode.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
-    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(svgEl);
+    if(!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)){
+        source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    if(!source.match(/^<svg[^>]+"http:\/\/www\.w3\.org\/1999\/xlink"/)){
+        source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+    }
+    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+    const url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(source);
+    
+    const downloadLink = document.createElement("a");
+    downloadLink.href = url;
+    downloadLink.download = `${code.name.replace(/\s+/g, '-').toLowerCase()}-qrcode.svg`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
   };
   
   const activeCode = generatedCodes.length > 0 ? generatedCodes[0] : null;
@@ -185,7 +195,7 @@ export function QrCodeGenerator() {
             <CardContent className="flex flex-col items-center justify-center space-y-4">
                 <div className="p-4 bg-white rounded-lg">
                     <QRCodeSVG
-                        id={`qr-code-svg-${activeCode.value}`} 
+                        id={`qr-code-svg-${activeCode.id}`} 
                         value={activeCode.value} 
                         size={256}
                         includeMargin={true}
@@ -210,7 +220,7 @@ export function QrCodeGenerator() {
                 <ScrollArea className='h-[240px]'>
                     <div className='space-y-4 pr-6'>
                     {previousCodes.map((code) => (
-                        <div key={code.value} className="flex items-center justify-between p-2 rounded-lg bg-secondary">
+                        <div key={code.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary">
                             <div>
                                 <p className='font-semibold'>{code.name}</p>
                                 <p className='text-sm text-muted-foreground'>{code.description}</p>
