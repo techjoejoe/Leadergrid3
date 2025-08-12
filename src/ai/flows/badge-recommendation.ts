@@ -13,8 +13,8 @@ import {z} from 'genkit';
 
 const RecommendBadgesInputSchema = z.object({
   studentId: z.string().describe('The ID of the student to recommend badges for.'),
-  pointTotal: z.number().describe('The student\u2019s current total points.'),
-  activityHistory: z.string().describe('A summary of the student\u2019s recent activities.'),
+  pointTotal: z.number().describe('The student’s current total points.'),
+  activityHistory: z.string().describe('A summary of the student’s recent activities.'),
   availableBadges: z.string().describe('A list of available badges and their descriptions.'),
 });
 export type RecommendBadgesInput = z.infer<typeof RecommendBadgesInputSchema>;
