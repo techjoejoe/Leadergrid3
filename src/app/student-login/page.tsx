@@ -29,21 +29,25 @@ export default function StudentLoginPage() {
                     <CardHeader>
                         <CardTitle className="text-2xl font-headline">Student Login</CardTitle>
                         <CardDescription>
-                            Enter your class code to sign in to your account.
+                            Enter your email and password to sign in to your account.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="class-code-login">Class Code</Label>
-                            <Input id="class-code-login" placeholder="ABC-123" required />
+                            <Label htmlFor="email-login">Email</Label>
+                            <Input id="email-login" type="email" placeholder="student@example.com" required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="password-login">Password</Label>
+                            <Input id="password-login" type="password" required />
                         </div>
                         <Button type="submit" className="w-full">
                             Login
                         </Button>
                          <div className="mt-4 text-center text-sm">
-                            Lost your code?{" "}
+                            Forgot your password?{" "}
                             <Link href="#" className="underline">
-                            Contact your teacher
+                                Reset it here
                             </Link>
                         </div>
                     </CardContent>
@@ -63,8 +67,12 @@ export default function StudentLoginPage() {
                             <Input id="name" placeholder="John Doe" required />
                         </div>
                          <div className="space-y-2">
-                            <Label htmlFor="class-code-signup">Class Code</Label>
-                            <Input id="class-code-signup" placeholder="ABC-123" required />
+                            <Label htmlFor="email-signup">Email</Label>
+                            <Input id="email-signup" type="email" placeholder="student@example.com" required />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="password-signup">Password</Label>
+                            <Input id="password-signup" type="password" required />
                         </div>
                         <Button type="submit" className="w-full">
                             Sign Up
