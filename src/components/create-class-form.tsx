@@ -40,11 +40,22 @@ const formSchema = z.object({
   endDate: z.date({
     required_error: "An end date is required.",
   }),
+}).refine((data) => data.endDate > data.startDate, {
+  message: "End date must be after the start date.",
+  path: ["endDate"],
 });
+
 
 type FormValues = z.infer<typeof formSchema>;
 
-export function CreateClassForm() {
+export type Class = FormValues & { id: string };
+
+interface CreateClassFormProps {
+  onClassCreated: (newClass: Class) => void;
+}
+
+
+export function CreateClassForm({ onClassCreated }: CreateClassFormProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
@@ -57,8 +68,12 @@ export function CreateClassForm() {
   });
 
   function onSubmit(values: FormValues) {
-    console.log(values);
-    // TODO: Implement the actual API call to create a class
+    const newClass: Class = {
+        ...values,
+        id: `cls-${Date.now()}`
+    }
+    onClassCreated(newClass);
+    
     toast({
         title: "Class Created!",
         description: `The class "${values.name}" has been successfully created.`,
