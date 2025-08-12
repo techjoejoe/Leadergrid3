@@ -69,9 +69,6 @@ export default function Home() {
               <Button asChild size="lg">
                 <Link href="/login">Get Started</Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/leaderboard">View Leaderboard</Link>
-              </Button>
             </div>
           </div>
         </section>
@@ -151,7 +148,6 @@ export default function Home() {
             </p>
           </div>
           <nav className="flex gap-4">
-              <Link href="/leaderboard" className="text-sm text-muted-foreground hover:text-primary">Leaderboard</Link>
               <Link href="/login" className="text-sm text-muted-foreground hover:text-primary">Login</Link>
           </nav>
         </div>
