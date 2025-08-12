@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { UserNav } from '@/components/user-nav';
 import { DashboardNav } from '@/components/dashboard-nav';
-import { Award } from 'lucide-react';
 import Link from 'next/link';
+import { Logo } from '@/components/logo';
 
 export const metadata: Metadata = {
-  title: 'LeaderGrid3 Dashboard',
-  description: 'Admin dashboard for LeaderGrid3.',
+  title: 'LeaderGrid Dashboard',
+  description: 'Admin dashboard for LeaderGrid.',
 };
 
 export default function DashboardLayout({
@@ -20,8 +20,7 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader className='p-4'>
             <Link href="/" className="flex items-center gap-2">
-                <Award className="w-8 h-8 text-sidebar-primary" />
-                <h1 className="text-2xl font-headline font-semibold text-sidebar-foreground">LeaderGrid3</h1>
+                <Logo className="w-auto h-10" />
             </Link>
         </SidebarHeader>
         <SidebarContent>
