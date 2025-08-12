@@ -11,13 +11,12 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Logo } from "@/components/logo"
 
 export default function StudentLoginPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-6">
-        <Link href="/" className="flex items-center gap-2">
-            <Logo className="w-auto h-12" />
+        <Link href="/" className="flex items-center gap-2 font-headline text-3xl font-bold text-primary">
+            LeaderGrid
         </Link>
         <Card className="mx-auto max-w-sm">
             <CardHeader>

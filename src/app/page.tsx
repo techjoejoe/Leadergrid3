@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { QrCode, BarChart, Users, Star } from 'lucide-react';
-import { Logo } from '@/components/logo';
 
 export default function Home() {
   const features = [
@@ -38,8 +37,8 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 max-w-screen-2xl items-center">
-          <Link href="/" className="flex items-center gap-2 mr-6 font-headline">
-            <Logo className="w-auto h-10" />
+          <Link href="/" className="flex items-center gap-2 mr-6 font-headline text-2xl font-bold text-primary">
+            LeaderGrid
           </Link>
           <div className="flex-1" />
           <nav className="flex items-center gap-2">
@@ -147,7 +146,6 @@ export default function Home() {
       <footer className="border-t">
         <div className="container flex flex-col items-center justify-between gap-4 py-6 md:h-20 md:flex-row md:py-0">
           <div className="flex items-center gap-2">
-             <Logo className="w-auto h-6 text-muted-foreground" />
             <p className="text-sm text-center text-muted-foreground md:text-left">
               &copy; {new Date().getFullYear()} LeaderGrid. All rights reserved.
             </p>
