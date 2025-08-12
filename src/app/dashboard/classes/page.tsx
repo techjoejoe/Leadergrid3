@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle } from "lucide-react";
+import { CreateClassForm } from "@/components/create-class-form";
 
 export default function ClassesPage() {
     return (
@@ -10,10 +9,7 @@ export default function ClassesPage() {
                     <CardTitle className="font-headline text-3xl">Class Management</CardTitle>
                     <CardDescription>Create and manage student classes.</CardDescription>
                 </div>
-                <Button>
-                    <PlusCircle className="mr-2" />
-                    Create New Class
-                </Button>
+                <CreateClassForm />
             </CardHeader>
             <CardContent>
                 <p>Class management interface will be here.</p>
