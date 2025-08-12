@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from "react";
@@ -6,6 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CreateClassForm, Class } from "@/components/create-class-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast";
+
 
 // Mock data for initial classes
 const initialClasses: Class[] = [
@@ -35,10 +51,20 @@ const initialClasses: Class[] = [
 
 export default function ClassesPage() {
     const [classes, setClasses] = useState<Class[]>(initialClasses);
+    const { toast } = useToast();
 
     const handleAddClass = (newClass: Class) => {
-        setClasses((prevClasses) => [...prevClasses, newClass]);
+        setClasses((prevClasses) => [newClass, ...prevClasses]);
     };
+
+    const handleDeleteClass = (classToDelete: Class) => {
+        setClasses((prevClasses) => prevClasses.filter(cls => cls.id !== classToDelete.id));
+        toast({
+            title: "Class Deleted",
+            description: `The class "${classToDelete.name}" has been removed.`,
+            variant: "destructive"
+        })
+    }
 
     const getStatus = (startDate: Date, endDate: Date) => {
         const now = new Date();
@@ -65,6 +91,7 @@ export default function ClassesPage() {
                             <TableHead>Start Date</TableHead>
                             <TableHead>End Date</TableHead>
                             <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -89,11 +116,35 @@ export default function ClassesPage() {
                                             {getStatus(cls.startDate, cls.endDate)}
                                         </Badge>
                                     </TableCell>
+                                    <TableCell className="text-right">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the
+                                                    class "{cls.name}".
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteClass(cls)}>
+                                                    Delete
+                                                </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24 text-center">
+                                <TableCell colSpan={6} className="h-24 text-center">
                                     No classes found. Create one to get started!
                                 </TableCell>
                             </TableRow>
