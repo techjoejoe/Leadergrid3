@@ -29,22 +29,22 @@ const initialClasses: Class[] = [
     id: "cls-1",
     name: "10th Grade Biology",
     joinCode: "BIOLOGY101",
-    startDate: new Date("2024-09-01"),
-    endDate: new Date("2025-06-15"),
+    startDate: new Date("2024-09-01T00:00:00"),
+    endDate: new Date("2025-06-15T00:00:00"),
   },
   {
     id: "cls-2",
     name: "Intro to Creative Writing",
     joinCode: "WRITE2024",
-    startDate: new Date("2024-09-01"),
-    endDate: new Date("2024-12-20"),
+    startDate: new Date("2024-09-01T00:00:00"),
+    endDate: new Date("2024-12-20T00:00:00"),
   },
   {
     id: "cls-3",
     name: "Advanced Placement Calculus",
     joinCode: "CALCPRO",
-    startDate: new Date(),
-    endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+    startDate: new Date("2024-08-26T00:00:00"),
+    endDate: new Date("2025-05-20T00:00:00"),
   },
 ];
 
