@@ -1,19 +1,19 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Award, Star } from 'lucide-react';
+import { Award } from 'lucide-react';
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-full bg-accent/10 -z-10">
          <div className="absolute bottom-0 left-0 right-0 top-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:2rem_2rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
-         {/* Floating stars for decoration */}
-         <Star className="absolute top-[10%] left-[10%] w-8 h-8 text-primary/20 animate-pulse-slow" />
-         <Star className="absolute top-[20%] right-[15%] w-6 h-6 text-primary/10 animate-pulse-medium" />
-         <Star className="absolute bottom-[15%] left-[25%] w-10 h-10 text-primary/20 animate-pulse-fast" />
-         <Star className="absolute bottom-[25%] right-[20%] w-5 h-5 text-primary/10 animate-pulse-slow" />
-         <Star className="absolute top-[40%] left-[40%] w-4 h-4 text-primary/5 animate-pulse-medium" />
+         {/* Floating trophies for decoration */}
+         <Award className="absolute top-[10%] left-[10%] w-8 h-8 text-primary/20 animate-pulse-slow" />
+         <Award className="absolute top-[20%] right-[15%] w-6 h-6 text-primary/10 animate-pulse-medium" />
+         <Award className="absolute bottom-[15%] left-[25%] w-10 h-10 text-primary/20 animate-pulse-fast" />
+         <Award className="absolute bottom-[25%] right-[20%] w-5 h-5 text-primary/10 animate-pulse-slow" />
+         <Award className="absolute top-[40%] left-[40%] w-4 h-4 text-primary/5 animate-pulse-medium" />
       </div>
       <div className="animate-fade-in-up">
         <Card className="w-full max-w-md shadow-2xl">
