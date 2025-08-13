@@ -55,9 +55,11 @@ interface GeneratedQrCode {
 export function QrCodeGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedQrCode[]>([]);
+  const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    setIsClient(true);
     try {
         const item = window.localStorage.getItem('generatedQrCodes');
         if (item) {
@@ -121,25 +123,8 @@ export function QrCodeGenerator() {
 
   const downloadQRCode = (code: GeneratedQrCode) => {
     const svgEl = document.getElementById(`qr-code-svg-${code.id}`);
-    if (!svgEl) {
-        // Fallback for codes in the list which don't have a visible SVG
-        const container = document.createElement('div');
-        container.style.display = 'none';
-        document.body.appendChild(container);
-        const { render } = require('react-dom');
-        render(<QRCodeSVG id={`qr-code-svg-${code.id}-temp`} value={code.value} size={256} includeMargin={true} />, container);
-        const tempSvgEl = document.getElementById(`qr-code-svg-${code.id}-temp`);
-        if(tempSvgEl) {
-             processDownload(tempSvgEl, code);
-        }
-        document.body.removeChild(container);
-
-    } else {
-        processDownload(svgEl, code);
-    }
-  };
-
-  const processDownload = (svgEl: HTMLElement, code: GeneratedQrCode) => {
+    if (!svgEl) return;
+    
     const serializer = new XMLSerializer();
     let source = serializer.serializeToString(svgEl);
     if(!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)){
@@ -299,7 +284,12 @@ export function QrCodeGenerator() {
                 <CardDescription>The list of all QR codes you've created.</CardDescription>
             </CardHeader>
             <CardContent>
-                {generatedCodes.length === 0 ? (
+                {!isClient ? (
+                    <div className='flex flex-col items-center justify-center h-64 gap-4 p-8 border-2 border-dashed rounded-lg text-muted-foreground'>
+                        <Loader2 className="h-16 w-16 animate-spin" />
+                        <p className='font-semibold text-center'>Loading QR codes...</p>
+                    </div>
+                ) : generatedCodes.length === 0 ? (
                     <div className='flex flex-col items-center justify-center h-64 gap-4 p-8 border-2 border-dashed rounded-lg text-muted-foreground'>
                         <QrCode className="h-16 w-16" />
                         <p className='font-semibold text-center'>Your generated QR codes will appear here.</p>
@@ -389,3 +379,5 @@ export function QrCodeGenerator() {
     </div>
   );
 }
+
+    
