@@ -95,8 +95,11 @@ export default function StudentDashboardPage() {
                     }
                 }
             } else {
-                // Commenting this out to allow pretend login
-                // router.push('/student-login');
+                setUser({
+                    displayName: 'Student',
+                    email: 'student@example.com',
+                    photoURL: avatarUrl,
+                } as User);
             }
         });
 
@@ -123,7 +126,7 @@ export default function StudentDashboardPage() {
         }
 
         return () => unsubscribe();
-    }, [auth, router]);
+    }, [auth, router, avatarUrl]);
     
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses, newClass];
@@ -155,20 +158,26 @@ export default function StudentDashboardPage() {
     }
 
     const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            window.localStorage.removeItem('studentAvatar');
-            toast({
-                title: "Logged Out",
-                description: "You have been successfully logged out."
-            })
+        // For real users, we sign out. For mock users, we just redirect.
+        if (user && user.uid) { // Check if it's a real Firebase user
+             try {
+                await signOut(auth);
+                window.localStorage.removeItem('studentAvatar');
+                toast({
+                    title: "Logged Out",
+                    description: "You have been successfully logged out."
+                })
+                router.push('/student-login');
+            } catch (error: any) {
+                 toast({
+                    title: "Logout Failed",
+                    description: error.message,
+                    variant: "destructive"
+                });
+            }
+        } else {
+            // It's a mock user, just go to login
             router.push('/student-login');
-        } catch (error: any) {
-             toast({
-                title: "Logout Failed",
-                description: error.message,
-                variant: "destructive"
-            });
         }
     }
 
@@ -206,6 +215,12 @@ export default function StudentDashboardPage() {
                                     <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
                                         <UserIcon className="mr-2 h-4 w-4" />
                                         <span>Edit Profile</span>
+                                    </DropdownMenuItem>
+                                     <DropdownMenuItem asChild>
+                                        <Link href="/student-dashboard/settings">
+                                            <Activity className="mr-2 h-4 w-4" />
+                                            <span>Manage Classes</span>
+                                        </Link>
                                     </DropdownMenuItem>
                                 </DropdownMenuGroup>
                                 <DropdownMenuSeparator />
@@ -329,5 +344,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
