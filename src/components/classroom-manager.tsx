@@ -21,10 +21,11 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, MinusCircle, Loader2, QrCode, Download, Check } from 'lucide-react';
+import { PlusCircle, MinusCircle, Loader2, QrCode, Download, Check, Play } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { format } from 'date-fns';
 import { Progress } from './ui/progress';
+import Link from 'next/link';
 
 // Mock data for students in a class
 const mockStudents = [
@@ -60,12 +61,10 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const [students, setStudents] = useState(mockStudents);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
-  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
 
   const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
@@ -122,42 +121,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
       form.reset({ points: 10, reason: '' });
     }, 1000);
   };
-
-  const handleGenerateCode = () => {
-    const qrValue = JSON.stringify({
-        type: 'class-check-in',
-        classId: classId,
-        className: className,
-        timestamp: Date.now()
-    });
-    setGeneratedCode(qrValue);
-    setIsQrDialogOpen(true);
-
-    // Simulate a student scanning the code
-    setTimeout(() => {
-        const uncheckedStudents = mockStudents.filter(s => !checkInLog.some(log => log.studentId === s.id));
-        if (uncheckedStudents.length === 0) {
-            toast({ title: "All students have checked in!", variant: "default" });
-            return;
-        }
-
-        const randomStudent = uncheckedStudents[Math.floor(Math.random() * uncheckedStudents.length)];
-        const newRecord: CheckInRecord = {
-            studentId: randomStudent.id,
-            studentName: randomStudent.name,
-            classId: classId,
-            checkedInAt: new Date().toISOString(),
-        };
-        const updatedLog = [...checkInLog, newRecord];
-        setCheckInLog(updatedLog);
-        window.localStorage.setItem(`checkInLog_${classId}`, JSON.stringify(updatedLog));
-
-        toast({
-            title: "Simulated Check-in",
-            description: `${randomStudent.name} just checked into ${className}.`
-        })
-    }, 3000);
-  }
 
   const downloadCSV = () => {
     if (checkInLog.length === 0) {
@@ -240,12 +203,14 @@ export function ClassroomManager({ classId }: { classId: string }) {
         <Card>
             <CardHeader>
                 <CardTitle>Class Check-in</CardTitle>
-                <CardDescription>Generate a live QR code for students to check into this class.</CardDescription>
+                <CardDescription>Launch a fullscreen display for students to check into this class.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button onClick={handleGenerateCode} className="w-full">
-                    <QrCode className="mr-2 h-4 w-4" />
-                    Generate Check-in Code
+                <Button asChild className="w-full">
+                    <Link href={`/dashboard/classes/${classId}/check-in`}>
+                        <Play className="mr-2 h-4 w-4" />
+                        Launch Fullscreen Check-in
+                    </Link>
                 </Button>
             </CardContent>
         </Card>
@@ -339,21 +304,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
               </DialogFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-       <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Live Check-in for {className}</DialogTitle>
-            <DialogDescription>Students can scan this code with their device to check in.</DialogDescription>
-          </DialogHeader>
-          {generatedCode && (
-            <div className="flex justify-center p-4">
-              <div className="p-4 bg-white rounded-lg">
-                <QRCodeSVG value={generatedCode} size={256} includeMargin />
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
     </div>
