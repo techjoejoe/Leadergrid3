@@ -6,6 +6,7 @@ import {
     Activity,
     Award,
     ChevronDown,
+    ChevronRight,
     LogOut,
     Settings,
     Star,
