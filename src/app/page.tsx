@@ -2,7 +2,8 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { QrCode, BarChart, Users, Star } from 'lucide-react';
+import { QrCode, BarChart, Users, Star, MoveRight } from 'lucide-react';
+import { Logo } from '@/components/logo';
 
 export default function Home() {
   const features = [
@@ -35,10 +36,10 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-dvh bg-background text-foreground">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 max-w-screen-2xl items-center">
-          <div className="mr-6">
-            
+          <div className="mr-6 flex items-center">
+            <Logo />
           </div>
           <div className="flex-1" />
           <nav className="flex items-center gap-2">
@@ -55,8 +56,8 @@ export default function Home() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative py-20 md:py-32">
-          <div className="absolute inset-0 -z-10 bg-accent/10">
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:2rem_2rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+           <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
+            <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary/20 opacity-20 blur-[100px]"></div>
           </div>
           <div className="container text-center animate-fade-in-up">
             <h1 className="text-4xl font-extrabold tracking-tight font-headline sm:text-5xl md:text-6xl lg:text-7xl">
@@ -65,9 +66,12 @@ export default function Home() {
             <p className="max-w-3xl mx-auto mt-6 text-lg text-muted-foreground sm:text-xl">
               LeaderGrid is a powerful platform that transforms your school's engagement through gamification. Motivate students, track progress, and build a vibrant learning community.
             </p>
-            <div className="mt-8 flex justify-center gap-4">
-              <Button asChild size="lg">
-                <Link href="/login">Get Started</Link>
+            <div className="mt-8 flex justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+              <Button asChild size="lg" className="group">
+                <Link href="/login">
+                  Get Started
+                  <MoveRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
               </Button>
             </div>
           </div>
@@ -85,7 +89,7 @@ export default function Home() {
             <div className="grid gap-8 mt-12 md:grid-cols-2 lg:grid-cols-4">
               {features.map((feature, i) => (
                 <div key={i} className="animate-fade-in-up" style={{ animationDelay: feature.delay }}>
-                  <Card className="h-full text-center hover:border-primary/50 hover:shadow-lg transition-all">
+                  <Card className="h-full text-center hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-2">
                     <CardHeader>
                       <div className="mx-auto bg-primary/10 text-primary p-3 rounded-full w-fit">
                         <feature.icon className="w-8 h-8" />
@@ -103,7 +107,7 @@ export default function Home() {
         </section>
 
         {/* How it works Section */}
-        <section className="py-20 bg-accent/10 md:py-32">
+        <section className="py-20 bg-card/50 md:py-32">
             <div className="container">
                 <div className="text-center">
                     <h2 className="text-3xl font-bold font-headline sm:text-4xl">Simple to Start</h2>
@@ -140,7 +144,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t">
+      <footer className="border-t border-border/40">
         <div className="container flex flex-col items-center justify-between gap-4 py-6 md:h-20 md:flex-row md:py-0">
           <div className="flex items-center gap-2">
             <p className="text-sm text-center text-muted-foreground md:text-left">
