@@ -36,14 +36,15 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 interface ProfileEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAvatarChange: (newAvatar: string) => void;
+  currentAvatar: string;
+  currentInitial: string;
 }
 
-export function ProfileEditor({ open, onOpenChange }: ProfileEditorProps) {
+export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvatar, currentInitial }: ProfileEditorProps) {
   const { toast } = useToast();
   const [isLoadingName, setIsLoadingName] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
-  const [avatar, setAvatar] = useState('https://placehold.co/100x100.png?text=AD');
-  const [initial, setInitial] = useState('AD');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileFormValues>({
@@ -58,7 +59,7 @@ export function ProfileEditor({ open, onOpenChange }: ProfileEditorProps) {
     // Mock API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
     console.log('Updated name:', values.displayName);
-    setInitial(values.displayName.substring(0, 2).toUpperCase());
+    // This part is mocked. In a real app, you would update the user's initial in a global state.
     toast({
       title: 'Success!',
       description: 'Your name has been updated.',
@@ -83,13 +84,40 @@ export function ProfileEditor({ open, onOpenChange }: ProfileEditorProps) {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+            title: "Image Too Large",
+            description: "Please select an image smaller than 2MB.",
+            variant: "destructive",
+        });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+            toast({
+            title: "Invalid File Type",
+            description: "Please select an image file (e.g., PNG, JPG).",
+            variant: "destructive",
+        });
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatar(reader.result as string);
-        toast({
-          title: 'Profile Photo Updated',
-          description: 'Your new photo has been set.',
-        });
+        const base64String = reader.result as string;
+        try {
+            window.localStorage.setItem('adminAvatar', base64String);
+            onAvatarChange(base64String);
+            toast({
+              title: 'Profile Photo Updated',
+              description: 'Your new photo has been set.',
+            });
+        } catch (error) {
+             toast({
+                title: "Error",
+                description: "Could not save your new photo.",
+                variant: "destructive",
+            });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -108,8 +136,8 @@ export function ProfileEditor({ open, onOpenChange }: ProfileEditorProps) {
         <div className="grid gap-6 py-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={avatar} />
-              <AvatarFallback>{initial}</AvatarFallback>
+              <AvatarImage src={currentAvatar} />
+              <AvatarFallback>{currentInitial}</AvatarFallback>
             </Avatar>
             <Button variant="outline" onClick={handleAvatarClick}>
               <UploadCloud className="mr-2" />

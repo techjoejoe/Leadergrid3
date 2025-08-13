@@ -19,13 +19,29 @@ import { getAuth, signOut } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileEditor } from "./profile-editor";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
+const DEFAULT_INITIALS = "AD";
 
 export function UserNav() {
   const auth = getAuth(app);
   const router = useRouter();
   const { toast } = useToast();
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
+  const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
+  const [initial, setInitial] = useState(DEFAULT_INITIALS);
+
+  useEffect(() => {
+    try {
+      const savedAvatar = window.localStorage.getItem('adminAvatar');
+      if (savedAvatar) {
+        setAvatar(savedAvatar);
+      }
+    } catch (error) {
+      console.error("Failed to load admin avatar from localStorage", error);
+    }
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -50,8 +66,8 @@ export function UserNav() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src="https://placehold.co/100x100.png" alt="@admin" data-ai-hint="person portrait" />
-              <AvatarFallback>AD</AvatarFallback>
+              <AvatarImage src={avatar} alt="@admin" data-ai-hint="person portrait" />
+              <AvatarFallback>{initial}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
@@ -84,7 +100,13 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ProfileEditor open={isProfileEditorOpen} onOpenChange={setIsProfileEditorOpen} />
+      <ProfileEditor 
+        open={isProfileEditorOpen} 
+        onOpenChange={setIsProfileEditorOpen}
+        onAvatarChange={setAvatar}
+        currentAvatar={avatar}
+        currentInitial={initial}
+      />
     </>
   )
 }
