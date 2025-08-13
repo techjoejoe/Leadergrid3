@@ -296,7 +296,7 @@ export default function StudentDashboardPage() {
                      <div className="grid gap-4 sm:grid-cols-3">
                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
                             <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Star className='h-4 w-4' /> Total Points</CardDescription>
+                                <CardDescription className="flex items-center gap-2"><Star className='h-4 w-4' /> Lifetime points earned</CardDescription>
                                 <CardTitle className="text-4xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
                             </CardHeader>
                         </Card>
