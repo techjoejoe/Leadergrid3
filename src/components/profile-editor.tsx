@@ -43,6 +43,7 @@ interface ProfileEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAvatarChange: (newAvatar: string) => void;
+  onNameChange: (newName: string) => void;
   currentAvatar: string;
   currentInitial: string;
   currentDisplayName: string;
@@ -54,7 +55,8 @@ export function ProfileEditor({
     user,
     open, 
     onOpenChange, 
-    onAvatarChange, 
+    onAvatarChange,
+    onNameChange,
     currentAvatar, 
     currentInitial,
     currentDisplayName,
@@ -94,9 +96,14 @@ export function ProfileEditor({
     setIsLoading(true);
     try {
       if (values.displayName !== currentDisplayName) {
-        await updateProfile(user, { displayName: values.displayName });
+        // For mock users, just update the state. For real users, update Firebase.
+        if (user.uid !== 'mock-user-id') {
+            await updateProfile(user, { displayName: values.displayName });
+        }
+        onNameChange(values.displayName);
       }
-      if (values.email !== currentEmail) {
+      // Only try to update email for real users, and only if it has changed.
+      if (values.email !== currentEmail && user.uid !== 'mock-user-id') {
         await updateEmail(user, values.email);
       }
       toast({
@@ -181,7 +188,10 @@ export function ProfileEditor({
     if (completedCrop && imgRef.current && user) {
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
         try {
-            await updateProfile(user, { photoURL: croppedImageUrl });
+            // For mock users, we don't call firebase
+            if (user.uid !== 'mock-user-id') {
+                await updateProfile(user, { photoURL: croppedImageUrl });
+            }
             window.localStorage.setItem(storageKey, croppedImageUrl);
             onAvatarChange(croppedImageUrl);
             toast({
@@ -310,7 +320,7 @@ export function ProfileEditor({
                 <p className="text-sm text-muted-foreground">
                     Click the button below to receive an email to reset your password.
                 </p>
-                <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword}>
+                <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword || user.uid === 'mock-user-id'}>
                     {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Send Password Reset Email
                 </Button>

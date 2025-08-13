@@ -71,6 +71,7 @@ export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [displayName, setDisplayName] = useState('Student');
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
@@ -82,6 +83,7 @@ export default function StudentDashboardPage() {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                setDisplayName(currentUser.displayName || 'Student');
                 try {
                     const savedAvatar = window.localStorage.getItem('studentAvatar');
                     if (savedAvatar) {
@@ -103,6 +105,7 @@ export default function StudentDashboardPage() {
                     uid: 'mock-user-id',
                 } as User;
                 setUser(mockUser);
+                setDisplayName('Student');
                  try {
                     const savedAvatar = window.localStorage.getItem('studentAvatar');
                     if (savedAvatar) {
@@ -192,7 +195,6 @@ export default function StudentDashboardPage() {
         }
     }
 
-    const displayName = user?.displayName || 'Student';
     const displayEmail = user?.email || 'student@example.com';
     const displayAvatar = avatarUrl || user?.photoURL || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
@@ -346,6 +348,7 @@ export default function StudentDashboardPage() {
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatarUrl}
+            onNameChange={setDisplayName}
             currentAvatar={displayAvatar}
             currentInitial={displayInitial}
             currentDisplayName={displayName}
