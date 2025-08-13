@@ -1,9 +1,5 @@
 
-collection(
-    'classes"
-    uaddDoc(
-        
-        se client';
+'use client';
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
