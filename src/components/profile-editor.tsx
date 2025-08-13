@@ -24,29 +24,46 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, Scissors, Check } from 'lucide-react';
+import { Loader2, UploadCloud, Check, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-
+import { getAuth, sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
+  email: z.string().email('Please enter a valid email address.'),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 interface ProfileEditorProps {
+  user: User;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAvatarChange: (newAvatar: string) => void;
   currentAvatar: string;
   currentInitial: string;
+  currentDisplayName: string;
+  currentEmail: string;
+  storageKey: string;
 }
 
-export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvatar, currentInitial }: ProfileEditorProps) {
+export function ProfileEditor({ 
+    user,
+    open, 
+    onOpenChange, 
+    onAvatarChange, 
+    currentAvatar, 
+    currentInitial,
+    currentDisplayName,
+    currentEmail,
+    storageKey,
+}: ProfileEditorProps) {
   const { toast } = useToast();
-  const [isLoadingName, setIsLoadingName] = useState(false);
+  const auth = getAuth(app);
+  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imgSrc, setImgSrc] = useState('');
@@ -58,30 +75,61 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      displayName: 'Admin',
+      displayName: currentDisplayName || '',
+      email: currentEmail || '',
     },
   });
 
-  const handleUpdateName = async (values: ProfileFormValues) => {
-    setIsLoadingName(true);
-    // Mock API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('Updated name:', values.displayName);
-    // This part is mocked. In a real app, you would update the user's initial in a global state.
-    toast({
-      title: 'Success!',
-      description: 'Your name has been updated.',
-    });
-    setIsLoadingName(false);
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        displayName: currentDisplayName,
+        email: currentEmail,
+      });
+    }
+  }, [open, currentDisplayName, currentEmail, form]);
+
+  const handleUpdateProfile = async (values: ProfileFormValues) => {
+    setIsLoading(true);
+    try {
+      if (values.displayName !== currentDisplayName) {
+        await updateProfile(user, { displayName: values.displayName });
+      }
+      if (values.email !== currentEmail) {
+        await updateEmail(user, values.email);
+      }
+      toast({
+        title: 'Success!',
+        description: 'Your profile has been updated.',
+      });
+      onOpenChange(false); // Close dialog on success
+    } catch (error: any) {
+       toast({
+        title: 'Error updating profile',
+        description: 'This is a sensitive operation. You may need to log out and log back in to change your email.',
+        variant: 'destructive',
+      });
+    } finally {
+        setIsLoading(false);
+    }
   };
   
   const handlePasswordReset = async () => {
+      if (!user.email) return;
       setIsLoadingPassword(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast({
-        title: 'Password Reset Email Sent',
-        description: 'Check your inbox for instructions to reset your password.',
-      });
+      try {
+        await sendPasswordResetEmail(auth, user.email);
+        toast({
+            title: 'Password Reset Email Sent',
+            description: 'Check your inbox for instructions to reset your password.',
+        });
+      } catch (error: any) {
+         toast({
+            title: 'Error sending reset email',
+            description: error.message,
+            variant: 'destructive',
+        });
+      }
       setIsLoadingPassword(false);
   }
 
@@ -131,7 +179,8 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
     if (completedCrop && imgRef.current) {
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
         try {
-            window.localStorage.setItem('adminAvatar', croppedImageUrl);
+            await updateProfile(user, { photoURL: croppedImageUrl });
+            window.localStorage.setItem(storageKey, croppedImageUrl);
             onAvatarChange(croppedImageUrl);
             toast({
               title: 'Profile Photo Updated',
@@ -215,7 +264,7 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
             </div>
 
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleUpdateName)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-4">
                 <FormField
                     control={form.control}
                     name="displayName"
@@ -229,14 +278,27 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
                     </FormItem>
                     )}
                 />
-                <Button type="submit" disabled={isLoadingName}>
-                    {isLoadingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Name
+                <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                        <Input type="email" placeholder="Your Email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                 <Button type="submit" disabled={isLoading} className="w-full">
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
                 </Button>
                 </form>
             </Form>
 
-            <div className="space-y-2">
+            <div className="space-y-2 border-t pt-4">
                 <h3 className="font-semibold text-sm">Password Reset</h3>
                 <p className="text-sm text-muted-foreground">
                     Click the button below to receive an email to reset your password.
@@ -247,9 +309,6 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
                 </Button>
             </div>
             </div>
-            <DialogFooter>
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
-            </DialogFooter>
             </>
         ) : (
              <>

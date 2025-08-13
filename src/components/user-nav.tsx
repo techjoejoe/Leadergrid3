@@ -14,8 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User } from "lucide-react"
-import { getAuth, signOut } from "firebase/auth";
+import { LogOut, Settings, User as UserIcon } from "lucide-react"
+import { getAuth, signOut, User } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileEditor } from "./profile-editor";
@@ -31,6 +31,9 @@ export function UserNav() {
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
   const [initial, setInitial] = useState(DEFAULT_INITIALS);
+  
+  // A dummy user object for the admin. In a real app, this would come from your auth state.
+  const [mockUser, setMockUser] = useState<User | null>(null);
 
   useEffect(() => {
     try {
@@ -38,10 +41,25 @@ export function UserNav() {
       if (savedAvatar) {
         setAvatar(savedAvatar);
       }
+
+      // Create a mock user object for the ProfileEditor
+      const user = auth.currentUser;
+      if (user) {
+        setMockUser(user);
+      } else {
+        // If no user is logged in, we create a mock object.
+        // This is primarily for demonstration purposes in this context.
+        setMockUser({
+            displayName: 'Admin',
+            email: 'admin@leadergrid.com',
+            photoURL: avatar,
+        } as User);
+      }
+
     } catch (error) {
       console.error("Failed to load admin avatar from localStorage", error);
     }
-  }, []);
+  }, [avatar, auth.currentUser]);
 
   const handleLogout = async () => {
     try {
@@ -83,7 +101,7 @@ export function UserNav() {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
-              <User className="mr-2 h-4 w-4" />
+              <UserIcon className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -100,13 +118,19 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ProfileEditor 
-        open={isProfileEditorOpen} 
-        onOpenChange={setIsProfileEditorOpen}
-        onAvatarChange={setAvatar}
-        currentAvatar={avatar}
-        currentInitial={initial}
-      />
+      {mockUser && (
+        <ProfileEditor 
+            user={mockUser}
+            open={isProfileEditorOpen} 
+            onOpenChange={setIsProfileEditorOpen}
+            onAvatarChange={setAvatar}
+            currentAvatar={avatar}
+            currentInitial={initial}
+            currentDisplayName={"Admin"}
+            currentEmail={"admin@leadergrid.com"}
+            storageKey="adminAvatar"
+        />
+      )}
     </>
   )
 }

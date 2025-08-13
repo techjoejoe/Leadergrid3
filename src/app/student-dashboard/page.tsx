@@ -1,17 +1,14 @@
 
-
 'use client';
 
 import {
     Activity,
     Award,
-    ChevronDown,
     LogOut,
-    Settings,
     Star,
-    Upload,
     Users,
     Building,
+    User as UserIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -34,11 +31,12 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { ClassroomHub } from '@/components/classroom-hub';
+import { ProfileEditor } from '@/components/profile-editor';
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
@@ -74,7 +72,7 @@ export default function StudentDashboardPage() {
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>(mockJoinedClasses);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
     const { toast } = useToast();
     const auth = getAuth(app);
     const router = useRouter();
@@ -126,10 +124,6 @@ export default function StudentDashboardPage() {
         return () => unsubscribe();
     }, [auth, router]);
     
-    const handleAvatarClick = () => {
-        fileInputRef.current?.click();
-    };
-    
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses, newClass];
         setJoinedClasses(updatedClasses);
@@ -151,53 +145,6 @@ export default function StudentDashboardPage() {
         }
     }
 
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (!user) return;
-        const file = event.target.files?.[0];
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) { // 2MB limit
-                toast({
-                    title: "Image Too Large",
-                    description: "Please select an image smaller than 2MB.",
-                    variant: "destructive",
-                });
-                return;
-            }
-            if (!file.type.startsWith('image/')) {
-                 toast({
-                    title: "Invalid File Type",
-                    description: "Please select an image file (e.g., PNG, JPG).",
-                    variant: "destructive",
-                });
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const base64String = reader.result as string;
-                try {
-                    await updateProfile(user, { photoURL: base64String });
-                    setAvatarUrl(base64String);
-                    window.localStorage.setItem('studentAvatar', base64String);
-                    
-                    toast({
-                        title: "Profile Photo Updated!",
-                        description: "Your new avatar has been saved."
-                    });
-                } catch (error) {
-                    console.error("Failed to save avatar", error);
-                    toast({
-                        title: "Error",
-                        description: "Could not save your new photo.",
-                        variant: "destructive",
-                    });
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    
     const handleLogout = async () => {
         try {
             await signOut(auth);
@@ -226,13 +173,6 @@ export default function StudentDashboardPage() {
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-end">
                     <div className="flex items-center gap-4">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            className="hidden"
-                            accept="image/*"
-                        />
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -252,15 +192,9 @@ export default function StudentDashboardPage() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={handleAvatarClick}>
-                                    <Upload className="mr-2 h-4 w-4" />
-                                    <span>Upload Photo</span>
-                                </DropdownMenuItem>
-                                 <DropdownMenuItem asChild>
-                                    <Link href="/student-dashboard/settings">
-                                        <Settings className="mr-2 h-4 w-4" />
-                                        <span>Settings</span>
-                                    </Link>
+                                <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
+                                    <UserIcon className="mr-2 h-4 w-4" />
+                                    <span>Edit Profile</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout}>
@@ -368,6 +302,19 @@ export default function StudentDashboardPage() {
 
                 </div>
             </main>
+            {user && (
+                <ProfileEditor 
+                    user={user}
+                    open={isProfileEditorOpen} 
+                    onOpenChange={setIsProfileEditorOpen}
+                    onAvatarChange={setAvatarUrl}
+                    currentAvatar={displayAvatar}
+                    currentInitial={displayInitial}
+                    currentDisplayName={displayName}
+                    currentEmail={displayEmail}
+                    storageKey="studentAvatar"
+                />
+            )}
         </div>
     );
 }
