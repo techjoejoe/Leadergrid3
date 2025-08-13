@@ -51,7 +51,10 @@ export default function CheckInPage() {
     const [bonusAwarded, setBonusAwarded] = useState(false);
     
     const onTimeUntilParam = searchParams.get('onTimeUntil');
-    const onTimeDeadline = onTimeUntilParam ? parseISO(onTimeUntilParam) : addMinutes(new Date(), 5);
+
+    const onTimeDeadline = useMemo(() => {
+        return onTimeUntilParam ? parseISO(onTimeUntilParam) : addMinutes(new Date(), 5);
+    }, [onTimeUntilParam]);
 
     const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
     const totalStudents = mockStudents.length;
@@ -61,7 +64,7 @@ export default function CheckInPage() {
         setQrValue(JSON.stringify({
             type: 'class-check-in',
             classId: classId,
-            className: className,
+            name: `Check-in for ${className}`,
             timestamp: new Date().toISOString(),
             onTimeUntil: onTimeDeadline.toISOString(),
             points: CHECK_IN_POINTS
@@ -82,7 +85,7 @@ export default function CheckInPage() {
         } catch (error) {
             console.error("Failed to load check-in log from localStorage", error);
         }
-    }, [classId, className, onTimeDeadline]);
+    }, [classId, className, onTimeDeadline, totalStudents]);
 
     // Simulate students checking in
     useEffect(() => {
@@ -110,10 +113,6 @@ export default function CheckInPage() {
                     checkedInAt: now.toISOString(),
                     isOnTime: isOnTime,
                 };
-                
-                toast({
-                    description: `${newRecord.studentName} just checked in ${isOnTime ? 'on time' : 'late'}!`
-                });
 
                 const updatedLog = [...prevLog, newRecord];
 
@@ -127,6 +126,17 @@ export default function CheckInPage() {
 
         return () => clearInterval(interval);
     }, [classId, isSessionOver, onTimeDeadline, totalStudents]);
+
+    // Effect to show toast messages
+    useEffect(() => {
+        if (checkInLog.length === 0) return;
+        const lastRecord = checkInLog[checkInLog.length - 1];
+        if (lastRecord) {
+             toast({
+                description: `${lastRecord.studentName} just checked in ${lastRecord.isOnTime ? 'on time' : 'late'}!`
+            });
+        }
+    }, [checkInLog.length, toast]);
 
 
     const { onTimeCount, lateCount } = useMemo(() => {
