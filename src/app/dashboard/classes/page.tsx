@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState } from "react";
-import { format } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, addDays, isPast } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateClassForm, Class } from "@/components/create-class-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -55,6 +55,37 @@ export default function ClassesPage() {
     const [classes, setClasses] = useState<Class[]>(initialClasses);
     const { toast } = useToast();
     const router = useRouter();
+
+    useEffect(() => {
+        const cleanupExpiredClassLogs = () => {
+            if (typeof window === 'undefined') return;
+
+            const twoWeeksAgo = addDays(new Date(), -14);
+            let logsCleanedCount = 0;
+
+            classes.forEach(cls => {
+                const endDate = new Date(cls.endDate);
+                if (isPast(endDate) && endDate < twoWeeksAgo) {
+                    // This class is expired by more than 2 weeks.
+                    const allKeys = Object.keys(localStorage);
+                    const classLogKeys = allKeys.filter(key => key.startsWith(`checkInLog_${cls.id}`));
+                    
+                    if (classLogKeys.length > 0) {
+                        logsCleanedCount += classLogKeys.length;
+                        classLogKeys.forEach(key => {
+                            localStorage.removeItem(key);
+                        });
+                    }
+                }
+            });
+
+            if (logsCleanedCount > 0) {
+                console.log(`Cleaned up ${logsCleanedCount} expired check-in log(s).`);
+            }
+        };
+
+        cleanupExpiredClassLogs();
+    }, [classes]);
 
     const handleAddClass = (newClass: Class) => {
         setClasses((prevClasses) => [newClass, ...prevClasses]);
