@@ -12,6 +12,8 @@ import {
     Star,
     Upload,
     Check,
+    Users,
+    School,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -44,7 +46,8 @@ import { JoinClassDialog, ClassInfo } from '@/components/join-class-dialog';
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
     points: 8850,
-    rank: 5,
+    classRank: 3,
+    schoolRank: 5,
 };
 
 const badges = [
@@ -287,17 +290,23 @@ export default function StudentDashboardPage() {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid gap-4 sm:grid-cols-2">
+                     <div className="grid gap-4 sm:grid-cols-3">
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2"><Star className='h-4 w-4' /> Total Points</CardDescription>
-                                <CardTitle className="text-5xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
+                                <CardTitle className="text-4xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
                             </CardHeader>
                         </Card>
                          <Card>
                             <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Crown className='h-4 w-4' /> Leaderboard Rank</CardDescription>
-                                <CardTitle className="text-5xl font-bold">#{studentData.rank}</CardTitle>
+                                <CardDescription className="flex items-center gap-2"><Users className='h-4 w-4' /> Class Rank</CardDescription>
+                                <CardTitle className="text-4xl font-bold">#{studentData.classRank}</CardTitle>
+                            </CardHeader>
+                        </Card>
+                         <Card>
+                            <CardHeader className="pb-2">
+                                <CardDescription className="flex items-center gap-2"><School className='h-4 w-4' /> School Rank</CardDescription>
+                                <CardTitle className="text-4xl font-bold">#{studentData.schoolRank}</CardTitle>
                             </CardHeader>
                         </Card>
                     </div>
