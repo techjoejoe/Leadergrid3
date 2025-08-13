@@ -262,21 +262,21 @@ export default function StudentDashboardPage() {
                     />
 
                      <div className="grid gap-4 sm:grid-cols-3">
-                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
-                            <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Star className='h-4 w-4' /> Lifetime points earned</CardDescription>
+                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg text-center">
+                            <CardHeader className="pb-4">
+                                <CardDescription className="flex items-center justify-center gap-2"><Star className='h-4 w-4' /> Lifetime points earned</CardDescription>
                                 <CardTitle className="text-4xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
                             </CardHeader>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
-                            <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Users className='h-4 w-4' /> Current Class Rank</CardDescription>
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg text-center">
+                            <CardHeader className="pb-4">
+                                <CardDescription className="flex items-center justify-center gap-2"><Users className='h-4 w-4' /> Current Class Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.classRank}</CardTitle>
                             </CardHeader>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
-                            <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Building className='h-4 w-4' /> Company Rank</CardDescription>
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg text-center">
+                            <CardHeader className="pb-4">
+                                <CardDescription className="flex items-center justify-center gap-2"><Building className='h-4 w-4' /> Company Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.schoolRank}</CardTitle>
                             </CardHeader>
                         </Card>
