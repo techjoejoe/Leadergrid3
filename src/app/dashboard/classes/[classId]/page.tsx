@@ -10,6 +10,8 @@ import { useParams } from "next/navigation";
 import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
 import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 // Mock data - In a real app, you'd fetch this based on the classId
 const mockClass = {
@@ -45,16 +47,22 @@ export default function ClassDetailsPage() {
             </Card>
             <ClassroomManager classId={classId} />
             <Separator />
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline text-2xl">Class Analytics</CardTitle>
-                        <CardDescription>View engagement reports, badge counts, and more for this class.</CardDescription>
-                    </CardHeader>
-                </Card>
-                <ReportCharts />
-                <ScanHistoryReport classId={classId} />
-            </div>
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger>
+                        <CardHeader className="p-0">
+                            <CardTitle className="font-headline text-2xl">Class Analytics</CardTitle>
+                            <CardDescription>View engagement reports, badge counts, and more for this class.</CardDescription>
+                        </CardHeader>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div className="space-y-6 pt-4">
+                            <ReportCharts />
+                            <ScanHistoryReport classId={classId} />
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
         </div>
     )
 }
