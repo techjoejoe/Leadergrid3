@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Crown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const leaderboardData = [
   { rank: 1, name: "Leo D.", points: 10500, avatar: "https://placehold.co/100x100.png", initial: "LD", hint: "student portrait" },
@@ -87,15 +88,19 @@ export default function LeaderboardPage() {
             {/* Rest of the list */}
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {rest.map((user) => (
-                    <div key={user.rank} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex flex-col items-center justify-center gap-2 aspect-square transition-all hover:bg-white/20 hover:scale-105">
-                         <div className="absolute top-2 left-3 text-2xl font-bold text-white/50">{user.rank}</div>
-                        <Avatar className="w-16 h-16 border-2 border-white/30">
-                            <AvatarImage src={user.avatar} data-ai-hint={user.hint} />
-                            <AvatarFallback>{user.initial}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-center">
-                            <h4 className="font-semibold text-white truncate">{user.name}</h4>
-                            <div className="flex items-center justify-center gap-1.5 text-sm text-yellow-300/90">
+                    <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
+                        <Image
+                            src={user.avatar}
+                            alt={user.name}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-110"
+                            data-ai-hint={user.hint}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                        <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
+                        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                             <h4 className="font-semibold truncate">{user.name}</h4>
+                            <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
                                 <Star className="h-3 w-3" />
                                 <span>{user.points.toLocaleString()} pts</span>
                             </div>
