@@ -43,19 +43,21 @@ export default function CheckInPage() {
 
     const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
     const [allCheckedIn, setAllCheckedIn] = useState(false);
+    const [qrValue, setQrValue] = useState('');
     const prevCheckInLogLength = useRef(0);
     
     const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
     const totalStudents = mockStudents.length;
 
-    const qrValue = useMemo(() => JSON.stringify({
-        type: 'class-check-in',
-        classId: classId,
-        className: className,
-        timestamp: Date.now()
-    }), [classId, className]);
-
     useEffect(() => {
+        // Generate QR value only on the client side to avoid hydration mismatch
+        setQrValue(JSON.stringify({
+            type: 'class-check-in',
+            classId: classId,
+            className: className,
+            timestamp: Date.now()
+        }));
+
         try {
             const storedLog = window.localStorage.getItem(`checkInLog_${classId}`);
             if (storedLog) {
@@ -69,7 +71,7 @@ export default function CheckInPage() {
         } catch (error) {
             console.error("Failed to load check-in log from localStorage", error);
         }
-    }, [classId, totalStudents]);
+    }, [classId, className, totalStudents]);
 
     // Simulate students checking in
     useEffect(() => {
@@ -148,7 +150,11 @@ export default function CheckInPage() {
                      <h1 className="text-4xl font-bold font-headline mb-2">Check-in for {className}</h1>
                     <p className="text-lg text-slate-400 mb-6">Scan the code below to mark your attendance.</p>
                     <div className="p-6 bg-white rounded-lg shadow-2xl shadow-cyan-500/20">
-                        <QRCodeSVG value={qrValue} size={320} includeMargin />
+                        {qrValue ? (
+                           <QRCodeSVG value={qrValue} size={320} includeMargin />
+                        ) : (
+                           <div className="w-[320px] h-[320px] bg-gray-200 animate-pulse" />
+                        )}
                     </div>
                 </div>
 
