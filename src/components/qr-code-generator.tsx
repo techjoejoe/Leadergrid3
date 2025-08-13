@@ -103,7 +103,7 @@ export function QrCodeGenerator() {
     })
     
     setIsLoading(false);
-    form.reset({ name: '', description: '', points: 10 });
+    form.reset({ name: '', description: '', points: 10, expirationDate: undefined });
   }
 
   const downloadQRCode = (code: GeneratedQrCode) => {
@@ -337,4 +337,3 @@ export function QrCodeGenerator() {
     </div>
   );
 }
-
