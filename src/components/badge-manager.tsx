@@ -80,6 +80,7 @@ export function BadgeManager() {
       name: '',
       description: '',
       criteria: '',
+      image: undefined,
     },
   });
 
@@ -106,7 +107,6 @@ export function BadgeManager() {
         })
         
         form.reset();
-        form.setValue('image', new FileList());
     } catch (error) {
         console.error("Error creating badge:", error);
         toast({
