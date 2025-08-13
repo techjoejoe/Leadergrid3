@@ -19,7 +19,6 @@ import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar"
 
 const links = [
     { href: "/dashboard", label: "Overview", icon: Grip },
-    { href: "/dashboard/reports", label: "Reporting", icon: BarChart },
     { href: "/dashboard/qrcodes", label: "QR Codes", icon: QrCode },
     { href: "/dashboard/classes", label: "Classes", icon: Users },
     { href: "/dashboard/badges", label: "Badges", icon: Badge },
@@ -40,7 +39,7 @@ export function DashboardNav() {
                     <SidebarMenuItem key={link.href}>
                         <SidebarMenuButton
                             asChild
-                            isActive={pathname === link.href}
+                            isActive={pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard')}
                             className="w-full"
                             tooltip={link.label}
                         >

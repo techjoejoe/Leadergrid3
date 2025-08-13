@@ -41,7 +41,11 @@ interface ScanRecord {
   className?: string;
 }
 
-export function ScanHistoryReport() {
+interface ScanHistoryReportProps {
+  classId: string;
+}
+
+export function ScanHistoryReport({ classId }: ScanHistoryReportProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -58,13 +62,13 @@ export function ScanHistoryReport() {
     
     try {
       const startTimestamp = Timestamp.fromDate(values.startDate);
-      // Set end date to the end of the selected day
       const endOfDay = new Date(values.endDate);
       endOfDay.setHours(23, 59, 59, 999);
       const endTimestamp = Timestamp.fromDate(endOfDay);
 
       const q = query(
         collection(db, "scans"),
+        where("classId", "==", classId),
         where("scanDate", ">=", startTimestamp),
         where("scanDate", "<=", endTimestamp),
         orderBy("scanDate", "desc")
@@ -76,7 +80,7 @@ export function ScanHistoryReport() {
       if (scanRecords.length === 0) {
         toast({
           title: "No Data Found",
-          description: "There are no scan records in the selected date range.",
+          description: "There are no scan records for this class in the selected date range.",
         });
         return;
       }
@@ -96,15 +100,14 @@ export function ScanHistoryReport() {
   };
 
   const downloadCSV = (data: ScanRecord[]) => {
-    const filename = `scan-history_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    const csvHeader = "Scan Date,Student Name,Activity Name,Description,Type,Class Name,Points Awarded\n";
+    const filename = `scan-history_${classId}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    const csvHeader = "Scan Date,Student Name,Activity Name,Description,Type,Points Awarded\n";
     const csvRows = data.map(r => {
       const scanDate = r.scanDate.toDate();
       const date = format(scanDate, 'PPP');
       const time = format(scanDate, 'p');
       const fullDate = `${date} ${time}`;
       
-      // Helper to ensure CSV content is properly escaped
       const escapeCSV = (str: string | undefined | null) => {
           if (str === undefined || str === null) return '';
           const escaped = `"${String(str).replace(/"/g, '""')}"`;
@@ -117,7 +120,6 @@ export function ScanHistoryReport() {
           escapeCSV(r.activityName),
           escapeCSV(r.activityDescription),
           escapeCSV(r.type),
-          escapeCSV(r.className),
           r.pointsAwarded
       ].join(',');
     }).join("\n");
@@ -139,7 +141,7 @@ export function ScanHistoryReport() {
       <CardHeader>
         <CardTitle className="font-headline text-2xl">Scan History Report</CardTitle>
         <CardDescription>
-          Download a CSV of all QR code scans within a specified date range.
+          Download a CSV of all QR code scans for this class within a specified date range.
         </CardDescription>
       </CardHeader>
       <Form {...form}>
