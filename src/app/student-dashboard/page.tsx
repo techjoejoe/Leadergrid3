@@ -225,6 +225,11 @@ export default function StudentDashboardPage() {
 
             <main className="flex-1 p-4 sm:p-6 md:p-8">
                 <div className="max-w-4xl mx-auto space-y-6">
+                    {/* Welcome Header */}
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline">Welcome Back, {student.name}!</h1>
+                        <p className="text-muted-foreground">Here's a summary of your progress and achievements.</p>
+                    </div>
 
                     {/* Stats Grid */}
                     <div className="grid gap-4 sm:grid-cols-2">
