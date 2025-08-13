@@ -11,15 +11,22 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Loader2, QrCode } from 'lucide-react';
+import { Download, Loader2, QrCode, CalendarIcon } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(1, 'QR Code name is required.'),
   description: z.string().min(1, 'A description is required.'),
   points: z.coerce.number().min(1, 'Points must be at least 1.'),
+  expirationDate: z.date({
+    required_error: "An expiration date is required.",
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -30,6 +37,7 @@ interface GeneratedQrCode {
     name: string;
     description: string;
     points: number;
+    expirationDate: string; // Store as ISO string
 }
 
 export function QrCodeGenerator() {
@@ -74,7 +82,8 @@ export function QrCodeGenerator() {
     const qrCodeValue = JSON.stringify({
         id: qrId,
         name: values.name,
-        points: values.points
+        points: values.points,
+        expires: values.expirationDate.toISOString(),
     });
 
     const newCode: GeneratedQrCode = {
@@ -83,6 +92,7 @@ export function QrCodeGenerator() {
         name: values.name,
         description: values.description,
         points: values.points,
+        expirationDate: values.expirationDate.toISOString(),
     };
 
     setGeneratedCodes(prev => [newCode, ...prev]);
@@ -136,8 +146,14 @@ export function QrCodeGenerator() {
     downloadLink.click();
     document.body.removeChild(downloadLink);
   }
-  
-  const activeCode = generatedCodes.length > 0 ? generatedCodes[0] : null;
+
+  const getStatus = (expirationDate: string) => {
+    const now = new Date();
+    const expiry = new Date(expirationDate);
+    // Set expiry to the end of the day
+    expiry.setHours(23, 59, 59, 999);
+    return now > expiry ? "Expired" : "Active";
+  }
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">
@@ -170,7 +186,7 @@ export function QrCodeGenerator() {
                     <FormItem>
                         <FormLabel>Description</FormLabel>
                         <FormControl>
-                        <Textarea placeholder="Describe what this QR code is for..." {...field} rows={3} />
+                        <Textarea placeholder="Describe what this QR code is for..." {...field} rows={2} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -188,6 +204,47 @@ export function QrCodeGenerator() {
                         <FormMessage />
                     </FormItem>
                     )}
+                />
+                <FormField
+                  control={form.control}
+                  name="expirationDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Expiration Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date(new Date().setHours(0,0,0,0))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 </CardContent>
                 <CardFooter>
@@ -226,9 +283,11 @@ export function QrCodeGenerator() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[100px]">Preview</TableHead>
+                                <TableHead className="w-[80px]">Preview</TableHead>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Points</TableHead>
+                                <TableHead>Expires</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -236,11 +295,11 @@ export function QrCodeGenerator() {
                             {generatedCodes.map((code) => (
                                <TableRow key={code.id}>
                                    <TableCell>
-                                        <div className="p-1 bg-white rounded-md w-16 h-16">
+                                        <div className="p-1 bg-white rounded-md w-14 h-14">
                                             <QRCodeSVG
                                                 id={`qr-code-svg-${code.id}`} 
                                                 value={code.value} 
-                                                size={60}
+                                                size={52}
                                                 includeMargin={false}
                                             />
                                         </div>
@@ -251,6 +310,15 @@ export function QrCodeGenerator() {
                                     </TableCell>
                                    <TableCell>
                                         <Badge variant="secondary">{code.points} pts</Badge>
+                                   </TableCell>
+                                   <TableCell>{format(new Date(code.expirationDate), "PPP")}</TableCell>
+                                   <TableCell>
+                                        <Badge
+                                            variant={getStatus(code.expirationDate) === "Active" ? "default" : "destructive"}
+                                            className={getStatus(code.expirationDate) === 'Active' ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}
+                                        >
+                                            {getStatus(code.expirationDate)}
+                                        </Badge>
                                    </TableCell>
                                    <TableCell className="text-right">
                                        <Button variant="outline" size="sm" onClick={() => downloadQRCode(code)}>
@@ -269,3 +337,4 @@ export function QrCodeGenerator() {
     </div>
   );
 }
+
