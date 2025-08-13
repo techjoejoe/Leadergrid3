@@ -24,8 +24,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud } from 'lucide-react';
+import { Loader2, UploadCloud, Scissors, Check } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -46,6 +49,11 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
   const [isLoadingName, setIsLoadingName] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imgSrc, setImgSrc] = useState('');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [isCropping, setIsCropping] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -81,32 +89,50 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+       if (file.size > 4 * 1024 * 1024) {
         toast({
             title: "Image Too Large",
-            description: "Please select an image smaller than 2MB.",
+            description: "Please select an image smaller than 4MB.",
             variant: "destructive",
         });
         return;
       }
-      if (!file.type.startsWith('image/')) {
-            toast({
-            title: "Invalid File Type",
-            description: "Please select an image file (e.g., PNG, JPG).",
-            variant: "destructive",
-        });
-        return;
-      }
-
+      setCrop(undefined) // Makes crop preview update between images.
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
+      reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
+      reader.readAsDataURL(e.target.files[0]);
+      setIsCropping(true);
+    }
+  };
+
+  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const { width, height } = e.currentTarget;
+    const newCrop = centerCrop(
+      makeAspectCrop(
+        {
+          unit: '%',
+          width: 90,
+        },
+        1, // aspect ratio 1:1
+        width,
+        height
+      ),
+      width,
+      height
+    );
+    setCrop(newCrop);
+    setCompletedCrop(newCrop);
+  }
+
+  const handleCropComplete = async () => {
+    if (completedCrop && imgRef.current) {
+        const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
         try {
-            window.localStorage.setItem('adminAvatar', base64String);
-            onAvatarChange(base64String);
+            window.localStorage.setItem('adminAvatar', croppedImageUrl);
+            onAvatarChange(croppedImageUrl);
             toast({
               title: 'Profile Photo Updated',
               description: 'Your new photo has been set.',
@@ -118,77 +144,145 @@ export function ProfileEditor({ open, onOpenChange, onAvatarChange, currentAvata
                 variant: "destructive",
             });
         }
-      };
-      reader.readAsDataURL(file);
+        setIsCropping(false);
+        setImgSrc('');
     }
   };
+  
+  function getCroppedImg(image: HTMLImageElement, crop: Crop): string {
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = crop.width * scaleX;
+    canvas.height = crop.height * scaleY;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        throw new Error('No 2d context');
+    }
+
+    ctx.drawImage(
+        image,
+        crop.x * scaleX,
+        crop.y * scaleY,
+        crop.width * scaleX,
+        crop.height * scaleY,
+        0,
+        0,
+        crop.width * scaleX,
+        crop.height * scaleY
+    );
+
+    return canvas.toDataURL('image/jpeg');
+  }
 
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        if(!isOpen) {
+            setIsCropping(false);
+            setImgSrc('');
+        }
+        onOpenChange(isOpen);
+    }}>
       <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
-          <DialogDescription>
-            Make changes to your profile here. Click save when you're done.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-6 py-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={currentAvatar} />
-              <AvatarFallback>{currentInitial}</AvatarFallback>
-            </Avatar>
-            <Button variant="outline" onClick={handleAvatarClick}>
-              <UploadCloud className="mr-2" />
-              Upload Photo
-            </Button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept="image/*"
-            />
-          </div>
+        {!isCropping ? (
+            <>
+            <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+                Make changes to your profile here. Click save when you're done.
+            </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-6 py-4">
+            <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                <AvatarImage src={currentAvatar} />
+                <AvatarFallback>{currentInitial}</AvatarFallback>
+                </Avatar>
+                <Button variant="outline" onClick={handleAvatarClick}>
+                <UploadCloud className="mr-2" />
+                Upload Photo
+                </Button>
+                <input
+                type="file"
+                ref={fileInputRef}
+                onChange={onSelectFile}
+                className="hidden"
+                accept="image/*"
+                />
+            </div>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleUpdateName)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="displayName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Display Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" disabled={isLoadingName}>
-                {isLoadingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Name
-              </Button>
-            </form>
-          </Form>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleUpdateName)} className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="displayName"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Display Name</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Your Name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button type="submit" disabled={isLoadingName}>
+                    {isLoadingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Name
+                </Button>
+                </form>
+            </Form>
 
-          <div className="space-y-2">
-             <h3 className="font-semibold text-sm">Password Reset</h3>
-             <p className="text-sm text-muted-foreground">
-                Click the button below to receive an email to reset your password.
-             </p>
-             <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword}>
-                {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Send Password Reset Email
-             </Button>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
-        </DialogFooter>
+            <div className="space-y-2">
+                <h3 className="font-semibold text-sm">Password Reset</h3>
+                <p className="text-sm text-muted-foreground">
+                    Click the button below to receive an email to reset your password.
+                </p>
+                <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword}>
+                    {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Send Password Reset Email
+                </Button>
+            </div>
+            </div>
+            <DialogFooter>
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>Close</Button>
+            </DialogFooter>
+            </>
+        ) : (
+             <>
+                <DialogHeader>
+                    <DialogTitle>Crop your new profile picture</DialogTitle>
+                    <DialogDescription>
+                        Adjust the selection to crop the perfect avatar.
+                    </DialogDescription>
+                </DialogHeader>
+                    {imgSrc && (
+                        <div className='flex justify-center'>
+                        <ReactCrop
+                            crop={crop}
+                            onChange={c => setCrop(c)}
+                            onComplete={c => setCompletedCrop(c)}
+                            aspect={1}
+                            circularCrop
+                        >
+                            <img ref={imgRef} alt="Crop me" src={imgSrc} onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
+                        </ReactCrop>
+                        </div>
+                    )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsCropping(false)}>Cancel</Button>
+                    <Button onClick={handleCropComplete}>
+                        <Check className="mr-2 h-4 w-4" />
+                        Save Crop
+                    </Button>
+                </DialogFooter>
+            </>
+        )}
       </DialogContent>
     </Dialog>
+    </>
   );
 }
