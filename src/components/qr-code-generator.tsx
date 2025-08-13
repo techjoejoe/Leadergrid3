@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Download, Loader2, QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { ScrollArea } from './ui/scroll-area';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
 
 const formSchema = z.object({
@@ -36,6 +36,27 @@ export function QrCodeGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedQrCode[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    try {
+        const item = window.localStorage.getItem('generatedQrCodes');
+        if (item) {
+            setGeneratedCodes(JSON.parse(item));
+        }
+    } catch (error) {
+        console.error("Failed to parse QR codes from localStorage", error);
+    }
+  }, []);
+
+  useEffect(() => {
+     try {
+        if(generatedCodes.length > 0) {
+            window.localStorage.setItem('generatedQrCodes', JSON.stringify(generatedCodes));
+        }
+    } catch (error) {
+        console.error("Failed to save QR codes to localStorage", error);
+    }
+  }, [generatedCodes]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -68,7 +89,7 @@ export function QrCodeGenerator() {
     
     toast({
         title: "QR Code Generated!",
-        description: "The new QR code is ready to be used.",
+        description: "The new QR code has been added to the list.",
     })
     
     setIsLoading(false);
@@ -78,15 +99,24 @@ export function QrCodeGenerator() {
   const downloadQRCode = (code: GeneratedQrCode) => {
     const svgEl = document.getElementById(`qr-code-svg-${code.id}`);
     if (!svgEl) {
-        console.error("QR Code SVG not found");
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not find the QR code image to download."
-        });
-        return;
-    }
+        // Fallback for codes in the list which don't have a visible SVG
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const { QRCodeSVG } = require('qrcode.react');
+        const { render } = require('react-dom');
+        render(<QRCodeSVG id={`qr-code-svg-${code.id}-temp`} value={code.value} size={256} includeMargin={true} />, container);
+        const tempSvgEl = document.getElementById(`qr-code-svg-${code.id}-temp`);
+        if(tempSvgEl) {
+             processDownload(tempSvgEl, code);
+        }
+        document.body.removeChild(container);
 
+    } else {
+        processDownload(svgEl, code);
+    }
+  };
+
+  const processDownload = (svgEl: HTMLElement, code: GeneratedQrCode) => {
     const serializer = new XMLSerializer();
     let source = serializer.serializeToString(svgEl);
     if(!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)){
@@ -105,134 +135,136 @@ export function QrCodeGenerator() {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
-  };
+  }
   
   const activeCode = generatedCodes.length > 0 ? generatedCodes[0] : null;
-  const previousCodes = generatedCodes.length > 1 ? generatedCodes.slice(1) : [];
 
   return (
-    <div className="grid gap-8 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-2xl">QR Code Generator</CardTitle>
-          <CardDescription>Create a new QR code with a name, description, and point value.</CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>QR Code Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 'Library Visit'" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Describe what this QR code is for..." {...field} rows={3} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="points"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Point Value</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="e.g., 10" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <QrCode className="mr-2 h-4 w-4" />
-                    Generate QR Code
-                  </>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </Card>
-
-      <div className="flex flex-col gap-4">
-        {!activeCode && (
-             <div className='flex flex-col items-center justify-center h-full gap-4 p-8 border-2 border-dashed rounded-lg text-muted-foreground'>
-                <QrCode className="h-16 w-16" />
-                <p className='font-semibold text-center'>Your generated QR code will appear here.</p>
-            </div>
-        )}
-        {activeCode && (
-          <Card className="w-full">
+    <div className="grid gap-8 lg:grid-cols-3">
+      <div className="lg:col-span-1">
+        <Card>
             <CardHeader>
-              <CardTitle className="font-headline text-2xl">{activeCode.name}</CardTitle>
-              <CardDescription>{activeCode.description}</CardDescription>
+            <CardTitle className="font-headline text-2xl">QR Code Generator</CardTitle>
+            <CardDescription>Create a new QR code with a name, description, and point value.</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center space-y-4">
-                <div className="p-4 bg-white rounded-lg">
-                    <QRCodeSVG
-                        id={`qr-code-svg-${activeCode.id}`} 
-                        value={activeCode.value} 
-                        size={256}
-                        includeMargin={true}
-                    />
-                </div>
-                <div className='text-lg font-bold text-primary'>{activeCode.points} Points</div>
-            </CardContent>
-             <CardFooter>
-                <Button variant="outline" className='w-full' onClick={() => downloadQRCode(activeCode)}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download QR Code
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+                <CardContent className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>QR Code Name</FormLabel>
+                        <FormControl>
+                        <Input placeholder="e.g., 'Library Visit'" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                        <Textarea placeholder="Describe what this QR code is for..." {...field} rows={3} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="points"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Point Value</FormLabel>
+                        <FormControl>
+                        <Input type="number" placeholder="e.g., 10" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                </CardContent>
+                <CardFooter>
+                <Button type="submit" disabled={isLoading} className="w-full">
+                    {isLoading ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                    </>
+                    ) : (
+                    <>
+                        <QrCode className="mr-2 h-4 w-4" />
+                        Generate QR Code
+                    </>
+                    )}
                 </Button>
-            </CardFooter>
-          </Card>
-        )}
-        {previousCodes.length > 0 && (
-          <Card>
+                </CardFooter>
+            </form>
+            </Form>
+        </Card>
+      </div>
+
+      <div className="lg:col-span-2">
+        <Card className='h-full'>
             <CardHeader>
-                <CardTitle className='font-headline'>Previous Codes</CardTitle>
+                <CardTitle className="font-headline text-2xl">Generated Codes</CardTitle>
+                <CardDescription>The list of all QR codes you've created.</CardDescription>
             </CardHeader>
             <CardContent>
-                <ScrollArea className='h-[240px]'>
-                    <div className='space-y-4 pr-6'>
-                    {previousCodes.map((code) => (
-                        <div key={code.id} className="flex items-center justify-between p-2 rounded-lg bg-secondary">
-                            <div>
-                                <p className='font-semibold'>{code.name}</p>
-                                <p className='text-sm text-muted-foreground'>{code.description}</p>
-                            </div>
-                           <Badge variant="default">{code.points} pts</Badge>
-                        </div>
-                    ))}
+                {generatedCodes.length === 0 ? (
+                    <div className='flex flex-col items-center justify-center h-64 gap-4 p-8 border-2 border-dashed rounded-lg text-muted-foreground'>
+                        <QrCode className="h-16 w-16" />
+                        <p className='font-semibold text-center'>Your generated QR codes will appear here.</p>
                     </div>
-                </ScrollArea>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[100px]">Preview</TableHead>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Points</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {generatedCodes.map((code) => (
+                               <TableRow key={code.id}>
+                                   <TableCell>
+                                        <div className="p-1 bg-white rounded-md w-16 h-16">
+                                            <QRCodeSVG
+                                                id={`qr-code-svg-${code.id}`} 
+                                                value={code.value} 
+                                                size={60}
+                                                includeMargin={false}
+                                            />
+                                        </div>
+                                   </TableCell>
+                                   <TableCell>
+                                        <div className='font-medium'>{code.name}</div>
+                                        <div className='text-sm text-muted-foreground'>{code.description}</div>
+                                    </TableCell>
+                                   <TableCell>
+                                        <Badge variant="secondary">{code.points} pts</Badge>
+                                   </TableCell>
+                                   <TableCell className="text-right">
+                                       <Button variant="outline" size="sm" onClick={() => downloadQRCode(code)}>
+                                            <Download className="mr-2 h-4 w-4" />
+                                            Download
+                                        </Button>
+                                   </TableCell>
+                               </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
             </CardContent>
-          </Card>
-        )}
+        </Card>
       </div>
     </div>
   );
