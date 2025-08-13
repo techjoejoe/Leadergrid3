@@ -212,8 +212,8 @@ export default function StudentDashboardPage() {
 
     return (
         <>
-        <div className="flex flex-col min-h-dvh bg-background">
-            <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex flex-col min-h-dvh bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900">
+            <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-end">
                     <div className="flex items-center gap-4">
                         <DropdownMenu>
@@ -274,7 +274,7 @@ export default function StudentDashboardPage() {
 
                     <div className="grid gap-4 sm:grid-cols-3">
                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
-                            <CardContent className="pt-6">
+                            <CardContent className="flex items-center justify-center p-6">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-full bg-primary/10 text-primary">
                                         <Star className='h-6 w-6' /> 
@@ -287,7 +287,7 @@ export default function StudentDashboardPage() {
                             </CardContent>
                         </Card>
                          <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
-                             <CardContent className="pt-6">
+                             <CardContent className="flex items-center justify-center p-6">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-full bg-primary/10 text-primary">
                                         <Users className='h-6 w-6' />
@@ -300,7 +300,7 @@ export default function StudentDashboardPage() {
                             </CardContent>
                         </Card>
                          <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
-                             <CardContent className="pt-6">
+                             <CardContent className="flex items-center justify-center p-6">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-full bg-primary/10 text-primary">
                                          <Building className='h-6 w-6' />
@@ -390,3 +390,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
