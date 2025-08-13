@@ -6,9 +6,11 @@ import {
     Award,
     ChevronRight,
     Crown,
+    LogOut,
     Settings,
     Star,
     Upload,
+    User as UserIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -19,16 +21,26 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
 // Mock Data - this would eventually come from your database
 const initialStudent = {
     name: 'Student',
+    email: 'student@example.com',
     avatar: 'https://placehold.co/100x100.png?text=??',
     initial: '??',
     points: 8850,
@@ -56,6 +68,7 @@ export default function StudentDashboardPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const auth = getAuth(app);
+    const router = useRouter();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -64,13 +77,16 @@ export default function StudentDashboardPage() {
                 setStudent(prev => ({
                     ...prev, 
                     name: currentUser.displayName || 'Student',
+                    email: currentUser.email || 'student@example.com',
                     initial: currentUser.displayName?.substring(0,2).toUpperCase() || '??',
                     avatar: currentUser.photoURL || `https://placehold.co/100x100.png?text=${currentUser.displayName?.substring(0,2).toUpperCase() || '??'}`
                 }));
+            } else {
+                router.push('/student-login');
             }
         });
         return () => unsubscribe();
-    }, [auth]);
+    }, [auth, router]);
 
     useEffect(() => {
         if (user) {
@@ -132,6 +148,23 @@ export default function StudentDashboardPage() {
             reader.readAsDataURL(file);
         }
     };
+    
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            toast({
+                title: "Logged Out",
+                description: "You have been successfully logged out."
+            })
+            router.push('/student-login');
+        } catch (error: any) {
+             toast({
+                title: "Logout Failed",
+                description: error.message,
+                variant: "destructive"
+            });
+        }
+    }
 
 
     return (
@@ -143,21 +176,6 @@ export default function StudentDashboardPage() {
                         LeaderGrid
                     </Link>
                     <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium hidden sm:inline">{student.name}</span>
-                         <Button variant="ghost" size="icon" asChild>
-                            <Link href="/student-dashboard/settings">
-                                <Settings className="h-5 w-5" />
-                            </Link>
-                        </Button>
-                        <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-                            <Avatar>
-                                <AvatarImage src={student.avatar} data-ai-hint="student smiling" />
-                                <AvatarFallback>{student.initial}</AvatarFallback>
-                            </Avatar>
-                             <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Upload className="h-6 w-6 text-white" />
-                            </div>
-                        </div>
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -165,6 +183,42 @@ export default function StudentDashboardPage() {
                             className="hidden"
                             accept="image/*"
                         />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                                    <Avatar>
+                                        <AvatarImage src={student.avatar} data-ai-hint="student smiling" />
+                                        <AvatarFallback>{student.initial}</AvatarFallback>
+                                    </Avatar>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56" align="end" forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">{student.name}</p>
+                                        <p className="text-xs leading-none text-muted-foreground">
+                                            {student.email}
+                                        </p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={handleAvatarClick}>
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    <span>Upload Photo</span>
+                                </DropdownMenuItem>
+                                 <DropdownMenuItem asChild>
+                                    <Link href="/student-dashboard/settings">
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Settings</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleLogout}>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </header>
