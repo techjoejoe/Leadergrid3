@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import Confetti from 'react-confetti';
 import { Progress } from '@/components/ui/progress';
 import { addMinutes, format, isBefore, parseISO } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
 
 // Mock data - In a real app, you'd fetch this from Firestore
 const mockStudents = [
@@ -31,8 +33,9 @@ interface CheckInRecord {
     studentId: string;
     studentName: string;
     classId: string;
-    checkedInAt: string; // ISO String
+    checkedInAt: Timestamp;
     isOnTime: boolean;
+    sessionName: string;
 }
 
 const CHECK_IN_POINTS = 25;
@@ -45,7 +48,6 @@ export default function CheckInPage({ params }: { params: { classId: string }}) 
 
     const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
     const [qrValue, setQrValue] = useState('');
-    const [isSessionOver, setIsSessionOver] = useState(false);
     const [bonusAwarded, setBonusAwarded] = useState(false);
     
     const onTimeUntilParam = searchParams.get('onTimeUntil');
@@ -65,57 +67,35 @@ export default function CheckInPage({ params }: { params: { classId: string }}) 
             type: 'class-check-in',
             classId: classId,
             name: sessionNameParam,
-            timestamp: new Date().toISOString(),
             onTimeUntil: onTimeDeadline.toISOString(),
             points: CHECK_IN_POINTS
         }));
     }, [classId, sessionNameParam, onTimeDeadline]);
 
-    // Simulate students checking in
-    useEffect(() => {
-        if (isSessionOver) return;
+    // Listen for real-time check-ins from Firestore
+     useEffect(() => {
+        const q = query(collection(db, "checkIns"), where("classId", "==", classId), where("sessionName", "==", sessionNameParam));
 
-        const interval = setInterval(() => {
-            setCheckInLog(prevLog => {
-                if (prevLog.length >= totalStudents) {
-                    clearInterval(interval);
-                    setIsSessionOver(true);
-                    return prevLog;
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const newRecords: CheckInRecord[] = [];
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const newRecord = change.doc.data() as CheckInRecord;
+                    newRecords.push(newRecord);
+
+                    // Show toast for new check-ins
+                    toast({
+                        description: `${newRecord.studentName} just checked in for "${newRecord.sessionName}" ${newRecord.isOnTime ? 'on time' : 'late'}!`
+                    });
                 }
-
-                const uncheckedStudents = mockStudents.filter(s => !prevLog.some(log => log.studentId === s.id));
-                if (uncheckedStudents.length === 0) {
-                     clearInterval(interval);
-                    setIsSessionOver(true);
-                    return prevLog;
-                }
-                const randomStudent = uncheckedStudents[Math.floor(Math.random() * uncheckedStudents.length)];
-                
-                // Simulate some students being late
-                const now = new Date();
-                const isOnTime = isBefore(now, onTimeDeadline);
-                
-                const newRecord: CheckInRecord = {
-                    studentId: randomStudent.id,
-                    studentName: randomStudent.name,
-                    classId: classId,
-                    checkedInAt: now.toISOString(),
-                    isOnTime: isOnTime,
-                };
-
-                const updatedLog = [...prevLog, newRecord];
-                
-                // Toast for each check-in
-                toast({
-                    description: `${newRecord.studentName} just checked in for "${sessionNameParam}" ${newRecord.isOnTime ? 'on time' : 'late'}!`
-                });
-
-                return updatedLog;
             });
-        }, 3000); // Check in a new student every 3 seconds
+            
+            setCheckInLog(prevLog => [...prevLog, ...newRecords].sort((a,b) => b.checkedInAt.toMillis() - a.checkedInAt.toMillis()));
+        });
 
-        return () => clearInterval(interval);
-    }, [isSessionOver, onTimeDeadline, totalStudents, toast, sessionNameParam, classId]);
+        return () => unsubscribe();
+    }, [classId, sessionNameParam, toast]);
+
 
     const { onTimeCount, lateCount } = useMemo(() => {
         return checkInLog.reduce((acc, cur) => {
@@ -139,6 +119,7 @@ export default function CheckInPage({ params }: { params: { classId: string }}) 
                 className: 'bg-yellow-500 text-white',
                 duration: 10000,
             });
+            // In a real app, you would now write these bonus points to each student in Firestore
         }
     }, [allOnTime, bonusAwarded, toast]);
 
@@ -209,3 +190,5 @@ export default function CheckInPage({ params }: { params: { classId: string }}) 
         </div>
     );
 }
+
+    

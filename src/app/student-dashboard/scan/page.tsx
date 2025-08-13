@@ -9,34 +9,49 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rss } from 'lucide-react';
 import Link from 'next/link';
 import { isBefore, parseISO } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
 
 export default function ScanPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [error, setError] = useState<string | null>(null);
 
-    const handleResult = (result: any, error: any) => {
+    const handleResult = async (result: any, error: any) => {
         if (!!result) {
             try {
                 const data = JSON.parse(result.text);
 
-                // Validate the QR code structure
+                // This is a mock student for the demo. In a real app, you'd get this from the logged-in user's state.
+                const mockStudent = { id: 'stu_5', name: 'Emily Suzuki' };
+
                 if (data && data.type === 'class-check-in' && data.points && data.name && data.onTimeUntil) {
                     
                     const now = new Date();
                     const onTimeDeadline = parseISO(data.onTimeUntil);
                     const isOnTime = isBefore(now, onTimeDeadline);
                     
+                    const pointsAwarded = isOnTime ? data.points : 0;
+
+                    // Create a new check-in record in Firestore
+                    await addDoc(collection(db, "checkIns"), {
+                        studentId: mockStudent.id,
+                        studentName: mockStudent.name,
+                        classId: data.classId,
+                        sessionName: data.name,
+                        checkedInAt: Timestamp.fromDate(now),
+                        isOnTime: isOnTime,
+                        pointsAwarded: pointsAwarded
+                    });
+                    
                     if (isOnTime) {
-                        // Store points in localStorage to be picked up by the dashboard
-                        localStorage.setItem('lastScannedPoints', data.points.toString());
+                        localStorage.setItem('lastScannedPoints', pointsAwarded.toString());
                         toast({
                             title: 'Checked In On Time!',
-                            description: `You earned ${data.points} points for "${data.name}".`,
+                            description: `You earned ${pointsAwarded} points for "${data.name}".`,
                             className: 'bg-green-500 text-white',
                         });
                     } else {
-                        // Still "check in" but award no points
                          localStorage.setItem('lastScannedPoints', '0');
                          toast({
                             title: 'Checked In Late',
@@ -47,7 +62,7 @@ export default function ScanPage() {
                     
                     router.push('/student-dashboard');
 
-                } else if (data && data.points && data.name && data.expires) { // Handle old QR code format
+                } else if (data && data.points && data.name && data.expires) { // Handle old QR code format for other activities
                     const expires = new Date(data.expires);
                     if (expires < new Date()) {
                          toast({
@@ -58,14 +73,11 @@ export default function ScanPage() {
                         router.push('/student-dashboard');
                         return;
                     }
-                     // Store points in localStorage to be picked up by the dashboard
                     localStorage.setItem('lastScannedPoints', data.points.toString());
-                    
                     toast({
                         title: 'Success!',
                         description: `You earned ${data.points} points for "${data.name}".`,
                     });
-                    
                     router.push('/student-dashboard');
                 }
                 
@@ -125,3 +137,4 @@ export default function ScanPage() {
     );
 }
 
+    

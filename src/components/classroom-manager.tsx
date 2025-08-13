@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,6 +25,9 @@ import { PlusCircle, MinusCircle, Loader2, Download, Check, Play } from 'lucide-
 import { format, addMinutes } from 'date-fns';
 import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+
 
 // Mock data for students in a class
 const mockStudents = [
@@ -55,15 +58,13 @@ type PointsFormValues = z.infer<typeof pointsFormSchema>;
 type CheckInFormValues = z.infer<typeof checkInFormSchema>;
 type Student = typeof mockStudents[0];
 
-// Using mock data for check-in log as we transition to Firestore
-const mockCheckInLog: CheckInRecord[] = [];
-
 interface CheckInRecord {
     studentId: string;
     studentName: string;
     classId: string;
-    checkedInAt: string; // ISO String
+    checkedInAt: Timestamp; // Changed to Firestore Timestamp
     sessionName: string;
+    isOnTime: boolean;
 }
 
 export function ClassroomManager({ classId }: { classId: string }) {
@@ -76,7 +77,33 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const { toast } = useToast();
   const router = useRouter();
   
-  const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>(mockCheckInLog);
+  const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
+
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+
+    const q = query(
+        collection(db, "checkIns"), 
+        where("classId", "==", classId),
+        where("checkedInAt", ">=", Timestamp.fromDate(today)),
+        where("checkedInAt", "<", Timestamp.fromDate(tomorrow))
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const newCheckIns: CheckInRecord[] = [];
+        querySnapshot.forEach((doc) => {
+            newCheckIns.push(doc.data() as CheckInRecord);
+        });
+        // Sort by most recent check-in
+        newCheckIns.sort((a, b) => b.checkedInAt.toMillis() - a.checkedInAt.toMillis());
+        setCheckInLog(newCheckIns);
+    });
+
+    return () => unsubscribe(); // Cleanup listener on unmount
+  }, [classId]);
 
   const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
 
@@ -149,13 +176,14 @@ export function ClassroomManager({ classId }: { classId: string }) {
     }
     
     const filename = `check-in_${className.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    const csvHeader = "Student Name,Session,Date,Time\n";
+    const csvHeader = "Student Name,Session,Date,Time,On Time\n";
     const csvRows = checkInLog.map(r => {
-        const d = new Date(r.checkedInAt);
+        const d = r.checkedInAt.toDate(); // Convert Firestore Timestamp to JS Date
         const date = format(d, 'PPP');
         const time = format(d, 'p');
         const session = r.sessionName || 'Check-in';
-        return `"${r.studentName}","${session}","${date}","${time}"`;
+        const onTime = r.isOnTime ? 'Yes' : 'No';
+        return `"${r.studentName}","${session}","${date}","${time}","${onTime}"`;
     }).join("\n");
 
     const csvContent = csvHeader + csvRows;
@@ -312,11 +340,11 @@ export function ClassroomManager({ classId }: { classId: string }) {
                             </TableRow>
                         </TableHeader>
                          <TableBody>
-                            {checkInLog.slice().reverse().map((record, index) => (
+                            {checkInLog.map((record, index) => (
                                 <TableRow key={`${record.studentId}-${index}`}>
                                     <TableCell className="font-medium">{record.studentName}</TableCell>
                                     <TableCell>{record.sessionName || 'Check-in'}</TableCell>
-                                    <TableCell className="text-right">{format(new Date(record.checkedInAt), 'p')}</TableCell>
+                                    <TableCell className="text-right">{format(record.checkedInAt.toDate(), 'p')}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -380,3 +408,5 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
+    
