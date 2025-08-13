@@ -25,7 +25,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from '@/components/ui/badge';
@@ -273,7 +272,7 @@ export default function StudentDashboardPage() {
                     />
 
                     <div className="grid gap-4 sm:grid-cols-3">
-                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
+                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
                             <CardContent className="flex items-center justify-center p-6">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-full bg-primary/10 text-primary">
@@ -286,7 +285,7 @@ export default function StudentDashboardPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
                              <CardContent className="flex items-center justify-center p-6">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-full bg-primary/10 text-primary">
@@ -299,7 +298,7 @@ export default function StudentDashboardPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
                              <CardContent className="flex items-center justify-center p-6">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-full bg-primary/10 text-primary">
@@ -390,5 +389,7 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
 
     
