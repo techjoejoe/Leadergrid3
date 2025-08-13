@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Rss } from 'lucide-react';
 import Link from 'next/link';
+import { isBefore, parseISO } from 'date-fns';
 
 export default function ScanPage() {
     const router = useRouter();
@@ -18,10 +19,35 @@ export default function ScanPage() {
         if (!!result) {
             try {
                 const data = JSON.parse(result.text);
-                if (data && data.points && data.name) {
-                    // In a real app, you'd verify the QR code signature/ID with a server
-                    // to prevent tampering and ensure it hasn't been used before.
+
+                // Validate the QR code structure
+                if (data && data.type === 'class-check-in' && data.points && data.name && data.onTimeUntil) {
                     
+                    const now = new Date();
+                    const onTimeDeadline = parseISO(data.onTimeUntil);
+                    const isOnTime = isBefore(now, onTimeDeadline);
+                    
+                    if (isOnTime) {
+                        // Store points in localStorage to be picked up by the dashboard
+                        localStorage.setItem('lastScannedPoints', data.points.toString());
+                        toast({
+                            title: 'Checked In On Time!',
+                            description: `You earned ${data.points} points for "${data.name}".`,
+                            className: 'bg-green-500 text-white',
+                        });
+                    } else {
+                        // Still "check in" but award no points
+                         localStorage.setItem('lastScannedPoints', '0');
+                         toast({
+                            title: 'Checked In Late',
+                            description: `You've been checked in for "${data.name}", but no points were awarded.`,
+                            variant: 'destructive',
+                        });
+                    }
+                    
+                    router.push('/student-dashboard');
+
+                } else if (data && data.points && data.name && data.expires) { // Handle old QR code format
                     const expires = new Date(data.expires);
                     if (expires < new Date()) {
                          toast({
@@ -32,8 +58,7 @@ export default function ScanPage() {
                         router.push('/student-dashboard');
                         return;
                     }
-
-                    // Store points in localStorage to be picked up by the dashboard
+                     // Store points in localStorage to be picked up by the dashboard
                     localStorage.setItem('lastScannedPoints', data.points.toString());
                     
                     toast({
@@ -42,12 +67,13 @@ export default function ScanPage() {
                     });
                     
                     router.push('/student-dashboard');
-
-                } else {
-                   setError("Invalid QR code format.");
+                }
+                
+                else {
+                   setError("Invalid LeaderGrid QR code format.");
                 }
             } catch (e) {
-                setError("Not a valid JSON QR code.");
+                setError("Not a valid LeaderGrid QR code.");
             }
         }
 

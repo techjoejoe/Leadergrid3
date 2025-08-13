@@ -21,11 +21,12 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, MinusCircle, Loader2, QrCode, Download, Check, Play } from 'lucide-react';
+import { PlusCircle, MinusCircle, Loader2, QrCode, Download, Check, Play, Clock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 import { Progress } from './ui/progress';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 // Mock data for students in a class
 const mockStudents = [
@@ -42,12 +43,17 @@ const mockClassDetails = {
     "cls-3": { name: "Advanced Placement Calculus" },
 }
 
-const formSchema = z.object({
+const pointsFormSchema = z.object({
   points: z.coerce.number().int().min(1, "Points must be a positive number."),
   reason: z.string().min(1, "A reason for the adjustment is required."),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const checkInFormSchema = z.object({
+    onTime: z.string().min(1, "Please set an on-time arrival time."),
+});
+
+type PointsFormValues = z.infer<typeof pointsFormSchema>;
+type CheckInFormValues = z.infer<typeof checkInFormSchema>;
 type Student = typeof mockStudents[0];
 
 interface CheckInRecord {
@@ -61,9 +67,11 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const [students, setStudents] = useState(mockStudents);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
+  const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
   
   const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
 
@@ -81,10 +89,15 @@ export function ClassroomManager({ classId }: { classId: string }) {
   }, [classId]);
 
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const pointsForm = useForm<PointsFormValues>({
+    resolver: zodResolver(pointsFormSchema),
     defaultValues: { points: 10, reason: '' },
   });
+
+  const checkInForm = useForm<CheckInFormValues>({
+      resolver: zodResolver(checkInFormSchema),
+      defaultValues: { onTime: format(addMinutes(new Date(), 15), "HH:mm") },
+  })
 
   const handleOpenPointsDialog = (student: Student, type: 'add' | 'subtract') => {
     setSelectedStudent(student);
@@ -92,7 +105,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
     setIsPointsDialogOpen(true);
   };
 
-  const onPointsSubmit = (values: FormValues) => {
+  const onPointsSubmit = (values: PointsFormValues) => {
     if (!selectedStudent) return;
     setIsLoading(true);
 
@@ -118,9 +131,20 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
       setIsLoading(false);
       setIsPointsDialogOpen(false);
-      form.reset({ points: 10, reason: '' });
+      pointsForm.reset({ points: 10, reason: '' });
     }, 1000);
   };
+
+  const onCheckInSubmit = (values: CheckInFormValues) => {
+      const [hours, minutes] = values.onTime.split(':');
+      const onTimeDeadline = new Date();
+      onTimeDeadline.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+      // Clear the log for a new session
+      window.localStorage.removeItem(`checkInLog_${classId}`);
+      
+      router.push(`/dashboard/classes/${classId}/check-in?onTimeUntil=${onTimeDeadline.toISOString()}`)
+  }
 
   const downloadCSV = () => {
     if (checkInLog.length === 0) {
@@ -206,12 +230,46 @@ export function ClassroomManager({ classId }: { classId: string }) {
                 <CardDescription>Launch a fullscreen display for students to check into this class.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Button asChild className="w-full">
-                    <Link href={`/dashboard/classes/${classId}/check-in`}>
-                        <Play className="mr-2 h-4 w-4" />
-                        Launch Fullscreen Check-in
-                    </Link>
-                </Button>
+                <Dialog open={isCheckInDialogOpen} onOpenChange={setIsCheckInDialogOpen}>
+                    <DialogTrigger asChild>
+                         <Button className="w-full">
+                            <Play className="mr-2 h-4 w-4" />
+                            Launch Fullscreen Check-in
+                         </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Set On-Time Deadline</DialogTitle>
+                            <DialogDescription>
+                                Students must check in by this time to receive points. Late check-ins will still be recorded.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Form {...checkInForm}>
+                            <form onSubmit={checkInForm.handleSubmit(onCheckInSubmit)} className="space-y-4">
+                                <FormField
+                                    control={checkInForm.control}
+                                    name="onTime"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>On-time until</FormLabel>
+                                            <FormControl>
+                                                <Input type="time" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <DialogFooter>
+                                    <Button type="button" variant="ghost" onClick={() => setIsCheckInDialogOpen(false)}>Cancel</Button>
+                                    <Button type="submit">
+                                        <Play className="mr-2 h-4 w-4" />
+                                        Launch Session
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </Form>
+                    </DialogContent>
+                </Dialog>
             </CardContent>
         </Card>
         <Card>
@@ -231,7 +289,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                  {checkInLog.length === 0 ? (
                     <div className='flex flex-col items-center justify-center text-center text-sm text-muted-foreground h-24'>
                         <Check className="h-8 w-8 mb-2" />
-                        <p>No check-ins yet.</p>
+                        <p>No check-ins yet for this session.</p>
                     </div>
                  ) : (
                     <Table>
@@ -265,10 +323,10 @@ export function ClassroomManager({ classId }: { classId: string }) {
               Enter the number of points and a reason for the adjustment.
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onPointsSubmit)} className="space-y-4">
+          <Form {...pointsForm}>
+            <form onSubmit={pointsForm.handleSubmit(onPointsSubmit)} className="space-y-4">
               <FormField
-                control={form.control}
+                control={pointsForm.control}
                 name="points"
                 render={({ field }) => (
                   <FormItem>
@@ -281,7 +339,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                 )}
               />
               <FormField
-                control={form.control}
+                control={pointsForm.control}
                 name="reason"
                 render={({ field }) => (
                   <FormItem>

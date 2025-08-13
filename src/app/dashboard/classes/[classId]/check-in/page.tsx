@@ -2,14 +2,15 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle, Award } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Award, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import Confetti from 'react-confetti';
 import { Progress } from '@/components/ui/progress';
+import { addMinutes, format, isBefore, parseISO } from 'date-fns';
 
 // Mock data - In a real app, you'd fetch this based on the classId
 const mockStudents = [
@@ -31,21 +32,27 @@ interface CheckInRecord {
     studentName: string;
     classId: string;
     checkedInAt: string; // ISO String
+    isOnTime: boolean;
 }
 
 const CHECK_IN_POINTS = 25;
+const BONUS_POINTS = 100;
 
 export default function CheckInPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const router = useRouter();
     const { toast } = useToast();
     const classId = Array.isArray(params.classId) ? params.classId[0] : params.classId;
 
     const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
-    const [allCheckedIn, setAllCheckedIn] = useState(false);
     const [qrValue, setQrValue] = useState('');
-    const prevCheckInLogLength = useRef(0);
+    const [isSessionOver, setIsSessionOver] = useState(false);
+    const [bonusAwarded, setBonusAwarded] = useState(false);
     
+    const onTimeUntilParam = searchParams.get('onTimeUntil');
+    const onTimeDeadline = onTimeUntilParam ? parseISO(onTimeUntilParam) : addMinutes(new Date(), 5);
+
     const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
     const totalStudents = mockStudents.length;
 
@@ -55,47 +62,59 @@ export default function CheckInPage() {
             type: 'class-check-in',
             classId: classId,
             className: className,
-            timestamp: Date.now()
+            timestamp: new Date().toISOString(),
+            onTimeUntil: onTimeDeadline.toISOString(),
+            points: CHECK_IN_POINTS
         }));
 
         try {
             const storedLog = window.localStorage.getItem(`checkInLog_${classId}`);
             if (storedLog) {
-                const parsedLog = JSON.parse(storedLog);
+                const parsedLog: CheckInRecord[] = JSON.parse(storedLog);
                 setCheckInLog(parsedLog);
-                prevCheckInLogLength.current = parsedLog.length;
                 if (parsedLog.length >= totalStudents) {
-                    setAllCheckedIn(true);
+                    setIsSessionOver(true);
                 }
+            } else {
+                 // Clear log for new session
+                window.localStorage.removeItem(`checkInLog_${classId}`);
             }
         } catch (error) {
             console.error("Failed to load check-in log from localStorage", error);
         }
-    }, [classId, className, totalStudents]);
+    }, [classId, className, onTimeDeadline]);
 
     // Simulate students checking in
     useEffect(() => {
-        if (allCheckedIn) return;
+        if (isSessionOver) return;
 
         const interval = setInterval(() => {
             setCheckInLog(prevLog => {
-                const uncheckedStudents = mockStudents.filter(s => !prevLog.some(log => log.studentId === s.id));
-                if (uncheckedStudents.length === 0) {
+                if (prevLog.length >= totalStudents) {
                     clearInterval(interval);
-                    if (!allCheckedIn) {
-                        setAllCheckedIn(true);
-                    }
+                    setIsSessionOver(true);
                     return prevLog;
                 }
 
+                const uncheckedStudents = mockStudents.filter(s => !prevLog.some(log => log.studentId === s.id));
                 const randomStudent = uncheckedStudents[Math.floor(Math.random() * uncheckedStudents.length)];
+                
+                // Simulate some students being late
+                const now = new Date();
+                const isOnTime = isBefore(now, onTimeDeadline);
+                
                 const newRecord: CheckInRecord = {
                     studentId: randomStudent.id,
                     studentName: randomStudent.name,
                     classId: classId,
-                    checkedInAt: new Date().toISOString(),
+                    checkedInAt: now.toISOString(),
+                    isOnTime: isOnTime,
                 };
                 
+                toast({
+                    description: `${newRecord.studentName} just checked in ${isOnTime ? 'on time' : 'late'}!`
+                });
+
                 const updatedLog = [...prevLog, newRecord];
 
                 try {
@@ -104,38 +123,41 @@ export default function CheckInPage() {
 
                 return updatedLog;
             });
-        }, 5000); // Check in a new student every 5 seconds
+        }, 3000); // Check in a new student every 3 seconds
 
         return () => clearInterval(interval);
-    }, [classId, allCheckedIn]);
+    }, [classId, isSessionOver, onTimeDeadline, totalStudents]);
 
-    // Effect to show toasts when a student checks in or when all are checked in
-    useEffect(() => {
-        if (checkInLog.length > prevCheckInLogLength.current) {
-            const newRecord = checkInLog[checkInLog.length - 1];
-            toast({
-                description: `${newRecord.studentName} just checked in!`
-            });
-        }
-        
-        if (allCheckedIn) {
-            toast({
-                title: 'Congratulations!',
-                description: `All students checked in! Everyone gets ${CHECK_IN_POINTS} points.`,
-                className: 'bg-green-500 text-white',
-            });
-        }
 
-        prevCheckInLogLength.current = checkInLog.length;
-
-    }, [checkInLog, allCheckedIn, toast]);
-
+    const { onTimeCount, lateCount } = useMemo(() => {
+        return checkInLog.reduce((acc, cur) => {
+            if(cur.isOnTime) acc.onTimeCount++;
+            else acc.lateCount++;
+            return acc;
+        }, { onTimeCount: 0, lateCount: 0 });
+    }, [checkInLog]);
 
     const checkedInPercentage = (checkInLog.length / totalStudents) * 100;
+    const allCheckedIn = checkInLog.length === totalStudents;
+    const allOnTime = allCheckedIn && onTimeCount === totalStudents;
+
+     // Effect to award bonus
+    useEffect(() => {
+        if (allOnTime && !bonusAwarded) {
+            setBonusAwarded(true);
+            toast({
+                title: 'BONUS AWARDED!',
+                description: `All students checked in on time! Everyone gets an extra ${BONUS_POINTS} points.`,
+                className: 'bg-yellow-500 text-white',
+                duration: 10000,
+            });
+        }
+    }, [allOnTime, bonusAwarded, toast]);
+
 
     return (
         <div className="relative flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-4 overflow-hidden">
-            {allCheckedIn && <Confetti recycle={false} numberOfPieces={500} />}
+            {allOnTime && <Confetti recycle={false} numberOfPieces={800} gravity={0.2} />}
             <div className="absolute top-4 left-4">
                 <Button variant="outline" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
                     <Link href={`/dashboard/classes/${classId}`}>
@@ -148,12 +170,16 @@ export default function CheckInPage() {
             <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
                 <div className="flex flex-col items-center text-center">
                      <h1 className="text-4xl font-bold font-headline mb-2">Check-in for {className}</h1>
-                    <p className="text-lg text-slate-400 mb-6">Scan the code below to mark your attendance.</p>
+                    <p className="text-lg text-slate-400 mb-6">Scan the code to mark your attendance.</p>
+                     <div className="flex items-center gap-2 text-yellow-400 mb-4 text-lg">
+                        <Clock className="h-5 w-5" />
+                        <span>On-time until: {format(onTimeDeadline, 'p')}</span>
+                    </div>
                     <div className="p-6 bg-white rounded-lg shadow-2xl shadow-cyan-500/20">
                         {qrValue ? (
-                           <QRCodeSVG value={qrValue} size={320} includeMargin />
+                           <QRCodeSVG value={qrValue} size={280} includeMargin />
                         ) : (
-                           <div className="w-[320px] h-[320px] bg-gray-200 animate-pulse" />
+                           <div className="w-[280px] h-[280px] bg-gray-200 animate-pulse" />
                         )}
                     </div>
                 </div>
@@ -163,20 +189,27 @@ export default function CheckInPage() {
                     <Progress value={checkedInPercentage} className="mb-4 h-3 bg-slate-700" />
                     
                     {allCheckedIn && (
-                        <div className="flex flex-col items-center text-center p-8 bg-green-500/10 border-2 border-dashed border-green-500/50 rounded-lg">
-                            <Award className="h-16 w-16 text-green-400 mb-4" />
-                            <h3 className="text-2xl font-bold">All Students Checked In!</h3>
-                            <p className="text-green-300">Great job, everyone! {CHECK_IN_POINTS} points awarded.</p>
+                        <div className={`flex flex-col items-center text-center p-8 border-2 border-dashed rounded-lg ${allOnTime ? 'bg-green-500/10 border-green-500/50' : 'bg-yellow-500/10 border-yellow-500/50'}`}>
+                            <Award className={`h-16 w-16 mb-4 ${allOnTime ? 'text-green-400' : 'text-yellow-400'}`} />
+                            <h3 className="text-2xl font-bold">{allOnTime ? "Perfect Punctuality!" : "Check-in Complete!"}</h3>
+                             {allOnTime ? (
+                                <p className="text-green-300">Great job, everyone! Bonus points awarded.</p>
+                            ) : (
+                                <p className="text-yellow-300">Everyone is checked in. {onTimeCount} on time, {lateCount} late.</p>
+                            )}
                         </div>
                     )}
                     
                     {!allCheckedIn && (
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-3 max-h-[400px] overflow-y-auto pr-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-h-[400px] overflow-y-auto pr-2">
                             {mockStudents.map(student => {
-                                const isCheckedIn = checkInLog.some(log => log.studentId === student.id);
+                                const record = checkInLog.find(log => log.studentId === student.id);
+                                const isCheckedIn = !!record;
+                                const isOnTime = record?.isOnTime ?? false;
+                                
                                 return (
-                                    <div key={student.id} className={`flex items-center gap-3 p-2 rounded-md transition-all duration-300 ${isCheckedIn ? 'bg-green-500/20 text-white' : 'bg-slate-700/50 text-slate-400'}`}>
-                                        <CheckCircle className={`h-5 w-5 transition-all duration-300 ${isCheckedIn ? 'text-green-400' : 'text-slate-600'}`} />
+                                    <div key={student.id} className={`flex items-center gap-3 p-2 rounded-md transition-all duration-300 ${isCheckedIn ? (isOnTime ? 'bg-green-500/20 text-white' : 'bg-yellow-500/20 text-white') : 'bg-slate-700/50 text-slate-400'}`}>
+                                        <CheckCircle className={`h-5 w-5 transition-all duration-300 ${isCheckedIn ? (isOnTime ? 'text-green-400' : 'text-yellow-500') : 'text-slate-600'}`} />
                                         <span className="font-medium">{student.name}</span>
                                     </div>
                                 )
