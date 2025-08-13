@@ -10,6 +10,7 @@ import {
     Building,
     User as UserIcon,
     Loader2,
+    QrCode,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -146,6 +147,16 @@ export default function StudentDashboardPage() {
             }
         }
 
+        try {
+            const pointsFromScan = localStorage.getItem('lastScannedPoints');
+            if (pointsFromScan) {
+                setStudentData(prevData => ({ ...prevData, points: prevData.points + parseInt(pointsFromScan, 10) }));
+                localStorage.removeItem('lastScannedPoints');
+            }
+        } catch (error) {
+             console.error("Failed to process points from localStorage", error);
+        }
+
         return () => unsubscribe();
     }, [auth, router, isClient]);
 
@@ -207,7 +218,13 @@ export default function StudentDashboardPage() {
         <>
         <div className="flex flex-col min-h-dvh bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900">
             <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-14 max-w-screen-2xl items-center justify-end">
+                <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
+                     <Button asChild variant="outline">
+                        <Link href="/student-dashboard/scan">
+                            <QrCode className="mr-2 h-4 w-4" />
+                            Scan QR Code
+                        </Link>
+                    </Button>
                     <div className="flex items-center gap-4">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
