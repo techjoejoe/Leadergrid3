@@ -123,6 +123,11 @@ export default function StudentLoginPage() {
                             <Button type="submit" className="w-full" disabled={isLoading}>
                                 {isLoading ? <Loader2 className="animate-spin" /> : 'Login'}
                             </Button>
+                            <Button variant="outline" className="w-full" asChild>
+                                <Link href="/student-dashboard">
+                                    Pretend to Login as Student
+                                </Link>
+                            </Button>
                              <div className="mt-4 text-center text-sm">
                                 Forgot your password?{" "}
                                 <Link href="#" className="underline">
