@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Loader2, QrCode, CalendarIcon } from 'lucide-react';
+import { Download, Loader2, QrCode, CalendarIcon, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
@@ -19,6 +19,17 @@ import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const formSchema = z.object({
   name: z.string().min(1, 'QR Code name is required.'),
@@ -146,6 +157,15 @@ export function QrCodeGenerator() {
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
+  }
+
+  const handleDeleteCode = (codeToDelete: GeneratedQrCode) => {
+    setGeneratedCodes((prevCodes) => prevCodes.filter(code => code.id !== codeToDelete.id));
+    toast({
+        title: "QR Code Deleted",
+        description: `The code "${codeToDelete.name}" has been removed.`,
+        variant: "destructive"
+    })
   }
 
   const getStatus = (expirationDate: string) => {
@@ -292,7 +312,7 @@ export function QrCodeGenerator() {
                                 <TableHead>Points</TableHead>
                                 <TableHead>Expires</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Action</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -327,11 +347,32 @@ export function QrCodeGenerator() {
                                             {getStatus(code.expirationDate)}
                                         </Badge>
                                    </TableCell>
-                                   <TableCell className="text-right">
-                                       <Button variant="outline" size="sm" onClick={() => downloadQRCode(code)}>
-                                            <Download className="mr-2 h-4 w-4" />
-                                            Download
-                                        </Button>
+                                   <TableCell className="text-right space-x-1">
+                                       <Button variant="outline" size="icon" onClick={() => downloadQRCode(code)}>
+                                            <Download className="h-4 w-4" />
+                                       </Button>
+                                       <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="icon">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the
+                                                    QR code for "{code.name}".
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteCode(code)}>
+                                                    Delete
+                                                </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                    </TableCell>
                                </TableRow>
                                 )
