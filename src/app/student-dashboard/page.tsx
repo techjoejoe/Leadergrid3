@@ -103,6 +103,18 @@ export default function StudentDashboardPage() {
                     email: 'student@example.com',
                     photoURL: null,
                     uid: 'mock-user-id',
+                    // Make sure all necessary fields are present
+                    emailVerified: true,
+                    isAnonymous: false,
+                    metadata: {},
+                    providerData: [],
+                    providerId: "password",
+                    tenantId: null,
+                    delete: async () => {},
+                    getIdToken: async () => "",
+                    getIdTokenResult: async () => ({} as any),
+                    reload: async () => {},
+                    toJSON: () => ({}),
                 } as User;
                 setUser(mockUser);
                 setDisplayName('Student');
@@ -239,12 +251,6 @@ export default function StudentDashboardPage() {
                                     <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
                                         <UserIcon className="mr-2 h-4 w-4" />
                                         <span>Edit Profile</span>
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem asChild>
-                                        <Link href="/student-dashboard/settings">
-                                            <Activity className="mr-2 h-4 w-4" />
-                                            <span>Manage Classes</span>
-                                        </Link>
                                     </DropdownMenuItem>
                                 </DropdownMenuGroup>
                                 <DropdownMenuSeparator />
@@ -390,7 +396,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
-
-    
