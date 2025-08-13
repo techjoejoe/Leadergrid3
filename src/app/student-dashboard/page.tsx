@@ -26,6 +26,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -201,10 +202,12 @@ export default function StudentDashboardPage() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
-                                    <UserIcon className="mr-2 h-4 w-4" />
-                                    <span>Edit Profile</span>
-                                </DropdownMenuItem>
+                                <DropdownMenuGroup>
+                                    <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
+                                        <UserIcon className="mr-2 h-4 w-4" />
+                                        <span>Edit Profile</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuGroup>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout}>
                                     <LogOut className="mr-2 h-4 w-4" />
@@ -312,19 +315,19 @@ export default function StudentDashboardPage() {
                 </div>
             </main>
         </div>
-        {user && (
-            <ProfileEditor 
-                user={user}
-                open={isProfileEditorOpen} 
-                onOpenChange={setIsProfileEditorOpen}
-                onAvatarChange={setAvatarUrl}
-                currentAvatar={displayAvatar}
-                currentInitial={displayInitial}
-                currentDisplayName={displayName}
-                currentEmail={displayEmail}
-                storageKey="studentAvatar"
-            />
-        )}
+        <ProfileEditor 
+            user={user}
+            open={isProfileEditorOpen} 
+            onOpenChange={setIsProfileEditorOpen}
+            onAvatarChange={setAvatarUrl}
+            currentAvatar={displayAvatar}
+            currentInitial={displayInitial}
+            currentDisplayName={displayName}
+            currentEmail={displayEmail}
+            storageKey="studentAvatar"
+        />
         </>
     );
 }
+
+    
