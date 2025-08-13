@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { app } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button"
@@ -60,8 +60,12 @@ export default function StudentLoginPage() {
         setIsLoading(true);
         setError(null);
         try {
-            await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
-            // You can also update the user's profile with the name here if needed
+            const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
+            // Update the user's profile with the name
+            await updateProfile(userCredential.user, {
+                displayName: signupName
+            });
+            
             toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid!" });
             router.push('/student-dashboard');
         } catch (error: any) {
@@ -78,7 +82,7 @@ export default function StudentLoginPage() {
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-4">
         
         <Tabs defaultValue="login" className="w-full max-w-sm">
             <TabsList className="grid w-full grid-cols-2">
@@ -178,6 +182,7 @@ export default function StudentLoginPage() {
                 </Card>
             </TabsContent>
         </Tabs>
+         <Button variant="link" asChild><Link href="/">Back to Home</Link></Button>
     </div>
   )
 }

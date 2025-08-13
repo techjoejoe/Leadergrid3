@@ -33,16 +33,12 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 // Mock Data - this would eventually come from your database
-const initialStudent = {
-    name: 'Student',
-    email: 'student@example.com',
-    avatar: 'https://placehold.co/100x100.png?text=??',
-    initial: '??',
+const initialStudentData = {
     points: 8850,
     rank: 5,
 };
@@ -63,7 +59,7 @@ const recentActivity = [
 
 
 export default function StudentDashboardPage() {
-    const [student, setStudent] = useState(initialStudent);
+    const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -74,38 +70,18 @@ export default function StudentDashboardPage() {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                setStudent(prev => ({
-                    ...prev, 
-                    name: currentUser.displayName || 'Student',
-                    email: currentUser.email || 'student@example.com',
-                    initial: currentUser.displayName?.substring(0,2).toUpperCase() || '??',
-                    avatar: currentUser.photoURL || `https://placehold.co/100x100.png?text=${currentUser.displayName?.substring(0,2).toUpperCase() || '??'}`
-                }));
             } else {
                 router.push('/student-login');
             }
         });
         return () => unsubscribe();
     }, [auth, router]);
-
-    useEffect(() => {
-        if (user) {
-            try {
-                const savedAvatar = window.localStorage.getItem(`studentAvatar_${user.uid}`);
-                if (savedAvatar) {
-                    setStudent(prev => ({...prev, avatar: savedAvatar}));
-                }
-            } catch (error) {
-                console.error("Failed to load avatar from localStorage", error);
-            }
-        }
-    }, [user]);
-
+    
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!user) return;
         const file = event.target.files?.[0];
         if (file) {
@@ -127,17 +103,20 @@ export default function StudentDashboardPage() {
             }
 
             const reader = new FileReader();
-            reader.onloadend = () => {
+            reader.onloadend = async () => {
                 const base64String = reader.result as string;
-                setStudent(prev => ({ ...prev, avatar: base64String }));
                 try {
-                    window.localStorage.setItem(`studentAvatar_${user.uid}`, base64String);
+                    // Update Firebase profile
+                    await updateProfile(user, { photoURL: base64String });
+                    // Force a re-render by updating the user state
+                    setUser({ ...user }); 
+                    
                     toast({
                         title: "Profile Photo Updated!",
                         description: "Your new avatar has been saved."
                     });
                 } catch (error) {
-                    console.error("Failed to save avatar to localStorage", error);
+                    console.error("Failed to save avatar", error);
                     toast({
                         title: "Error",
                         description: "Could not save your new photo.",
@@ -166,6 +145,10 @@ export default function StudentDashboardPage() {
         }
     }
 
+    const displayName = user?.displayName || 'Student';
+    const displayEmail = user?.email || 'student@example.com';
+    const displayAvatar = user?.photoURL || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
+    const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     return (
         <div className="flex flex-col min-h-dvh bg-background">
@@ -187,17 +170,17 @@ export default function StudentDashboardPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                                     <Avatar>
-                                        <AvatarImage src={student.avatar} data-ai-hint="student smiling" />
-                                        <AvatarFallback>{student.initial}</AvatarFallback>
+                                        <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                        <AvatarFallback>{displayInitial}</AvatarFallback>
                                     </Avatar>
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end" forceMount>
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{student.name}</p>
+                                        <p className="text-sm font-medium leading-none">{displayName}</p>
                                         <p className="text-xs leading-none text-muted-foreground">
-                                            {student.email}
+                                            {displayEmail}
                                         </p>
                                     </div>
                                 </DropdownMenuLabel>
@@ -227,7 +210,7 @@ export default function StudentDashboardPage() {
                 <div className="max-w-4xl mx-auto space-y-6">
                     {/* Welcome Header */}
                     <div>
-                        <h1 className="text-3xl font-bold font-headline">Welcome Back, {student.name.split(' ')[0]}!</h1>
+                        <h1 className="text-3xl font-bold font-headline">Welcome Back, {displayName.split(' ')[0]}!</h1>
                         <p className="text-muted-foreground">Here's a summary of your progress and achievements.</p>
                     </div>
 
@@ -236,13 +219,13 @@ export default function StudentDashboardPage() {
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2"><Star className='h-4 w-4' /> Total Points</CardDescription>
-                                <CardTitle className="text-5xl font-bold">{student.points.toLocaleString()}</CardTitle>
+                                <CardTitle className="text-5xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
                             </CardHeader>
                         </Card>
                          <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2"><Crown className='h-4 w-4' /> Leaderboard Rank</CardDescription>
-                                <CardTitle className="text-5xl font-bold">#{student.rank}</CardTitle>
+                                <CardTitle className="text-5xl font-bold">#{studentData.rank}</CardTitle>
                             </CardHeader>
                         </Card>
                     </div>
