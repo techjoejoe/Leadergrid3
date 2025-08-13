@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -124,8 +124,8 @@ export function QrCodeGenerator() {
     if (!svgEl) {
         // Fallback for codes in the list which don't have a visible SVG
         const container = document.createElement('div');
+        container.style.display = 'none';
         document.body.appendChild(container);
-        const { QRCodeSVG } = require('qrcode.react');
         const { render } = require('react-dom');
         render(<QRCodeSVG id={`qr-code-svg-${code.id}-temp`} value={code.value} size={256} includeMargin={true} />, container);
         const tempSvgEl = document.getElementById(`qr-code-svg-${code.id}-temp`);
@@ -365,7 +365,7 @@ export function QrCodeGenerator() {
                                                 <AlertDialogDescription>
                                                     This action cannot be undone. This will permanently delete the
                                                     QR code for "{code.name}".
-                                                </Description>
+                                                </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -389,3 +389,5 @@ export function QrCodeGenerator() {
     </div>
   );
 }
+
+    
