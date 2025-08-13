@@ -209,11 +209,11 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     </TableCell>
                     <TableCell className="text-center font-bold text-lg">{student.points.toLocaleString()}</TableCell>
                     <TableCell className="text-right">
-                        <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
-                        <PlusCircle className="mr-2 h-4 w-4 text-green-500" /> Add
+                        <Button variant="outline" size="icon" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
+                          <PlusCircle className="h-4 w-4 text-green-500" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
-                        <MinusCircle className="mr-2 h-4 w-4 text-red-500" /> Subtract
+                        <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
+                          <MinusCircle className="h-4 w-4 text-red-500" />
                         </Button>
                     </TableCell>
                     </TableRow>
