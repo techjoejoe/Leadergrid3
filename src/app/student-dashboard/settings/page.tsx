@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, onAuthStateChanged, updateProfile, sendPasswordResetEmail, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, updateProfile, sendPasswordResetEmail, User, updateEmail } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -32,7 +32,9 @@ export default function StudentSettingsPage() {
 
     const [user, setUser] = useState<User | null>(null);
     const [displayName, setDisplayName] = useState('');
+    const [email, setEmail] = useState('');
     const [isLoadingName, setIsLoadingName] = useState(false);
+    const [isLoadingEmail, setIsLoadingEmail] = useState(false);
     const [isLoadingPassword, setIsLoadingPassword] = useState(false);
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
 
@@ -41,6 +43,7 @@ export default function StudentSettingsPage() {
             if (currentUser) {
                 setUser(currentUser);
                 setDisplayName(currentUser.displayName || '');
+                setEmail(currentUser.email || '');
             } else {
                 router.push('/student-login');
             }
@@ -60,7 +63,7 @@ export default function StudentSettingsPage() {
 
     const handleUpdateName = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user) return;
+        if (!user || user.displayName === displayName) return;
 
         setIsLoadingName(true);
         try {
@@ -79,6 +82,29 @@ export default function StudentSettingsPage() {
             setIsLoadingName(false);
         }
     };
+    
+    const handleUpdateEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || user.email === email) return;
+        
+        setIsLoadingEmail(true);
+        try {
+            await updateEmail(user, email);
+            toast({
+                title: 'Success!',
+                description: 'Your email has been updated. You may need to re-verify your new email address.',
+            });
+        } catch (error: any) {
+             toast({
+                title: 'Error updating email',
+                description: 'This is a sensitive operation. Please log out and log back in before changing your email.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsLoadingEmail(false);
+        }
+    }
+
 
     const handlePasswordReset = async () => {
         if (!user?.email) {
@@ -113,7 +139,6 @@ export default function StudentSettingsPage() {
         setJoinedClasses(updatedClasses);
         localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
 
-        // If the left class was the active one, update active class
         const activeClassCode = localStorage.getItem('activeClassCode');
         if (activeClassCode === classToLeave.code) {
              if (updatedClasses.length > 0) {
@@ -151,7 +176,7 @@ export default function StudentSettingsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="font-headline text-2xl">Profile Settings</CardTitle>
-                        <CardDescription>Manage your account details and password.</CardDescription>
+                        <CardDescription>Manage your account details. Your profile photo can be changed from the dashboard menu.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <form onSubmit={handleUpdateName} className="space-y-4">
@@ -167,6 +192,22 @@ export default function StudentSettingsPage() {
                             <Button type="submit" disabled={isLoadingName}>
                                 {isLoadingName && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Save Name
+                            </Button>
+                        </form>
+                         <form onSubmit={handleUpdateEmail} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email Address</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <Button type="submit" disabled={isLoadingEmail}>
+                                {isLoadingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Email
                             </Button>
                         </form>
                     </CardContent>
@@ -204,7 +245,7 @@ export default function StudentSettingsPage() {
                                             <AlertDialogHeader>
                                             <AlertDialogTitle>Are you sure you want to leave "{cls.name}"?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                This action cannot be undone. You will need to be re-invited or use the join code to join the class again.
+                                                This action cannot be undone. You will need to use the join code to join the class again.
                                             </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
