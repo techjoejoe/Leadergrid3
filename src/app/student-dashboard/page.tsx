@@ -70,7 +70,7 @@ export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-    const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>(mockJoinedClasses);
+    const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
     const { toast } = useToast();
@@ -127,7 +127,11 @@ export default function StudentDashboardPage() {
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses, newClass];
         setJoinedClasses(updatedClasses);
-        localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
+        try {
+            localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
+        } catch(e) {
+            console.error(e)
+        }
         
         handleActiveClassChange(newClass.code);
 
@@ -141,7 +145,11 @@ export default function StudentDashboardPage() {
         const newActiveClass = joinedClasses.find(c => c.code === classCode);
         if (newActiveClass) {
             setActiveClass(newActiveClass);
-            localStorage.setItem('activeClassCode', newActiveClass.code);
+             try {
+                localStorage.setItem('activeClassCode', newActiveClass.code);
+            } catch(e) {
+                console.error(e)
+            }
         }
     }
 
@@ -169,6 +177,7 @@ export default function StudentDashboardPage() {
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     return (
+        <>
         <div className="flex flex-col min-h-dvh bg-background">
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-end">
@@ -302,19 +311,20 @@ export default function StudentDashboardPage() {
 
                 </div>
             </main>
-            {user && (
-                <ProfileEditor 
-                    user={user}
-                    open={isProfileEditorOpen} 
-                    onOpenChange={setIsProfileEditorOpen}
-                    onAvatarChange={setAvatarUrl}
-                    currentAvatar={displayAvatar}
-                    currentInitial={displayInitial}
-                    currentDisplayName={displayName}
-                    currentEmail={displayEmail}
-                    storageKey="studentAvatar"
-                />
-            )}
         </div>
+        {user && (
+            <ProfileEditor 
+                user={user}
+                open={isProfileEditorOpen} 
+                onOpenChange={setIsProfileEditorOpen}
+                onAvatarChange={setAvatarUrl}
+                currentAvatar={displayAvatar}
+                currentInitial={displayInitial}
+                currentDisplayName={displayName}
+                currentEmail={displayEmail}
+                storageKey="studentAvatar"
+            />
+        )}
+        </>
     );
 }

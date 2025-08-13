@@ -39,7 +39,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 interface ProfileEditorProps {
-  user: User;
+  user: User | null; // Allow user to be null
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAvatarChange: (newAvatar: string) => void;
@@ -90,6 +90,7 @@ export function ProfileEditor({
   }, [open, currentDisplayName, currentEmail, form]);
 
   const handleUpdateProfile = async (values: ProfileFormValues) => {
+    if (!user) return;
     setIsLoading(true);
     try {
       if (values.displayName !== currentDisplayName) {
@@ -115,7 +116,7 @@ export function ProfileEditor({
   };
   
   const handlePasswordReset = async () => {
-      if (!user.email) return;
+      if (!user?.email) return;
       setIsLoadingPassword(true);
       try {
         await sendPasswordResetEmail(auth, user.email);
@@ -134,6 +135,7 @@ export function ProfileEditor({
   }
 
   const handleAvatarClick = () => {
+    if (!user) return;
     fileInputRef.current?.click();
   };
 
@@ -176,7 +178,7 @@ export function ProfileEditor({
   }
 
   const handleCropComplete = async () => {
-    if (completedCrop && imgRef.current) {
+    if (completedCrop && imgRef.current && user) {
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
         try {
             await updateProfile(user, { photoURL: croppedImageUrl });
@@ -225,9 +227,7 @@ export function ProfileEditor({
     return canvas.toDataURL('image/jpeg');
   }
 
-
   return (
-    <>
     <Dialog open={open} onOpenChange={(isOpen) => {
         if(!isOpen) {
             setIsCropping(false);
@@ -236,7 +236,11 @@ export function ProfileEditor({
         onOpenChange(isOpen);
     }}>
       <DialogContent className="sm:max-w-[480px]">
-        {!isCropping ? (
+        {!user ? (
+            <div className="flex items-center justify-center h-48">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        ) : !isCropping ? (
             <>
             <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
@@ -342,6 +346,5 @@ export function ProfileEditor({
         )}
       </DialogContent>
     </Dialog>
-    </>
   );
 }
