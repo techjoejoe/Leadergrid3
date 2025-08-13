@@ -115,7 +115,6 @@ export default {
         'pulse-slow': 'shimmer 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-medium': 'shimmer 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-fast': 'shimmer 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'shimmer': 'shimmer 3s infinite linear',
       },
       backgroundSize: {
         'shimmer-size': '200% 100%',
