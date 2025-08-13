@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { ScrollArea } from './ui/scroll-area';
 
 const formSchema = z.object({
   name: z.string().min(1, 'QR Code name is required.'),
@@ -304,54 +305,55 @@ export function QrCodeGenerator() {
                         <p className='font-semibold text-center'>Your generated QR codes will appear here.</p>
                     </div>
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[80px]">Preview</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Points</TableHead>
-                                <TableHead>Expires</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {generatedCodes.map((code) => {
-                                const date = new Date(code.expirationDate);
-                                const isValidDate = !isNaN(date.getTime());
-                                return (
-                                <TableRow key={code.id}>
-                                   <TableCell>
-                                        <div className="p-1 bg-white rounded-md w-14 h-14">
-                                            <QRCodeSVG
-                                                id={`qr-code-svg-${code.id}`} 
-                                                value={code.value} 
-                                                size={52}
-                                                includeMargin={false}
-                                            />
-                                        </div>
-                                   </TableCell>
-                                   <TableCell>
-                                        <div className='font-medium'>{code.name}</div>
-                                        <div className='text-sm text-muted-foreground'>{code.description}</div>
+                    <ScrollArea className="h-[450px]">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[80px]">Preview</TableHead>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Points</TableHead>
+                                    <TableHead>Expires</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {generatedCodes.map((code) => {
+                                    const date = new Date(code.expirationDate);
+                                    const isValidDate = !isNaN(date.getTime());
+                                    return (
+                                    <TableRow key={code.id}>
+                                    <TableCell>
+                                            <div className="p-1 bg-white rounded-md w-14 h-14">
+                                                <QRCodeSVG
+                                                    id={`qr-code-svg-${code.id}`} 
+                                                    value={code.value} 
+                                                    size={52}
+                                                    includeMargin={false}
+                                                />
+                                            </div>
                                     </TableCell>
-                                   <TableCell>
-                                        <Badge variant="secondary">{code.points} pts</Badge>
-                                   </TableCell>
-                                   <TableCell>{isValidDate ? format(date, "PPP") : "Invalid Date"}</TableCell>
-                                   <TableCell>
-                                        <Badge
-                                            variant={getStatus(code.expirationDate) === "Active" ? "default" : "destructive"}
-                                            className={getStatus(code.expirationDate) === 'Active' ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}
-                                        >
-                                            {getStatus(code.expirationDate)}
-                                        </Badge>
-                                   </TableCell>
-                                   <TableCell className="text-right space-x-1">
-                                       <Button variant="outline" size="icon" onClick={() => downloadQRCode(code)}>
+                                    <TableCell>
+                                            <div className='font-medium'>{code.name}</div>
+                                            <div className='text-sm text-muted-foreground'>{code.description}</div>
+                                        </TableCell>
+                                    <TableCell>
+                                            <Badge variant="secondary">{code.points} pts</Badge>
+                                    </TableCell>
+                                    <TableCell>{isValidDate ? format(date, "PPP") : "Invalid Date"}</TableCell>
+                                    <TableCell>
+                                            <Badge
+                                                variant={getStatus(code.expirationDate) === "Active" ? "default" : "destructive"}
+                                                className={getStatus(code.expirationDate) === 'Active' ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}
+                                            >
+                                                {getStatus(code.expirationDate)}
+                                            </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right space-x-1">
+                                    <Button variant="outline" size="icon" onClick={() => downloadQRCode(code)}>
                                             <Download className="h-4 w-4" />
-                                       </Button>
-                                       <AlertDialog>
+                                    </Button>
+                                    <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="destructive" size="icon">
                                                     <Trash2 className="h-4 w-4" />
@@ -363,7 +365,7 @@ export function QrCodeGenerator() {
                                                 <AlertDialogDescription>
                                                     This action cannot be undone. This will permanently delete the
                                                     QR code for "{code.name}".
-                                                </AlertDialogDescription>
+                                                </Description>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -373,12 +375,13 @@ export function QrCodeGenerator() {
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
-                                   </TableCell>
-                               </TableRow>
-                                )
-                            })}
-                        </TableBody>
-                    </Table>
+                                    </TableCell>
+                                    </TableRow>
+                                    )
+                                })}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
                 )}
             </CardContent>
         </Card>
