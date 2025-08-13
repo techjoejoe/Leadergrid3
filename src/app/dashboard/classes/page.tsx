@@ -8,7 +8,7 @@ import { CreateClassForm, Class } from "@/components/create-class-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +21,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 
 // Mock data for initial classes
@@ -52,6 +54,7 @@ const initialClasses: Class[] = [
 export default function ClassesPage() {
     const [classes, setClasses] = useState<Class[]>(initialClasses);
     const { toast } = useToast();
+    const router = useRouter();
 
     const handleAddClass = (newClass: Class) => {
         setClasses((prevClasses) => [newClass, ...prevClasses]);
@@ -97,7 +100,7 @@ export default function ClassesPage() {
                     <TableBody>
                         {classes.length > 0 ? (
                             classes.map((cls) => (
-                                <TableRow key={cls.id}>
+                                <TableRow key={cls.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => router.push(`/dashboard/classes/${cls.id}`)}>
                                     <TableCell className="font-medium">{cls.name}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary">{cls.joinCode}</Badge>
@@ -117,8 +120,13 @@ export default function ClassesPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
+                                        <Button variant="outline" size="sm" asChild onClick={(e) => e.stopPropagation()}>
+                                            <Link href={`/dashboard/classes/${cls.id}`}>
+                                                Manage
+                                            </Link>
+                                        </Button>
+                                        <AlertDialog onOpenChange={(e) => e.stopPropagation()}>
+                                            <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
                                                 <Button variant="ghost" size="icon">
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
