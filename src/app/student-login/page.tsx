@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { Logo } from "@/components/logo";
 
 
 export default function StudentLoginPage() {
@@ -80,7 +79,7 @@ export default function StudentLoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-6">
-        <Logo />
+        
         <Tabs defaultValue="login" className="w-full max-w-sm">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>

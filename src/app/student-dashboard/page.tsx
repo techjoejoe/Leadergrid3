@@ -36,7 +36,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { Logo } from '@/components/logo';
 
 // Mock Data - this would eventually come from your database
 const initialStudent = {
@@ -174,7 +173,7 @@ export default function StudentDashboardPage() {
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
                     <div className="mr-6">
-                        <Logo />
+                        
                     </div>
                     <div className="flex items-center gap-4">
                         <input
