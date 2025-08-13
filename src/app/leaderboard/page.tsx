@@ -10,17 +10,28 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const initialLeaderboardData = [
-  { rank: 1, name: "Leo D.", points: 10500, avatar: "https://placehold.co/100x100.png", initial: "LD", hint: "student portrait" },
-  { rank: 2, name: "Frencha D.", points: 9800, avatar: "https://placehold.co/80x80.png", initial: "FD", hint: "student smiling" },
-  { rank: 3, name: "Hanna F.", points: 9750, avatar: "https://placehold.co/80x80.png", initial: "HF", hint: "person reading" },
-  { rank: 4, name: "David L.", points: 8900, avatar: "https://placehold.co/40x40.png", initial: "DL", hint: "student glasses" },
-  { rank: 5, name: "Emily S.", points: 8850, avatar: "https://placehold.co/40x40.png", initial: "ES", hint: "person nature" },
-  { rank: 6, name: "Frank G.", points: 8200, avatar: "https://placehold.co/40x40.png", initial: "FG", hint: "student sports" },
-  { rank: 7, name: "Grace H.", points: 7900, avatar: "https://placehold.co/40x40.png", initial: "GH", hint: "student art" },
-  { rank: 8, name: "Ivy J.", points: 7600, avatar: "https://placehold.co/40x40.png", initial: "IJ", hint: "student nature" },
-  { rank: 9, name: "Kevin M.", points: 7350, avatar: "https://placehold.co/40x40.png", initial: "KM", hint: "student glasses" },
-  { rank: 10, name: "Laura N.", points: 7100, avatar: "https://placehold.co/40x40.png", initial: "LN", hint: "student art" },
+  { rank: 1, name: "Leo DiCaprio", points: 10500, avatar: "https://placehold.co/100x100.png", initial: "LD", hint: "student portrait" },
+  { rank: 2, name: "Frencha Dressler", points: 9800, avatar: "https://placehold.co/80x80.png", initial: "FD", hint: "student smiling" },
+  { rank: 3, name: "Hanna Fowler", points: 9750, avatar: "https://placehold.co/80x80.png", initial: "HF", hint: "person reading" },
+  { rank: 4, name: "David Lee", points: 8900, avatar: "https://placehold.co/40x40.png", initial: "DL", hint: "student glasses" },
+  { rank: 5, name: "Emily Suzuki", points: 8850, avatar: "https://placehold.co/40x40.png", initial: "ES", hint: "person nature" },
+  { rank: 6, name: "Frank Gomez", points: 8200, avatar: "https://placehold.co/40x40.png", initial: "FG", hint: "student sports" },
+  { rank: 7, name: "Grace Hopper", points: 7900, avatar: "https://placehold.co/40x40.png", initial: "GH", hint: "student art" },
+  { rank: 8, name: "Ivy Jones", points: 7600, avatar: "https://placehold.co/40x40.png", initial: "IJ", hint: "student nature" },
+  { rank: 9, name: "Kevin Mitnick", points: 7350, avatar: "https://placehold.co/40x40.png", initial: "KM", hint: "student glasses" },
+  { rank: 10, name: "Laura Nyro", points: 7100, avatar: "https://placehold.co/40x40.png", initial: "LN", hint: "student art" },
 ];
+
+const formatName = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length > 1) {
+        const firstName = parts[0];
+        const lastName = parts[parts.length - 1];
+        return `${firstName} ${lastName.charAt(0)}.`;
+    }
+    return name;
+}
+
 
 const PodiumPlace = ({ user, place }: { user: typeof initialLeaderboardData[0], place: number }) => {
     const isFirst = place === 1;
@@ -42,7 +53,7 @@ const PodiumPlace = ({ user, place }: { user: typeof initialLeaderboardData[0], 
                 </Avatar>
                 {isFirst && <Crown className="absolute -top-4 -right-2 h-8 w-8 text-yellow-400 rotate-12" />}
             </div>
-            <h3 className="mt-2 text-lg font-bold text-white">{user.name}</h3>
+            <h3 className="mt-2 text-lg font-bold text-white">{formatName(user.name)}</h3>
             <div className="relative mt-2 flex items-center justify-center h-20 bg-white/20 backdrop-blur-sm rounded-t-lg shadow-inner-strong"
                 style={{
                     width: isFirst ? "140px" : "120px",
@@ -118,7 +129,7 @@ export default function LeaderboardPage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                         <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
                         <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                             <h4 className="font-semibold truncate">{user.name}</h4>
+                             <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
                             <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
                                 <Star className="h-3 w-3" />
                                 <span>{user.points.toLocaleString()} pts</span>

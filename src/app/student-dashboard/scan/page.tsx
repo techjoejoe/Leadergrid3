@@ -1,5 +1,6 @@
 
-'use client';
+addDoc(
+    'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -34,7 +35,7 @@ export default function ScanPage() {
                     const pointsAwarded = isOnTime ? data.points : 0;
 
                     // Create a new check-in record in Firestore
-                    await addDoc(collection(db, "checkIns"), {
+                    await addDoc(collection(db, ""), {
                         studentId: mockStudent.id,
                         studentName: mockStudent.name,
                         classId: data.classId,
