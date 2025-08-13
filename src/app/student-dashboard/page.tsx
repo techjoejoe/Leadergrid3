@@ -61,8 +61,6 @@ const initialBadges = [
     { name: 'Artful Dodger', imageUrl: 'https://placehold.co/80x80.png?text=AD', hint: 'paint icon' },
 ];
 
-type BadgeInfo = typeof initialBadges[0] & { animationClass: string };
-
 const recentActivity = [
     { description: 'Earned "Math Master" badge', points: 250, date: '2d ago' },
     { description: 'Completed Library Visit QR', points: 50, date: '3d ago' },
@@ -70,18 +68,11 @@ const recentActivity = [
     { description: 'Answered question in class', points: 20, date: '5d ago' },
 ];
 
-const animationClasses = [
-    'animate-pulse-slow',
-    'animate-pulse-medium',
-    'animate-pulse-fast',
-];
-
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
-    const [badges, setBadges] = useState<BadgeInfo[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const auth = getAuth(app);
@@ -114,13 +105,6 @@ export default function StudentDashboardPage() {
         } catch (error) {
             console.error("Failed to parse data from localStorage", error);
         }
-
-        // Randomly assign animation classes to badges on mount
-        const shimmeringBadges = initialBadges.map(badge => ({
-            ...badge,
-            animationClass: animationClasses[Math.floor(Math.random() * animationClasses.length)]
-        }));
-        setBadges(shimmeringBadges);
 
         return () => unsubscribe();
     }, [auth, router]);
@@ -338,20 +322,14 @@ export default function StudentDashboardPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {badges.length > 0 ? (
+                            {initialBadges.length > 0 ? (
                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
-                                    {badges.map((badge, index) => (
+                                    {initialBadges.map((badge, index) => (
                                         <div key={index} className="flex flex-col items-center gap-2">
-                                            <div className="relative rounded-full overflow-hidden">
-                                                <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                    <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
-                                                    <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
-                                                </Avatar>
-                                                <div className={cn(
-                                                    "absolute inset-0 bg-shimmer-gradient bg-shimmer-size",
-                                                    badge.animationClass
-                                                )} />
-                                            </div>
+                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
+                                                <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
+                                                <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
+                                            </Avatar>
                                             <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
                                         </div>
                                     ))}

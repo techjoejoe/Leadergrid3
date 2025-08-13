@@ -10,10 +10,6 @@ export default {
   ],
   theme: {
     extend: {
-      backgroundImage: {
-        'shimmer-gradient':
-          'linear-gradient(45deg, rgba(255,255,255,0) 45%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 55%)',
-      },
       fontFamily: {
         body: ['Inter', 'sans-serif'],
         headline: ['"Space Grotesk"', 'sans-serif'],
@@ -103,21 +99,11 @@ export default {
                 transform: 'translateY(0)'
             }
         },
-        'shimmer': {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
-        'pulse-slow': 'shimmer 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'pulse-medium': 'shimmer 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'pulse-fast': 'shimmer 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      },
-      backgroundSize: {
-        'shimmer-size': '200% 100%',
       },
     },
   },
