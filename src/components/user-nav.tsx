@@ -1,4 +1,8 @@
+
+'use client';
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -8,12 +12,35 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CreditCard, LifeBuoy, LogOut, Settings, User } from "lucide-react"
+import { LogOut, Settings, User } from "lucide-react"
+import { getAuth, signOut } from "firebase/auth";
+import { app } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 export function UserNav() {
+  const auth = getAuth(app);
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        toast({
+            title: "Logged Out",
+            description: "You have been successfully logged out."
+        })
+        router.push('/login');
+    } catch (error: any) {
+         toast({
+            title: "Logout Failed",
+            description: error.message,
+            variant: "destructive"
+        });
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -39,32 +66,19 @@ export function UserNav() {
             <Link href="/dashboard/settings">
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
-              <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
             </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <CreditCard className="mr-2 h-4 w-4" />
-            <span>Billing</span>
-            <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link href="/dashboard/settings">
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
-              <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <LifeBuoy className="mr-2 h-4 w-4" />
-          <span>Support</span>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
-          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
