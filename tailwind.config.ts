@@ -10,6 +10,10 @@ export default {
   ],
   theme: {
     extend: {
+      backgroundImage: {
+        'shimmer-gradient':
+          'linear-gradient(45deg, rgba(255,255,255,0) 45%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 55%)',
+      },
       fontFamily: {
         body: ['Inter', 'sans-serif'],
         headline: ['"Space Grotesk"', 'sans-serif'],
@@ -99,26 +103,10 @@ export default {
                 transform: 'translateY(0)'
             }
         },
-        'pulse-slow': {
-          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%': { opacity: '0.5', transform: 'scale(1.05)' },
-        },
-        'pulse-medium': {
-          '0%, 100%': { opacity: '0.8', transform: 'scale(0.95)' },
-          '50%': { opacity: '0.4', transform: 'scale(1)' },
-        },
-        'pulse-fast': {
-          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%': { opacity: '0.6', transform: 'scale(1.1)' },
-        },
         'shimmer': {
-          '0%': { transform: 'translateX(-150%) skewX(-30deg)' },
-          '100%': { transform: 'translateX(150%) skewX(-30deg)' },
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
-        'shimmer-hover': {
-          '0%': { transform: 'translateX(-150%) skewX(-30deg)' },
-          '100%': { transform: 'translateX(150%) skewX(-30deg)' },
-        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -128,7 +116,9 @@ export default {
         'pulse-medium': 'shimmer 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-fast': 'shimmer 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'shimmer': 'shimmer 3s infinite linear',
-        'shimmer-hover': 'shimmer 1.5s linear',
+      },
+      backgroundSize: {
+        'shimmer-size': '200% 100%',
       },
     },
   },
