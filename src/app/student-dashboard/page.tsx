@@ -9,6 +9,7 @@ import {
     Users,
     Building,
     User as UserIcon,
+    Loader2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -75,35 +76,34 @@ export default function StudentDashboardPage() {
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
+    const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
     const auth = getAuth(app);
     const router = useRouter();
 
     useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isClient) return;
+
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 setDisplayName(currentUser.displayName || 'Student');
-                try {
-                    const savedAvatar = window.localStorage.getItem('studentAvatar');
-                    if (savedAvatar) {
-                        setAvatarUrl(savedAvatar);
-                    } else if (currentUser.photoURL) {
-                        setAvatarUrl(currentUser.photoURL);
-                    }
-                } catch(e) {
-                     if (currentUser.photoURL) {
-                        setAvatarUrl(currentUser.photoURL);
-                    }
+                const savedAvatar = window.localStorage.getItem('studentAvatar');
+                if (savedAvatar) {
+                    setAvatarUrl(savedAvatar);
+                } else if (currentUser.photoURL) {
+                    setAvatarUrl(currentUser.photoURL);
                 }
             } else {
-                // For "pretend" login, create a mock user
                 const mockUser = {
                     displayName: 'Student',
                     email: 'student@example.com',
                     photoURL: null,
                     uid: 'mock-user-id',
-                    // Make sure all necessary fields are present
                     emailVerified: true,
                     isAnonymous: false,
                     metadata: {},
@@ -118,13 +118,9 @@ export default function StudentDashboardPage() {
                 } as User;
                 setUser(mockUser);
                 setDisplayName('Student');
-                 try {
-                    const savedAvatar = window.localStorage.getItem('studentAvatar');
-                    if (savedAvatar) {
-                        setAvatarUrl(savedAvatar);
-                    }
-                } catch (error) {
-                    console.error("Failed to access localStorage", error);
+                const savedAvatar = window.localStorage.getItem('studentAvatar');
+                if (savedAvatar) {
+                    setAvatarUrl(savedAvatar);
                 }
             }
         });
@@ -144,7 +140,6 @@ export default function StudentDashboardPage() {
             }
         } catch (error) {
             console.error("Failed to parse data from localStorage", error);
-            // If localstorage is corrupt, start with mock data
             setJoinedClasses(mockJoinedClasses);
             if(mockJoinedClasses.length > 0) {
                 setActiveClass(mockJoinedClasses[0]);
@@ -152,28 +147,12 @@ export default function StudentDashboardPage() {
         }
 
         return () => unsubscribe();
-    }, [auth, router]);
-    
-    useEffect(() => {
-        try {
-            const savedAvatar = window.localStorage.getItem('studentAvatar');
-            if (savedAvatar) {
-                setAvatarUrl(savedAvatar);
-            }
-        } catch (error) {
-            console.error("Failed to load student avatar from localStorage", error);
-        }
-    }, []);
+    }, [auth, router, isClient]);
 
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses, newClass];
         setJoinedClasses(updatedClasses);
-        try {
-            localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
-        } catch(e) {
-            console.error(e)
-        }
-        
+        localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
         handleActiveClassChange(newClass.code);
 
         toast({
@@ -186,17 +165,12 @@ export default function StudentDashboardPage() {
         const newActiveClass = joinedClasses.find(c => c.code === classCode);
         if (newActiveClass) {
             setActiveClass(newActiveClass);
-             try {
-                localStorage.setItem('activeClassCode', newActiveClass.code);
-            } catch(e) {
-                console.error(e)
-            }
+            localStorage.setItem('activeClassCode', newActiveClass.code);
         }
     }
 
     const handleLogout = async () => {
-        // For real users, we sign out. For mock users, we just redirect.
-        if (user && user.uid !== 'mock-user-id') { // Check if it's a real Firebase user
+        if (user && user.uid !== 'mock-user-id') {
              try {
                 await signOut(auth);
                 window.localStorage.removeItem('studentAvatar');
@@ -213,9 +187,16 @@ export default function StudentDashboardPage() {
                 });
             }
         } else {
-            // It's a mock user, just go to login
             router.push('/student-login');
         }
+    }
+
+    if (!isClient) {
+        return (
+             <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+        );
     }
 
     const displayEmail = user?.email || 'student@example.com';
