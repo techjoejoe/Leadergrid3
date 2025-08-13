@@ -192,7 +192,7 @@ export default function StudentDashboardPage() {
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setIsProfileEditorOpen(true); }}>
+                                <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
                                     <UserIcon className="mr-2 h-4 w-4" />
                                     <span>Edit Profile</span>
                                 </DropdownMenuItem>
