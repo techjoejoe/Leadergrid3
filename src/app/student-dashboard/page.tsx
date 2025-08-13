@@ -52,7 +52,7 @@ const initialStudentData = {
     schoolRank: 5,
 };
 
-const badges = [
+const initialBadges = [
     { name: 'Math Master', imageUrl: 'https://placehold.co/80x80.png?text=M', hint: 'math logo' },
     { name: 'Science Star', imageUrl: 'https://placehold.co/80x80.png?text=S', hint: 'atom icon' },
     { name: 'Perfect Attendance', imageUrl: 'https://placehold.co/80x80.png?text=PA', hint: 'calendar icon' },
@@ -60,6 +60,8 @@ const badges = [
     { name: 'Book Worm', imageUrl: 'https://placehold.co/80x80.png?text=BW', hint: 'book icon' },
     { name: 'Artful Dodger', imageUrl: 'https://placehold.co/80x80.png?text=AD', hint: 'paint icon' },
 ];
+
+type BadgeInfo = typeof initialBadges[0] & { animationClass: string };
 
 const recentActivity = [
     { description: 'Earned "Math Master" badge', points: 250, date: '2d ago' },
@@ -79,6 +81,7 @@ export default function StudentDashboardPage() {
     const [user, setUser] = useState<User | null>(null);
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
+    const [badges, setBadges] = useState<BadgeInfo[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const auth = getAuth(app);
@@ -111,6 +114,13 @@ export default function StudentDashboardPage() {
         } catch (error) {
             console.error("Failed to parse data from localStorage", error);
         }
+
+        // Randomly assign animation classes to badges on mount
+        const shimmeringBadges = initialBadges.map(badge => ({
+            ...badge,
+            animationClass: animationClasses[Math.floor(Math.random() * animationClasses.length)]
+        }));
+        setBadges(shimmeringBadges);
 
         return () => unsubscribe();
     }, [auth, router]);
@@ -339,7 +349,7 @@ export default function StudentDashboardPage() {
                                                 </Avatar>
                                                 <div className={cn(
                                                     "absolute inset-0 bg-shimmer-gradient bg-shimmer-size",
-                                                    animationClasses[index % animationClasses.length]
+                                                    badge.animationClass
                                                 )} />
                                             </div>
                                             <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
