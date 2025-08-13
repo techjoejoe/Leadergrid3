@@ -10,7 +10,7 @@ import { ArrowLeft, Rss } from 'lucide-react';
 import Link from 'next/link';
 import { isBefore, parseISO } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, writeBatch, doc } from 'firebase/firestore';
 
 export default function ScanPage() {
     const router = useRouter();
@@ -27,26 +27,12 @@ export default function ScanPage() {
                 const now = new Date();
                 const scanTimestamp = Timestamp.fromDate(now);
 
-                // Centralized logging to the 'scans' collection
-                const logScan = async (type: string, activityName: string, points: number) => {
-                    const scanLogRef = doc(collection(db, "scans"));
-                    await setDoc(scanLogRef, {
-                        studentId: mockStudent.id,
-                        studentName: mockStudent.name,
-                        scanDate: scanTimestamp,
-                        activityName: activityName,
-                        pointsAwarded: points,
-                        type: type,
-                    });
-                };
-
-                if (data && data.type === 'class-check-in' && data.points && data.name && data.onTimeUntil) {
+                if (data && data.type === 'class-check-in') {
                     
                     const onTimeDeadline = parseISO(data.onTimeUntil);
                     const isOnTime = isBefore(now, onTimeDeadline);
                     const pointsAwarded = isOnTime ? data.points : 0;
                     
-                    // Use a batch write to ensure both records are created
                     const batch = writeBatch(db);
 
                     const checkInRef = doc(collection(db, "checkIns"));
@@ -66,8 +52,11 @@ export default function ScanPage() {
                         studentName: mockStudent.name,
                         scanDate: scanTimestamp,
                         activityName: data.name,
+                        activityDescription: data.description || `Class check-in for ${data.className}`,
                         pointsAwarded: pointsAwarded,
                         type: 'Class Check-in',
+                        classId: data.classId,
+                        className: data.className,
                     });
 
                     await batch.commit();
@@ -90,7 +79,7 @@ export default function ScanPage() {
                     
                     router.push('/student-dashboard');
 
-                } else if (data && data.points && data.name && data.expires) { // Handle old QR code format for other activities
+                } else if (data && data.points && data.name && data.expires) { // Handle general activity QR codes
                     const expires = new Date(data.expires);
                     if (expires < new Date()) {
                          toast({
@@ -102,8 +91,19 @@ export default function ScanPage() {
                         return;
                     }
                     
-                    // Log the activity scan to the 'scans' collection
-                    await logScan('Activity', data.name, data.points);
+                    const scanLogRef = doc(collection(db, "scans"));
+                    await addDoc(collection(db, "scans"), {
+                        studentId: mockStudent.id,
+                        studentName: mockStudent.name,
+                        scanDate: scanTimestamp,
+                        activityName: data.name,
+                        activityDescription: data.description,
+                        pointsAwarded: data.points,
+                        type: 'Activity',
+                        classId: data.classId || null,
+                        className: data.className || null,
+                    });
+
 
                     localStorage.setItem('lastScannedPoints', data.points.toString());
                     toast({

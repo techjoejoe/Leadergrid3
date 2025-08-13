@@ -112,7 +112,9 @@ export function QrCodeGenerator() {
     const qrId = `qr-${Date.now()}`;
     const qrCodeValue = JSON.stringify({
         id: qrId,
+        type: 'Activity', // Add type for general activities
         name: values.name,
+        description: values.description,
         points: values.points,
         expires: expirationDate.toISOString(),
     });

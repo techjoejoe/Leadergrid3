@@ -34,8 +34,11 @@ interface ScanRecord {
   studentName: string;
   scanDate: Timestamp;
   activityName: string;
+  activityDescription: string;
   pointsAwarded: number;
   type: string;
+  classId?: string;
+  className?: string;
 }
 
 export function ScanHistoryReport() {
@@ -94,13 +97,29 @@ export function ScanHistoryReport() {
 
   const downloadCSV = (data: ScanRecord[]) => {
     const filename = `scan-history_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    const csvHeader = "Scan Date,Student Name,Activity Name,Type,Points Awarded\n";
+    const csvHeader = "Scan Date,Student Name,Activity Name,Description,Type,Class Name,Points Awarded\n";
     const csvRows = data.map(r => {
       const scanDate = r.scanDate.toDate();
       const date = format(scanDate, 'PPP');
       const time = format(scanDate, 'p');
       const fullDate = `${date} ${time}`;
-      return `"${fullDate}","${r.studentName}","${r.activityName}","${r.type}","${r.pointsAwarded}"`;
+      
+      // Helper to ensure CSV content is properly escaped
+      const escapeCSV = (str: string | undefined | null) => {
+          if (str === undefined || str === null) return '';
+          const escaped = `"${String(str).replace(/"/g, '""')}"`;
+          return escaped;
+      };
+
+      return [
+          escapeCSV(fullDate),
+          escapeCSV(r.studentName),
+          escapeCSV(r.activityName),
+          escapeCSV(r.activityDescription),
+          escapeCSV(r.type),
+          escapeCSV(r.className),
+          r.pointsAwarded
+      ].join(',');
     }).join("\n");
 
     const csvContent = csvHeader + csvRows;
