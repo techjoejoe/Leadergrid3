@@ -42,6 +42,7 @@ import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from 'fireb
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { JoinClassDialog, ClassInfo } from '@/components/join-class-dialog';
+import { cn } from '@/lib/utils';
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
@@ -202,6 +203,12 @@ export default function StudentDashboardPage() {
     const displayAvatar = user?.photoURL || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
+    const animationClasses = [
+        'animate-pulse-fast',
+        'animate-pulse-medium',
+        'animate-pulse-slow',
+    ];
+
     return (
         <div className="flex flex-col min-h-dvh bg-background">
              {/* Header */}
@@ -323,7 +330,10 @@ export default function StudentDashboardPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
                                     {badges.map((badge, index) => (
                                         <div key={index} className="flex flex-col items-center gap-2">
-                                            <Avatar className="relative group h-20 w-20 border-2 border-primary/50 transition-transform duration-300 hover:scale-110 overflow-hidden">
+                                            <Avatar className={cn(
+                                                "relative group h-20 w-20 border-2 border-primary/50 transition-transform duration-300 hover:scale-110 overflow-hidden",
+                                                animationClasses[index % animationClasses.length]
+                                            )}>
                                                 <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
                                                 <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
                                                 <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
