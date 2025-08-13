@@ -291,19 +291,19 @@ export default function StudentDashboardPage() {
 
                     {/* Stats Grid */}
                      <div className="grid gap-4 sm:grid-cols-3">
-                        <Card>
+                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2"><Star className='h-4 w-4' /> Total Points</CardDescription>
                                 <CardTitle className="text-4xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
                             </CardHeader>
                         </Card>
-                         <Card>
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2"><Users className='h-4 w-4' /> Current Class Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.classRank}</CardTitle>
                             </CardHeader>
                         </Card>
-                         <Card>
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2"><Building className='h-4 w-4' /> Company Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.schoolRank}</CardTitle>
@@ -312,7 +312,7 @@ export default function StudentDashboardPage() {
                     </div>
 
                     {/* My Badges */}
-                    <Card>
+                    <Card className="transition-shadow duration-300 hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
                                <Award className="mr-2" /> My Badges
@@ -323,7 +323,7 @@ export default function StudentDashboardPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
                                     {badges.map((badge, index) => (
                                         <div key={index} className="flex flex-col items-center gap-2">
-                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
+                                            <Avatar className="h-20 w-20 border-2 border-primary/50 transition-transform duration-300 hover:scale-110">
                                                 <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
                                                 <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
                                             </Avatar>
@@ -340,7 +340,7 @@ export default function StudentDashboardPage() {
                     </Card>
 
                     {/* Recent Activity */}
-                    <Card>
+                    <Card className="transition-shadow duration-300 hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
                                 <Activity className="mr-2" /> Recent Activity
