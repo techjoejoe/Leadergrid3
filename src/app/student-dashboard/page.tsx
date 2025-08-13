@@ -4,13 +4,14 @@
 import {
     Activity,
     Award,
+    ChevronDown,
     ChevronRight,
     Crown,
     LogOut,
     Settings,
     Star,
     Upload,
-    User as UserIcon,
+    Check,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -36,7 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { JoinClassDialog } from '@/components/join-class-dialog';
+import { JoinClassDialog, ClassInfo } from '@/components/join-class-dialog';
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
@@ -62,7 +65,8 @@ const recentActivity = [
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
-    const [joinedClass, setJoinedClass] = useState<string | null>(null);
+    const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
+    const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const auth = getAuth(app);
@@ -76,11 +80,23 @@ export default function StudentDashboardPage() {
                 router.push('/student-login');
             }
         });
-        
-        // Check localStorage for joined class
-        const storedClass = localStorage.getItem('joinedClass');
-        if (storedClass) {
-            setJoinedClass(storedClass);
+
+        // Load classes from localStorage
+        try {
+            const storedClasses = localStorage.getItem('joinedClasses');
+            const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
+            setJoinedClasses(classes);
+
+            const storedActiveClassCode = localStorage.getItem('activeClassCode');
+            if (storedActiveClassCode) {
+                const foundActiveClass = classes.find(c => c.code === storedActiveClassCode);
+                setActiveClass(foundActiveClass || classes[0] || null);
+            } else if (classes.length > 0) {
+                setActiveClass(classes[0]);
+                localStorage.setItem('activeClassCode', classes[0].code);
+            }
+        } catch (error) {
+            console.error("Failed to parse data from localStorage", error);
         }
 
         return () => unsubscribe();
@@ -90,14 +106,28 @@ export default function StudentDashboardPage() {
         fileInputRef.current?.click();
     };
     
-    const handleJoinClass = (className: string) => {
-        setJoinedClass(className);
-        localStorage.setItem('joinedClass', className);
+    const handleJoinClass = (newClass: ClassInfo) => {
+        const updatedClasses = [...joinedClasses, newClass];
+        setJoinedClasses(updatedClasses);
+        localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
+        
+        // Set the newly joined class as active
+        handleActiveClassChange(newClass.code);
+
         toast({
             title: "Success!",
-            description: `You have joined the class: ${className}.`
+            description: `You have joined the class: ${newClass.name}.`
         })
     }
+    
+    const handleActiveClassChange = (classCode: string) => {
+        const newActiveClass = joinedClasses.find(c => c.code === classCode);
+        if (newActiveClass) {
+            setActiveClass(newActiveClass);
+            localStorage.setItem('activeClassCode', newActiveClass.code);
+        }
+    }
+
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!user) return;
@@ -173,12 +203,31 @@ export default function StudentDashboardPage() {
              {/* Header */}
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
-                    <div className="mr-6">
-                        {joinedClass ? (
-                             <Badge variant="secondary" className="text-sm">Class: {joinedClass}</Badge>
+                    <div className="flex items-center gap-4">
+                        {joinedClasses.length > 0 && activeClass ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                     <Button variant="outline">
+                                        Class: {activeClass.name}
+                                        <ChevronDown className="ml-2 h-4 w-4" />
+                                     </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                    <DropdownMenuLabel>Select a Class</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                     <DropdownMenuRadioGroup value={activeClass.code} onValueChange={handleActiveClassChange}>
+                                        {joinedClasses.map((cls) => (
+                                             <DropdownMenuRadioItem key={cls.code} value={cls.code}>
+                                                {cls.name}
+                                             </DropdownMenuRadioItem>
+                                        ))}
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         ) : (
-                            <JoinClassDialog onClassJoined={handleJoinClass} />
+                            <p className="text-sm text-muted-foreground">No classes joined.</p>
                         )}
+                        <JoinClassDialog onClassJoined={handleJoinClass} joinedClasses={joinedClasses} />
                     </div>
                     <div className="flex items-center gap-4">
                         <input

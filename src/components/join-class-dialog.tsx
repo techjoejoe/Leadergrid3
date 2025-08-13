@@ -33,19 +33,25 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+export interface ClassInfo {
+    name: string;
+    code: string;
+}
+
 // This is a mock list. In a real app, you'd validate this against your database.
-const validClasses = [
-    { joinCode: "BIOLOGY101", name: "10th Grade Biology" },
-    { joinCode: "WRITE2024", name: "Intro to Creative Writing" },
-    { joinCode: "CALCPRO", name: "Advanced Placement Calculus" },
-    { joinCode: "JoinJoe", name: "Joe's Class" },
+const validClasses: ClassInfo[] = [
+    { code: "BIOLOGY101", name: "10th Grade Biology" },
+    { code: "WRITE2024", name: "Intro to Creative Writing" },
+    { code: "CALCPRO", name: "Advanced Placement Calculus" },
+    { code: "JoinJoe", name: "Joe's Class" },
 ];
 
 interface JoinClassDialogProps {
-    onClassJoined: (className: string) => void;
+    onClassJoined: (classInfo: ClassInfo) => void;
+    joinedClasses: ClassInfo[];
 }
 
-export function JoinClassDialog({ onClassJoined }: JoinClassDialogProps) {
+export function JoinClassDialog({ onClassJoined, joinedClasses }: JoinClassDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -57,12 +63,22 @@ export function JoinClassDialog({ onClassJoined }: JoinClassDialogProps) {
   function onSubmit(values: FormValues) {
     setIsLoading(true);
 
+    const isAlreadyJoined = joinedClasses.some(c => c.code.toUpperCase() === values.joinCode.toUpperCase());
+    if (isAlreadyJoined) {
+        form.setError("joinCode", {
+            type: "manual",
+            message: "You have already joined this class.",
+        });
+        setIsLoading(false);
+        return;
+    }
+
     // Simulate checking the code
     setTimeout(() => {
-        const foundClass = validClasses.find(c => c.joinCode.toUpperCase() === values.joinCode.toUpperCase());
+        const foundClass = validClasses.find(c => c.code.toUpperCase() === values.joinCode.toUpperCase());
 
         if (foundClass) {
-            onClassJoined(foundClass.name);
+            onClassJoined(foundClass);
             setOpen(false);
             form.reset();
         } else {
@@ -118,4 +134,3 @@ export function JoinClassDialog({ onClassJoined }: JoinClassDialogProps) {
     </Dialog>
   );
 }
-
