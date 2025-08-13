@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,7 @@ export default function CheckInPage() {
 
     const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
     const [allCheckedIn, setAllCheckedIn] = useState(false);
+    const prevCheckInLogLength = useRef(0);
     
     const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
     const totalStudents = mockStudents.length;
@@ -60,6 +61,7 @@ export default function CheckInPage() {
             if (storedLog) {
                 const parsedLog = JSON.parse(storedLog);
                 setCheckInLog(parsedLog);
+                prevCheckInLogLength.current = parsedLog.length;
                 if (parsedLog.length >= totalStudents) {
                     setAllCheckedIn(true);
                 }
@@ -79,11 +81,6 @@ export default function CheckInPage() {
                 if (uncheckedStudents.length === 0) {
                     clearInterval(interval);
                     if (!allCheckedIn) {
-                         toast({
-                            title: 'Congratulations!',
-                            description: `All students checked in! Everyone gets ${CHECK_IN_POINTS} points.`,
-                            className: 'bg-green-500 text-white',
-                        });
                         setAllCheckedIn(true);
                     }
                     return prevLog;
@@ -103,16 +100,34 @@ export default function CheckInPage() {
                      window.localStorage.setItem(`checkInLog_${classId}`, JSON.stringify(updatedLog));
                 } catch(e) { console.error(e) }
 
-                toast({
-                    description: `${randomStudent.name} just checked in!`
-                })
-
                 return updatedLog;
             });
         }, 5000); // Check in a new student every 5 seconds
 
         return () => clearInterval(interval);
-    }, [classId, allCheckedIn, toast]);
+    }, [classId, allCheckedIn]);
+
+    // Effect to show toasts when a student checks in or when all are checked in
+    useEffect(() => {
+        if (checkInLog.length > prevCheckInLogLength.current) {
+            const newRecord = checkInLog[checkInLog.length - 1];
+            toast({
+                description: `${newRecord.studentName} just checked in!`
+            });
+        }
+        
+        if (allCheckedIn) {
+            toast({
+                title: 'Congratulations!',
+                description: `All students checked in! Everyone gets ${CHECK_IN_POINTS} points.`,
+                className: 'bg-green-500 text-white',
+            });
+        }
+
+        prevCheckInLogLength.current = checkInLog.length;
+
+    }, [checkInLog, allCheckedIn, toast]);
+
 
     const checkedInPercentage = (checkInLog.length / totalStudents) * 100;
 
