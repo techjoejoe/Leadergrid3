@@ -68,7 +68,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex justify-center gap-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
               <Button asChild size="lg" className="group">
-                <Link href="/login">
+                <Link href="/student-login">
                   Get Started
                   <MoveRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
