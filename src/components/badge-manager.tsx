@@ -13,6 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Award, ImagePlus, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
+
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/png"];
@@ -52,27 +55,24 @@ const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) 
 
 export function BadgeManager() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [createdBadges, setCreatedBadges] = useState<Badge[]>([]);
   const { toast } = useToast();
 
-  // Load badges from localStorage on initial client-side render
   useEffect(() => {
-    try {
-        const item = window.localStorage.getItem('createdBadges');
-        if (item) {
-            setCreatedBadges(JSON.parse(item));
+    async function fetchBadges() {
+        try {
+            const querySnapshot = await getDocs(collection(db, "badges"));
+            const badges = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Badge));
+            setCreatedBadges(badges);
+        } catch (error) {
+            console.error("Failed to fetch badges from Firestore", error);
+        } finally {
+            setIsFetching(false);
         }
-    } catch (error) {
-        console.error("Failed to parse badges from localStorage", error);
     }
+    fetchBadges();
   }, []);
-
-  // Save badges to localStorage whenever they change
-  useEffect(() => {
-    if(createdBadges.length > 0) {
-        window.localStorage.setItem('createdBadges', JSON.stringify(createdBadges));
-    }
-  }, [createdBadges]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -91,12 +91,18 @@ export function BadgeManager() {
         const file = values.image[0];
         const imageUrl = await toBase64(file);
 
-        const newBadge: Badge = {
-          id: `badge-${Date.now()}`,
+        const newBadgeData = {
           name: values.name,
           description: values.description,
           criteria: values.criteria,
           imageUrl: imageUrl,
+        };
+
+        const docRef = await addDoc(collection(db, "badges"), newBadgeData);
+
+        const newBadge: Badge = {
+          id: docRef.id,
+          ...newBadgeData
         };
 
         setCreatedBadges(prev => [newBadge, ...prev]);
@@ -111,7 +117,7 @@ export function BadgeManager() {
         console.error("Error creating badge:", error);
         toast({
             title: "Error",
-            description: "Failed to create the badge image.",
+            description: "Failed to create the badge.",
             variant: "destructive",
         })
     } finally {
@@ -217,7 +223,12 @@ export function BadgeManager() {
                 <CardDescription>The list of all achievement badges you've created.</CardDescription>
             </CardHeader>
             <CardContent>
-                {createdBadges.length === 0 ? (
+                {isFetching ? (
+                   <div className='flex flex-col items-center justify-center h-64 gap-4 p-8 border-2 border-dashed rounded-lg text-muted-foreground'>
+                        <Loader2 className="h-16 w-16 animate-spin" />
+                        <p className='font-semibold text-center'>Loading badges...</p>
+                    </div>
+                ) : createdBadges.length === 0 ? (
                     <div className='flex flex-col items-center justify-center h-64 gap-4 p-8 border-2 border-dashed rounded-lg text-muted-foreground'>
                         <Award className="h-16 w-16" />
                         <p className='font-semibold text-center'>Your created badges will appear here.</p>

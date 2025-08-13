@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -9,6 +8,7 @@ import {
     Users,
     MoveRight,
     BookOpen,
+    Loader2,
   } from "lucide-react"
   
   import {
@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useEffect, useState } from "react";
 import type { Class } from "@/components/create-class-form";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
   
 
 const recentActivities = [
@@ -60,62 +62,44 @@ const topGroups = [
   { name: 'Hufflepuff', points: 3850, progress: 77 },
   { name: 'Ravenclaw', points: 3700, progress: 74 },
 ];
-
-const initialClasses: Class[] = [
-  {
-    id: "cls-1",
-    name: "10th Grade Biology",
-    joinCode: "BIOLOGY101",
-    startDate: new Date("2024-09-01T00:00:00"),
-    endDate: new Date("2025-06-15T00:00:00"),
-  },
-  {
-    id: "cls-2",
-    name: "Intro to Creative Writing",
-    joinCode: "WRITE2024",
-    startDate: new Date("2024-09-01T00:00:00"),
-    endDate: new Date("2024-12-20T00:00:00"),
-  },
-  {
-    id: "cls-3",
-    name: "Advanced Placement Calculus",
-    joinCode: "CALCPRO",
-    startDate: new Date("2024-08-26T00:00:00"),
-    endDate: new Date("2025-05-20T00:00:00"),
-  },
-];
   
   export default function DashboardPage() {
-    const [classes, setClasses] = useState<Class[]>([]);
+    const [activeClasses, setActiveClasses] = useState<Class[]>([]);
+    const [isLoadingClasses, setIsLoadingClasses] = useState(true);
 
     useEffect(() => {
-        try {
-            const storedClasses = window.localStorage.getItem('managedClasses');
-            if (storedClasses) {
-                // Important: Dates are stored as strings in JSON, so they need to be converted back to Date objects.
-                const parsedClasses = JSON.parse(storedClasses).map((cls: Class) => ({
-                    ...cls,
-                    startDate: new Date(cls.startDate),
-                    endDate: new Date(cls.endDate),
-                }));
-                setClasses(parsedClasses);
-            } else {
-                setClasses(initialClasses);
-            }
-        } catch (error) {
-            console.error("Failed to load classes from localStorage", error);
-            setClasses(initialClasses);
+        async function fetchActiveClasses() {
+          try {
+            const now = new Date();
+            const classesRef = collection(db, "classes");
+            // We fetch all classes and filter client-side because Firestore can't
+            // do range queries on different fields (startDate and endDate).
+            // For larger datasets, this would need a more sophisticated data model,
+            // like a dedicated 'status' field.
+            const q = query(classesRef);
+            const querySnapshot = await getDocs(q);
+
+            const all_classes = querySnapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                ...data,
+                id: doc.id,
+                startDate: (data.startDate as Timestamp).toDate(),
+                endDate: (data.endDate as Timestamp).toDate(),
+              } as Class
+            })
+
+            const active = all_classes.filter(c => c.startDate <= now && c.endDate >= now);
+
+            setActiveClasses(active);
+          } catch (error) {
+            console.error("Error fetching active classes:", error);
+          } finally {
+            setIsLoadingClasses(false);
+          }
         }
+        fetchActiveClasses();
     }, []);
-
-    const getStatus = (startDate: Date, endDate: Date) => {
-        const now = new Date();
-        if (now < startDate) return "Scheduled";
-        if (now > endDate) return "Archived";
-        return "Active";
-    }
-
-    const activeClasses = classes.filter(c => getStatus(c.startDate, c.endDate) === 'Active');
 
     return (
         <div className="flex flex-col gap-4">
@@ -210,26 +194,32 @@ const initialClasses: Class[] = [
                         </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-3">
-                                {activeClasses.length > 0 ? activeClasses.map((cls) => (
-                                    <div key={cls.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/20">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-primary/20 rounded-md">
-                                                <BookOpen className="h-5 w-5 text-primary" />
+                            {isLoadingClasses ? (
+                                <div className="flex justify-center items-center h-24">
+                                  <Loader2 className="h-6 w-6 animate-spin" />
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {activeClasses.length > 0 ? activeClasses.map((cls) => (
+                                        <div key={cls.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/20">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-primary/20 rounded-md">
+                                                    <BookOpen className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <span className="font-medium">{cls.name}</span>
                                             </div>
-                                            <span className="font-medium">{cls.name}</span>
+                                            <Button asChild size="sm" className="group">
+                                                <Link href={`/dashboard/classes/${cls.id}`}>
+                                                    Go to Class
+                                                    <MoveRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                                </Link>
+                                            </Button>
                                         </div>
-                                        <Button asChild size="sm" className="group">
-                                            <Link href={`/dashboard/classes/${cls.id}`}>
-                                                Go to Class
-                                                <MoveRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                )) : (
-                                    <p className="text-sm text-muted-foreground text-center">No active classes right now.</p>
-                                )}
-                            </div>
+                                    )) : (
+                                        <p className="text-sm text-muted-foreground text-center py-4">No active classes right now.</p>
+                                    )}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                     <Card>
@@ -258,5 +248,3 @@ const initialClasses: Class[] = [
         </div>
     )
   }
-  
-    

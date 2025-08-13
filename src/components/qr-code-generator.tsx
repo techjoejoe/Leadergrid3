@@ -31,6 +31,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ScrollArea } from './ui/scroll-area';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp } from 'firebase/firestore';
+
 
 const formSchema = z.object({
   name: z.string().min(1, 'QR Code name is required.'),
@@ -54,44 +57,41 @@ interface GeneratedQrCode {
 
 export function QrCodeGenerator() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedQrCode[]>([]);
-  const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsClient(true);
-    try {
-        const item = window.localStorage.getItem('generatedQrCodes');
-        if (item) {
-            const allCodes: GeneratedQrCode[] = JSON.parse(item);
-            const now = new Date();
-            const activeCodes = allCodes.filter(code => new Date(code.expirationDate) > now);
-            
-            if(allCodes.length !== activeCodes.length) {
-                toast({
-                    title: "Expired Codes Removed",
-                    description: `${allCodes.length - activeCodes.length} QR code(s) have expired and were deleted.`
-                });
-            }
-            
-            setGeneratedCodes(activeCodes);
+    async function fetchCodes() {
+        try {
+            const now = Timestamp.now();
+            const q = query(collection(db, "qrcodes"), where("expirationDate", ">", now));
+            const querySnapshot = await getDocs(q);
+            const fetchedCodes: GeneratedQrCode[] = querySnapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                value: data.value,
+                name: data.name,
+                description: data.description,
+                points: data.points,
+                expirationDate: (data.expirationDate as Timestamp).toDate().toISOString()
+              }
+            });
+            setGeneratedCodes(fetchedCodes);
+        } catch (error) {
+            console.error("Failed to fetch QR codes from Firestore", error);
+            toast({
+                title: "Error",
+                description: "Could not fetch QR codes.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsFetching(false);
         }
-    } catch (error) {
-        console.error("Failed to parse QR codes from localStorage", error);
     }
-  }, []);
-
-  useEffect(() => {
-     try {
-        // We save all codes, even if there are none, to clear out the storage
-        // if the last one is deleted.
-        if (isClient) {
-            window.localStorage.setItem('generatedQrCodes', JSON.stringify(generatedCodes));
-        }
-    } catch (error) {
-        console.error("Failed to save QR codes to localStorage", error);
-    }
-  }, [generatedCodes, isClient]);
+    fetchCodes();
+  }, [toast]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -106,14 +106,8 @@ export function QrCodeGenerator() {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     
-    // Set expiration to 5 PM CST on the selected date.
-    // NOTE: This uses the host's idea of CST/CDT. For true timezone support,
-    // a library like date-fns-tz would be needed.
     const expirationDate = new Date(values.expirationDate);
-    expirationDate.setHours(17, 0, 0, 0); // 5:00:00 PM
-    
-    // For a rough CST (UTC-5/UTC-6) approximation, we could adjust hours,
-    // but for this mock app, we'll assume the server/user is in a compatible timezone.
+    expirationDate.setHours(17, 0, 0, 0); // 5:00:00 PM CST-ish
     
     const qrId = `qr-${Date.now()}`;
     const qrCodeValue = JSON.stringify({
@@ -123,24 +117,41 @@ export function QrCodeGenerator() {
         expires: expirationDate.toISOString(),
     });
 
-    const newCode: GeneratedQrCode = {
-        id: qrId,
+    const newCodeForDb = {
         value: qrCodeValue,
         name: values.name,
         description: values.description,
         points: values.points,
-        expirationDate: expirationDate.toISOString(),
+        expirationDate: Timestamp.fromDate(expirationDate),
     };
 
-    setGeneratedCodes(prev => [newCode, ...prev]);
-    
-    toast({
-        title: "QR Code Generated!",
-        description: "The new QR code has been added to the list.",
-    })
-    
-    setIsLoading(false);
-    form.reset({ name: '', description: '', points: 10, expirationDate: addDays(new Date(), 30) });
+    try {
+        const docRef = await addDoc(collection(db, 'qrcodes'), newCodeForDb);
+        const newCodeForState: GeneratedQrCode = {
+            id: docRef.id,
+            value: qrCodeValue,
+            name: values.name,
+            description: values.description,
+            points: values.points,
+            expirationDate: expirationDate.toISOString(),
+        }
+        setGeneratedCodes(prev => [newCodeForState, ...prev]);
+        toast({
+            title: "QR Code Generated!",
+            description: "The new QR code has been added to the list.",
+        })
+        form.reset({ name: '', description: '', points: 10, expirationDate: addDays(new Date(), 30) });
+
+    } catch (error) {
+        console.error("Error creating QR code:", error);
+         toast({
+            title: "Error",
+            description: "Failed to save the QR code.",
+            variant: "destructive",
+        })
+    } finally {
+        setIsLoading(false);
+    }
   }
 
   const downloadQRCode = (code: GeneratedQrCode) => {
@@ -167,13 +178,23 @@ export function QrCodeGenerator() {
     document.body.removeChild(downloadLink);
   }
 
-  const handleDeleteCode = (codeToDelete: GeneratedQrCode) => {
-    setGeneratedCodes((prevCodes) => prevCodes.filter(code => code.id !== codeToDelete.id));
-    toast({
-        title: "QR Code Deleted",
-        description: `The code "${codeToDelete.name}" has been removed.`,
-        variant: "destructive"
-    })
+  const handleDeleteCode = async (codeToDelete: GeneratedQrCode) => {
+    try {
+        await deleteDoc(doc(db, "qrcodes", codeToDelete.id));
+        setGeneratedCodes((prevCodes) => prevCodes.filter(code => code.id !== codeToDelete.id));
+        toast({
+            title: "QR Code Deleted",
+            description: `The code "${codeToDelete.name}" has been removed.`,
+            variant: "destructive"
+        })
+    } catch(error) {
+        console.error("Error deleting QR code:", error);
+         toast({
+            title: "Error",
+            description: "Failed to delete the QR code.",
+            variant: "destructive"
+        })
+    }
   }
 
   const getStatus = (expirationDate: string) => {
@@ -304,7 +325,7 @@ export function QrCodeGenerator() {
                 <CardDescription>The list of all QR codes you've created.</CardDescription>
             </CardHeader>
             <CardContent>
-                {!isClient ? (
+                {isFetching ? (
                     <div className='flex flex-col items-center justify-center h-64 gap-4 p-8 border-2 border-dashed rounded-lg text-muted-foreground'>
                         <Loader2 className="h-16 w-16 animate-spin" />
                         <p className='font-semibold text-center'>Loading QR codes...</p>
@@ -399,7 +420,3 @@ export function QrCodeGenerator() {
     </div>
   );
 }
-
-    
-
-    

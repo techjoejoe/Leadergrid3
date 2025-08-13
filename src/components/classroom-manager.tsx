@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -55,6 +55,9 @@ type PointsFormValues = z.infer<typeof pointsFormSchema>;
 type CheckInFormValues = z.infer<typeof checkInFormSchema>;
 type Student = typeof mockStudents[0];
 
+// Using mock data for check-in log as we transition to Firestore
+const mockCheckInLog: CheckInRecord[] = [];
+
 interface CheckInRecord {
     studentId: string;
     studentName: string;
@@ -73,24 +76,9 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const { toast } = useToast();
   const router = useRouter();
   
-  const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
+  const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>(mockCheckInLog);
 
   const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
-
-  useEffect(() => {
-    try {
-        const allKeys = Object.keys(window.localStorage);
-        const classLogKeys = allKeys.filter(key => key.startsWith(`checkInLog_${classId}`));
-        const allLogs = classLogKeys.flatMap(key => {
-            const item = window.localStorage.getItem(key);
-            return item ? JSON.parse(item) : [];
-        });
-        setCheckInLog(allLogs);
-    } catch (error) {
-        console.error("Failed to load check-in log from localStorage", error);
-    }
-  }, [classId]);
-
 
   const pointsForm = useForm<PointsFormValues>({
     resolver: zodResolver(pointsFormSchema),
@@ -145,10 +133,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
       const [hours, minutes] = values.onTime.split(':');
       const onTimeDeadline = new Date();
       onTimeDeadline.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-
-      // Clear the log for a new session
-      const sessionLogKey = `checkInLog_${classId}_${values.sessionName.replace(/\s+/g, '-')}`;
-      window.localStorage.removeItem(sessionLogKey);
       
       const queryParams = new URLSearchParams({
           onTimeUntil: onTimeDeadline.toISOString(),
@@ -170,7 +154,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
         const d = new Date(r.checkedInAt);
         const date = format(d, 'PPP');
         const time = format(d, 'p');
-        // Fallback for older records without a session name
         const session = r.sessionName || 'Check-in';
         return `"${r.studentName}","${session}","${date}","${time}"`;
     }).join("\n");

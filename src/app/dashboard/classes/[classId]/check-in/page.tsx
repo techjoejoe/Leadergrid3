@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useSearchParams, useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, Award, Clock } from 'lucide-react';
@@ -12,7 +12,7 @@ import Confetti from 'react-confetti';
 import { Progress } from '@/components/ui/progress';
 import { addMinutes, format, isBefore, parseISO } from 'date-fns';
 
-// Mock data - In a real app, you'd fetch this based on the classId
+// Mock data - In a real app, you'd fetch this from Firestore
 const mockStudents = [
   { id: 'stu_1', name: 'Alex Thompson' },
   { id: 'stu_2', name: 'Brianna Miller' },
@@ -38,12 +38,10 @@ interface CheckInRecord {
 const CHECK_IN_POINTS = 25;
 const BONUS_POINTS = 100;
 
-export default function CheckInPage() {
-    const params = useParams();
+export default function CheckInPage({ params }: { params: { classId: string }}) {
     const searchParams = useSearchParams();
-    const router = useRouter();
     const { toast } = useToast();
-    const classId = Array.isArray(params.classId) ? params.classId[0] : params.classId;
+    const { classId } = params;
 
     const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
     const [qrValue, setQrValue] = useState('');
@@ -53,16 +51,16 @@ export default function CheckInPage() {
     const onTimeUntilParam = searchParams.get('onTimeUntil');
     const sessionNameParam = searchParams.get('sessionName') || 'Class Check-in';
 
+    // Memoize deadline so it doesn't change on re-renders
     const onTimeDeadline = useMemo(() => {
         return onTimeUntilParam ? parseISO(onTimeUntilParam) : addMinutes(new Date(), 5);
     }, [onTimeUntilParam]);
 
     const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
     const totalStudents = mockStudents.length;
-    const sessionLogKey = `checkInLog_${classId}_${sessionNameParam.replace(/\s+/g, '-')}`;
 
+    // QR Value generation, now includes deadline
     useEffect(() => {
-        // Generate QR value only on the client side to avoid hydration mismatch
         setQrValue(JSON.stringify({
             type: 'class-check-in',
             classId: classId,
@@ -71,23 +69,7 @@ export default function CheckInPage() {
             onTimeUntil: onTimeDeadline.toISOString(),
             points: CHECK_IN_POINTS
         }));
-
-        try {
-            const storedLog = window.localStorage.getItem(sessionLogKey);
-            if (storedLog) {
-                const parsedLog: CheckInRecord[] = JSON.parse(storedLog);
-                setCheckInLog(parsedLog);
-                if (parsedLog.length >= totalStudents) {
-                    setIsSessionOver(true);
-                }
-            } else {
-                 // Clear log for a new session instance
-                window.localStorage.removeItem(sessionLogKey);
-            }
-        } catch (error) {
-            console.error("Failed to load check-in log from localStorage", error);
-        }
-    }, [classId, className, onTimeDeadline, totalStudents, sessionLogKey, sessionNameParam]);
+    }, [classId, sessionNameParam, onTimeDeadline]);
 
     // Simulate students checking in
     useEffect(() => {
@@ -102,6 +84,11 @@ export default function CheckInPage() {
                 }
 
                 const uncheckedStudents = mockStudents.filter(s => !prevLog.some(log => log.studentId === s.id));
+                if (uncheckedStudents.length === 0) {
+                     clearInterval(interval);
+                    setIsSessionOver(true);
+                    return prevLog;
+                }
                 const randomStudent = uncheckedStudents[Math.floor(Math.random() * uncheckedStudents.length)];
                 
                 // Simulate some students being late
@@ -117,29 +104,18 @@ export default function CheckInPage() {
                 };
 
                 const updatedLog = [...prevLog, newRecord];
-
-                try {
-                     window.localStorage.setItem(sessionLogKey, JSON.stringify(updatedLog));
-                } catch(e) { console.error(e) }
+                
+                // Toast for each check-in
+                toast({
+                    description: `${newRecord.studentName} just checked in for "${sessionNameParam}" ${newRecord.isOnTime ? 'on time' : 'late'}!`
+                });
 
                 return updatedLog;
             });
         }, 3000); // Check in a new student every 3 seconds
 
         return () => clearInterval(interval);
-    }, [classId, isSessionOver, onTimeDeadline, totalStudents, sessionLogKey]);
-
-    // Effect to show toast messages
-    useEffect(() => {
-        if (checkInLog.length === 0) return;
-        const lastRecord = checkInLog[checkInLog.length - 1];
-        if (lastRecord) {
-             toast({
-                description: `${lastRecord.studentName} just checked in for "${sessionNameParam}" ${lastRecord.isOnTime ? 'on time' : 'late'}!`
-            });
-        }
-    }, [checkInLog, toast, sessionNameParam]);
-
+    }, [isSessionOver, onTimeDeadline, totalStudents, toast, sessionNameParam, classId]);
 
     const { onTimeCount, lateCount } = useMemo(() => {
         return checkInLog.reduce((acc, cur) => {
@@ -151,7 +127,7 @@ export default function CheckInPage() {
 
     const checkedInPercentage = (checkInLog.length / totalStudents) * 100;
     const allCheckedIn = checkInLog.length === totalStudents;
-    const allOnTime = allCheckedIn && onTimeCount === totalStudents;
+    const allOnTime = allCheckedIn && lateCount === 0;
 
      // Effect to award bonus
     useEffect(() => {

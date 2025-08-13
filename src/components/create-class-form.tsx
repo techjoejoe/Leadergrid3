@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { CalendarIcon, PlusCircle } from "lucide-react"
+import { CalendarIcon, PlusCircle, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 
 import { cn } from "@/lib/utils"
@@ -52,12 +52,13 @@ type FormValues = z.infer<typeof formSchema>;
 export type Class = FormValues & { id: string };
 
 interface CreateClassFormProps {
-  onClassCreated: (newClass: Class) => void;
+  onClassCreated: (newClass: Omit<Class, 'id'>) => Promise<boolean>;
 }
 
 
 export function CreateClassForm({ onClassCreated }: CreateClassFormProps) {
   const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -68,19 +69,19 @@ export function CreateClassForm({ onClassCreated }: CreateClassFormProps) {
     }
   });
 
-  function onSubmit(values: FormValues) {
-    const newClass: Class = {
-        ...values,
-        id: `cls-${Date.now()}`
+  async function onSubmit(values: FormValues) {
+    setIsLoading(true);
+    const success = await onClassCreated(values);
+    setIsLoading(false);
+
+    if (success) {
+      toast({
+          title: "Class Created!",
+          description: `The class "${values.name}" has been successfully created.`,
+      });
+      setOpen(false);
+      form.reset();
     }
-    onClassCreated(newClass);
-    
-    toast({
-        title: "Class Created!",
-        description: `The class "${values.name}" has been successfully created.`,
-    });
-    setOpen(false);
-    form.reset();
   }
 
   return (
@@ -156,9 +157,6 @@ export function CreateClassForm({ onClassCreated }: CreateClassFormProps) {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date(new Date().setHours(0,0,0,0))
-                            }
                             initialFocus
                           />
                         </PopoverContent>
@@ -209,7 +207,9 @@ export function CreateClassForm({ onClassCreated }: CreateClassFormProps) {
                   )}
                 />
                 <DialogFooter>
-                    <Button type="submit">Create Class</Button>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? <Loader2 className="animate-spin" /> : "Create Class"}
+                    </Button>
                 </DialogFooter>
             </form>
         </Form>

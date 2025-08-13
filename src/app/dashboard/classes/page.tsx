@@ -1,15 +1,14 @@
 
-
 'use client';
 
 import { useState, useEffect } from "react";
-import { format, addDays, isPast } from "date-fns";
+import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateClassForm, Class } from "@/components/create-class-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wrench, Trash2 } from "lucide-react";
+import { Wrench, Trash2, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,118 +23,84 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-
-// Mock data for initial classes, used as a fallback if localStorage is empty
-const initialClasses: Class[] = [
-  {
-    id: "cls-1",
-    name: "10th Grade Biology",
-    joinCode: "BIOLOGY101",
-    startDate: new Date("2024-09-01T00:00:00"),
-    endDate: new Date("2025-06-15T00:00:00"),
-  },
-  {
-    id: "cls-2",
-    name: "Intro to Creative Writing",
-    joinCode: "WRITE2024",
-    startDate: new Date("2024-09-01T00:00:00"),
-    endDate: new Date("2024-12-20T00:00:00"),
-  },
-  {
-    id: "cls-3",
-    name: "Advanced Placement Calculus",
-    joinCode: "CALCPRO",
-    startDate: new Date("2024-08-26T00:00:00"),
-    endDate: new Date("2025-05-20T00:00:00"),
-  },
-];
-
-const LOCAL_STORAGE_KEY = 'managedClasses';
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, query, orderBy } from "firebase/firestore";
 
 export default function ClassesPage() {
     const [classes, setClasses] = useState<Class[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
     const router = useRouter();
 
-    // Load classes from localStorage on initial client-side render
     useEffect(() => {
-        try {
-            const storedClasses = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (storedClasses) {
-                // Dates are stored as strings in JSON, so they need to be converted back to Date objects.
-                const parsedClasses = JSON.parse(storedClasses).map((cls: Class) => ({
-                    ...cls,
-                    startDate: new Date(cls.startDate),
-                    endDate: new Date(cls.endDate),
-                }));
-                setClasses(parsedClasses);
-            } else {
-                // If nothing is in storage, use the initial list and save it.
-                setClasses(initialClasses);
-                window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialClasses));
+        async function fetchClasses() {
+            try {
+                const q = query(collection(db, "classes"), orderBy("startDate", "desc"));
+                const querySnapshot = await getDocs(q);
+                const fetchedClasses = querySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    // Convert Firestore Timestamps to JS Date objects
+                    return {
+                        ...data,
+                        id: doc.id,
+                        startDate: (data.startDate as Timestamp).toDate(),
+                        endDate: (data.endDate as Timestamp).toDate(),
+                    } as Class;
+                });
+                setClasses(fetchedClasses);
+            } catch (error) {
+                console.error("Error fetching classes: ", error);
+                toast({
+                    title: "Error",
+                    description: "Could not fetch classes from the database.",
+                    variant: "destructive"
+                });
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Failed to load classes from localStorage", error);
-            setClasses(initialClasses);
         }
-    }, []);
+        fetchClasses();
+    }, [toast]);
 
-    // Effect to run cleanup logic
-    useEffect(() => {
-        const cleanupExpiredClassLogs = () => {
-            if (typeof window === 'undefined' || classes.length === 0) return;
 
-            const twoWeeksAgo = addDays(new Date(), -14);
-            let logsCleanedCount = 0;
-
-            classes.forEach(cls => {
-                const endDate = new Date(cls.endDate);
-                if (isPast(endDate) && endDate < twoWeeksAgo) {
-                    const allKeys = Object.keys(localStorage);
-                    const classLogKeys = allKeys.filter(key => key.startsWith(`checkInLog_${cls.id}`));
-                    
-                    if (classLogKeys.length > 0) {
-                        logsCleanedCount += classLogKeys.length;
-                        classLogKeys.forEach(key => {
-                            localStorage.removeItem(key);
-                        });
-                    }
-                }
-            });
-
-            if (logsCleanedCount > 0) {
-                console.log(`Cleaned up ${logsCleanedCount} expired check-in log(s).`);
-            }
-        };
-
-        cleanupExpiredClassLogs();
-    }, [classes]);
-
-    const handleAddClass = (newClass: Class) => {
-        const updatedClasses = [newClass, ...classes];
-        setClasses(updatedClasses);
-        try {
-            window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedClasses));
+    const handleAddClass = async (newClassData: Omit<Class, 'id'>) => {
+       try {
+            const docRef = await addDoc(collection(db, "classes"), newClassData);
+            const newClass: Class = {
+                ...newClassData,
+                id: docRef.id,
+            };
+            setClasses(prevClasses => [newClass, ...prevClasses]);
+            return true;
         } catch (error) {
-            console.error("Failed to save classes to localStorage", error);
+            console.error("Error adding document: ", error);
+            toast({
+                title: "Error",
+                description: "Failed to create the new class.",
+                variant: "destructive"
+            });
+            return false;
         }
     };
 
-    const handleDeleteClass = (classToDelete: Class) => {
-        const updatedClasses = classes.filter(cls => cls.id !== classToDelete.id)
-        setClasses(updatedClasses);
+    const handleDeleteClass = async (classToDelete: Class) => {
         try {
-            window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedClasses));
-        } catch (error) {
-             console.error("Failed to save classes to localStorage", error);
-        }
+            await deleteDoc(doc(db, "classes", classToDelete.id));
+            setClasses(prevClasses => prevClasses.filter(cls => cls.id !== classToDelete.id));
 
-        toast({
-            title: "Class Deleted",
-            description: `The class "${classToDelete.name}" has been removed.`,
-            variant: "destructive"
-        })
+            toast({
+                title: "Class Deleted",
+                description: `The class "${classToDelete.name}" has been removed.`,
+                variant: "destructive"
+            });
+        } catch (error) {
+             console.error("Error deleting document: ", error);
+             toast({
+                title: "Error",
+                description: "Failed to delete the class.",
+                variant: "destructive"
+            });
+        }
     }
 
     const getStatus = (startDate: Date, endDate: Date) => {
@@ -167,7 +132,13 @@ export default function ClassesPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {classes.length > 0 ? (
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-24 text-center">
+                                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
+                                </TableCell>
+                            </TableRow>
+                        ) : classes.length > 0 ? (
                             classes.map((cls) => (
                                 <TableRow key={cls.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => router.push(`/dashboard/classes/${cls.id}`)}>
                                     <TableCell className="font-medium">{cls.name}</TableCell>
