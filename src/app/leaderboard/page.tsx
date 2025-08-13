@@ -1,14 +1,15 @@
 
+'use client';
+
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Crown, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
-const leaderboardData = [
+const initialLeaderboardData = [
   { rank: 1, name: "Leo D.", points: 10500, avatar: "https://placehold.co/100x100.png", initial: "LD", hint: "student portrait" },
   { rank: 2, name: "Frencha D.", points: 9800, avatar: "https://placehold.co/80x80.png", initial: "FD", hint: "student smiling" },
   { rank: 3, name: "Hanna F.", points: 9750, avatar: "https://placehold.co/80x80.png", initial: "HF", hint: "person reading" },
@@ -21,7 +22,7 @@ const leaderboardData = [
   { rank: 10, name: "Laura N.", points: 7100, avatar: "https://placehold.co/40x40.png", initial: "LN", hint: "student art" },
 ];
 
-const PodiumPlace = ({ user, place }: { user: typeof leaderboardData[0], place: number }) => {
+const PodiumPlace = ({ user, place }: { user: typeof initialLeaderboardData[0], place: number }) => {
     const isFirst = place === 1;
     const isSecond = place === 2;
     const isThird = place === 3;
@@ -60,6 +61,23 @@ const PodiumPlace = ({ user, place }: { user: typeof leaderboardData[0], place: 
 }
 
 export default function LeaderboardPage() {
+    const [leaderboardData, setLeaderboardData] = useState(initialLeaderboardData);
+
+    useEffect(() => {
+      try {
+          const studentAvatar = window.localStorage.getItem('studentAvatar');
+          if (studentAvatar) {
+              setLeaderboardData(prevData =>
+                  prevData.map(user =>
+                      user.rank === 5 ? { ...user, avatar: studentAvatar } : user
+                  )
+              );
+          }
+      } catch (error) {
+          console.error("Failed to load student avatar from localStorage", error);
+      }
+    }, []);
+
     const [top3, rest] = [leaderboardData.slice(0, 3), leaderboardData.slice(3)];
 
   return (
@@ -95,6 +113,7 @@ export default function LeaderboardPage() {
                             fill
                             className="object-cover transition-transform duration-300 group-hover:scale-110"
                             data-ai-hint={user.hint}
+                            unoptimized // Add this to allow external URLs like data URIs
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                         <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>

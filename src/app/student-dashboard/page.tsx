@@ -71,6 +71,7 @@ const recentActivity = [
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +83,19 @@ export default function StudentDashboardPage() {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
+                // Load avatar from localStorage first for faster load
+                try {
+                    const savedAvatar = window.localStorage.getItem('studentAvatar');
+                    if (savedAvatar) {
+                        setAvatarUrl(savedAvatar);
+                    } else if (currentUser.photoURL) {
+                        setAvatarUrl(currentUser.photoURL);
+                    }
+                } catch(e) {
+                     if (currentUser.photoURL) {
+                        setAvatarUrl(currentUser.photoURL);
+                    }
+                }
             } else {
                 // Commenting this out to allow pretend login
                 // router.push('/student-login');
@@ -163,8 +177,9 @@ export default function StudentDashboardPage() {
                 try {
                     // Update Firebase profile
                     await updateProfile(user, { photoURL: base64String });
-                    // Force a re-render by updating the user state
-                    setUser({ ...user }); 
+                    // Update local state and localStorage
+                    setAvatarUrl(base64String);
+                    window.localStorage.setItem('studentAvatar', base64String);
                     
                     toast({
                         title: "Profile Photo Updated!",
@@ -186,6 +201,8 @@ export default function StudentDashboardPage() {
     const handleLogout = async () => {
         try {
             await signOut(auth);
+            // Clear local storage on logout
+            window.localStorage.removeItem('studentAvatar');
             toast({
                 title: "Logged Out",
                 description: "You have been successfully logged out."
@@ -202,7 +219,7 @@ export default function StudentDashboardPage() {
 
     const displayName = user?.displayName || 'Student';
     const displayEmail = user?.email || 'student@example.com';
-    const displayAvatar = user?.photoURL || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
+    const displayAvatar = avatarUrl || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     return (
