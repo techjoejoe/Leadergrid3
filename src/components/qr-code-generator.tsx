@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from './ui/badge';
 import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
@@ -72,6 +72,7 @@ export function QrCodeGenerator() {
       name: '',
       description: '',
       points: 10,
+      expirationDate: addDays(new Date(), 30),
     },
   });
 
@@ -103,7 +104,7 @@ export function QrCodeGenerator() {
     })
     
     setIsLoading(false);
-    form.reset({ name: '', description: '', points: 10, expirationDate: undefined });
+    form.reset({ name: '', description: '', points: 10, expirationDate: addDays(new Date(), 30) });
   }
 
   const downloadQRCode = (code: GeneratedQrCode) => {
@@ -148,6 +149,9 @@ export function QrCodeGenerator() {
   }
 
   const getStatus = (expirationDate: string) => {
+    if (!expirationDate || isNaN(new Date(expirationDate).getTime())) {
+        return "Invalid";
+    }
     const now = new Date();
     const expiry = new Date(expirationDate);
     // Set expiry to the end of the day
@@ -292,8 +296,11 @@ export function QrCodeGenerator() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {generatedCodes.map((code) => (
-                               <TableRow key={code.id}>
+                            {generatedCodes.map((code) => {
+                                const date = new Date(code.expirationDate);
+                                const isValidDate = !isNaN(date.getTime());
+                                return (
+                                <TableRow key={code.id}>
                                    <TableCell>
                                         <div className="p-1 bg-white rounded-md w-14 h-14">
                                             <QRCodeSVG
@@ -311,7 +318,7 @@ export function QrCodeGenerator() {
                                    <TableCell>
                                         <Badge variant="secondary">{code.points} pts</Badge>
                                    </TableCell>
-                                   <TableCell>{format(new Date(code.expirationDate), "PPP")}</TableCell>
+                                   <TableCell>{isValidDate ? format(date, "PPP") : "Invalid Date"}</TableCell>
                                    <TableCell>
                                         <Badge
                                             variant={getStatus(code.expirationDate) === "Active" ? "default" : "destructive"}
@@ -327,7 +334,8 @@ export function QrCodeGenerator() {
                                         </Button>
                                    </TableCell>
                                </TableRow>
-                            ))}
+                                )
+                            })}
                         </TableBody>
                     </Table>
                 )}
