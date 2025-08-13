@@ -1,5 +1,7 @@
 
 
+'use client';
+
 import {
     Activity,
     Award,
@@ -20,6 +22,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useEffect, useState } from "react";
+import type { Class } from "@/components/create-class-form";
   
 
 const recentActivities = [
@@ -57,7 +61,7 @@ const topGroups = [
   { name: 'Ravenclaw', points: 3700, progress: 74 },
 ];
 
-const mockClasses = [
+const initialClasses: Class[] = [
   {
     id: "cls-1",
     name: "10th Grade Biology",
@@ -82,6 +86,28 @@ const mockClasses = [
 ];
   
   export default function DashboardPage() {
+    const [classes, setClasses] = useState<Class[]>([]);
+
+    useEffect(() => {
+        try {
+            const storedClasses = window.localStorage.getItem('managedClasses');
+            if (storedClasses) {
+                // Important: Dates are stored as strings in JSON, so they need to be converted back to Date objects.
+                const parsedClasses = JSON.parse(storedClasses).map((cls: Class) => ({
+                    ...cls,
+                    startDate: new Date(cls.startDate),
+                    endDate: new Date(cls.endDate),
+                }));
+                setClasses(parsedClasses);
+            } else {
+                setClasses(initialClasses);
+            }
+        } catch (error) {
+            console.error("Failed to load classes from localStorage", error);
+            setClasses(initialClasses);
+        }
+    }, []);
+
     const getStatus = (startDate: Date, endDate: Date) => {
         const now = new Date();
         if (now < startDate) return "Scheduled";
@@ -89,7 +115,7 @@ const mockClasses = [
         return "Active";
     }
 
-    const activeClasses = mockClasses.filter(c => getStatus(c.startDate, c.endDate) === 'Active');
+    const activeClasses = classes.filter(c => getStatus(c.startDate, c.endDate) === 'Active');
 
     return (
         <div className="flex flex-col gap-4">
@@ -233,6 +259,4 @@ const mockClasses = [
     )
   }
   
-
     
-

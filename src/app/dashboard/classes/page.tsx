@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -25,7 +26,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 
-// Mock data for initial classes
+// Mock data for initial classes, used as a fallback if localStorage is empty
 const initialClasses: Class[] = [
   {
     id: "cls-1",
@@ -50,15 +51,40 @@ const initialClasses: Class[] = [
   },
 ];
 
+const LOCAL_STORAGE_KEY = 'managedClasses';
 
 export default function ClassesPage() {
-    const [classes, setClasses] = useState<Class[]>(initialClasses);
+    const [classes, setClasses] = useState<Class[]>([]);
     const { toast } = useToast();
     const router = useRouter();
 
+    // Load classes from localStorage on initial client-side render
+    useEffect(() => {
+        try {
+            const storedClasses = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (storedClasses) {
+                // Dates are stored as strings in JSON, so they need to be converted back to Date objects.
+                const parsedClasses = JSON.parse(storedClasses).map((cls: Class) => ({
+                    ...cls,
+                    startDate: new Date(cls.startDate),
+                    endDate: new Date(cls.endDate),
+                }));
+                setClasses(parsedClasses);
+            } else {
+                // If nothing is in storage, use the initial list and save it.
+                setClasses(initialClasses);
+                window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialClasses));
+            }
+        } catch (error) {
+            console.error("Failed to load classes from localStorage", error);
+            setClasses(initialClasses);
+        }
+    }, []);
+
+    // Effect to run cleanup logic
     useEffect(() => {
         const cleanupExpiredClassLogs = () => {
-            if (typeof window === 'undefined') return;
+            if (typeof window === 'undefined' || classes.length === 0) return;
 
             const twoWeeksAgo = addDays(new Date(), -14);
             let logsCleanedCount = 0;
@@ -66,7 +92,6 @@ export default function ClassesPage() {
             classes.forEach(cls => {
                 const endDate = new Date(cls.endDate);
                 if (isPast(endDate) && endDate < twoWeeksAgo) {
-                    // This class is expired by more than 2 weeks.
                     const allKeys = Object.keys(localStorage);
                     const classLogKeys = allKeys.filter(key => key.startsWith(`checkInLog_${cls.id}`));
                     
@@ -88,11 +113,24 @@ export default function ClassesPage() {
     }, [classes]);
 
     const handleAddClass = (newClass: Class) => {
-        setClasses((prevClasses) => [newClass, ...prevClasses]);
+        const updatedClasses = [newClass, ...classes];
+        setClasses(updatedClasses);
+        try {
+            window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedClasses));
+        } catch (error) {
+            console.error("Failed to save classes to localStorage", error);
+        }
     };
 
     const handleDeleteClass = (classToDelete: Class) => {
-        setClasses((prevClasses) => prevClasses.filter(cls => cls.id !== classToDelete.id));
+        const updatedClasses = classes.filter(cls => cls.id !== classToDelete.id)
+        setClasses(updatedClasses);
+        try {
+            window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedClasses));
+        } catch (error) {
+             console.error("Failed to save classes to localStorage", error);
+        }
+
         toast({
             title: "Class Deleted",
             description: `The class "${classToDelete.name}" has been removed.`,
