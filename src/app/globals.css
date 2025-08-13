@@ -4,61 +4,61 @@
 
 @layer base {
   :root {
-    --background: 222 84% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222 84% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 84% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 262 84% 58%;
+    --background: 217 71% 11%; /* Depth Navy */
+    --foreground: 220 14% 96%; /* Lighter version of Card Tint 2 for text */
+    --card: 216 70% 20%; /* Darker blue for cards */
+    --card-foreground: 220 14% 96%;
+    --popover: 217 71% 11%;
+    --popover-foreground: 220 14% 96%;
+    --primary: 214 100% 38%; /* Leadership Blue */
     --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
+    --secondary: 195 99% 46%; /* Sky Accent */
+    --secondary-foreground: 217 71% 11%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 20% 65%; /* Secondary Text */
+    --accent: 195 99% 46%; /* Sky Accent */
+    --accent-foreground: 217 71% 11%;
+    --destructive: 0 84% 60%; /* Danger */
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 262 84% 58%;
+    --border: 215 28% 17%; /* Dividers */
+    --input: 215 28% 17%;
+    --ring: 214 100% 38%; /* Leadership Blue */
     --radius: 0.5rem;
-    --chart-1: 262 84% 58%;
-    --chart-2: 222 84% 58%;
-    --chart-3: 182 84% 58%;
-    --chart-4: 142 84% 58%;
-    --chart-5: 102 84% 58%;
-    --sidebar-background: 222 84% 4%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 262 84% 58%;
+    --chart-1: 214 100% 38%; /* Leadership Blue */
+    --chart-2: 195 99% 46%; /* Sky Accent */
+    --chart-3: 81 74% 58%; /* Progress Lime */
+    --chart-4: 39 92% 56%; /* Warning */
+    --chart-5: 220 14% 96%;
+    --sidebar-background: 217 71% 11%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 214 100% 38%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 262 84% 58%;
+    --sidebar-accent: 195 99% 46%;
+    --sidebar-accent-foreground: 217 71% 11%;
+    --sidebar-border: 215 28% 17%;
+    --sidebar-ring: 214 100% 38%;
   }
 
   .dark {
-    --background: 222 84% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222 84% 9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 84% 9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 262 84% 58%;
+    --background: 217 71% 11%; /* Depth Navy */
+    --foreground: 220 14% 96%; /* Lighter version of Card Tint 2 for text */
+    --card: 216 70% 20%; /* Darker blue for cards */
+    --card-foreground: 220 14% 96%;
+    --popover: 217 71% 11%;
+    --popover-foreground: 220 14% 96%;
+    --primary: 214 100% 38%; /* Leadership Blue */
     --primary-foreground: 210 40% 98%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
+    --secondary: 195 99% 46%; /* Sky Accent */
+    --secondary-foreground: 217 71% 11%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 20% 65%; /* Secondary Text */
+    --accent: 195 99% 46%; /* Sky Accent */
+    --accent-foreground: 217 71% 11%;
+    --destructive: 0 84% 60%; /* Danger */
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 262 84% 58%;
+    --border: 215 28% 17%; /* Dividers */
+    --input: 215 28% 17%;
+    --ring: 214 100% 38%; /* Leadership Blue */
   }
 }
 
