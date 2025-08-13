@@ -1,17 +1,26 @@
 
+'use client';
+
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
-// Mock data - In a real app, you'd fetch this based on params.classId
+// Mock data - In a real app, you'd fetch this based on the classId
 const mockClass = {
     id: "cls-1",
     name: "10th Grade Biology",
 };
 
-export default function ClassDetailsPage({ params }: { params: { classId: string } }) {
+export default function ClassDetailsPage() {
+    const params = useParams();
+    const classId = Array.isArray(params.classId) ? params.classId[0] : params.classId;
+
+    // In a real app, you might fetch class details here using the classId
+    // For now, we'll just use the mock data name.
+
     return (
         <div className="space-y-6">
             <Card>
@@ -31,7 +40,7 @@ export default function ClassDetailsPage({ params }: { params: { classId: string
                     </div>
                 </CardHeader>
             </Card>
-            <ClassroomManager classId={params.classId} />
+            <ClassroomManager classId={classId} />
         </div>
     )
 }
