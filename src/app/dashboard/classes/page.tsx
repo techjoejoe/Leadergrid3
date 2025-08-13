@@ -8,7 +8,7 @@ import { CreateClassForm, Class } from "@/components/create-class-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Trash2 } from "lucide-react";
+import { Wrench, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -122,7 +122,7 @@ export default function ClassesPage() {
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" asChild onClick={(e) => e.stopPropagation()}>
                                             <Link href={`/dashboard/classes/${cls.id}`}>
-                                                <ChevronRight className="h-4 w-4" />
+                                                <Wrench className="h-4 w-4" />
                                             </Link>
                                         </Button>
                                         <AlertDialog onOpenChange={(e) => e.stopPropagation()}>
