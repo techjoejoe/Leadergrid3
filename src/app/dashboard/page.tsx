@@ -5,6 +5,8 @@ import {
     Award,
     DollarSign,
     Users,
+    MoveRight,
+    BookOpen,
   } from "lucide-react"
   
   import {
@@ -16,6 +18,8 @@ import {
   } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
   
 
 const recentActivities = [
@@ -52,8 +56,41 @@ const topGroups = [
   { name: 'Hufflepuff', points: 3850, progress: 77 },
   { name: 'Ravenclaw', points: 3700, progress: 74 },
 ];
+
+const mockClasses = [
+  {
+    id: "cls-1",
+    name: "10th Grade Biology",
+    joinCode: "BIOLOGY101",
+    startDate: new Date("2024-09-01T00:00:00"),
+    endDate: new Date("2025-06-15T00:00:00"),
+  },
+  {
+    id: "cls-2",
+    name: "Intro to Creative Writing",
+    joinCode: "WRITE2024",
+    startDate: new Date("2024-09-01T00:00:00"),
+    endDate: new Date("2024-12-20T00:00:00"),
+  },
+  {
+    id: "cls-3",
+    name: "Advanced Placement Calculus",
+    joinCode: "CALCPRO",
+    startDate: new Date("2024-08-26T00:00:00"),
+    endDate: new Date("2025-05-20T00:00:00"),
+  },
+];
   
   export default function DashboardPage() {
+    const getStatus = (startDate: Date, endDate: Date) => {
+        const now = new Date();
+        if (now < startDate) return "Scheduled";
+        if (now > endDate) return "Archived";
+        return "Active";
+    }
+
+    const activeClasses = mockClasses.filter(c => getStatus(c.startDate, c.endDate) === 'Active');
+
     return (
         <div className="flex flex-col gap-4">
             <h1 className="text-3xl font-headline font-bold">Dashboard</h1>
@@ -112,7 +149,7 @@ const topGroups = [
                 </Card>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
+                <Card className="col-span-full lg:col-span-4">
                     <CardHeader>
                     <CardTitle className="font-headline">Recent Activity</CardTitle>
                     <CardDescription>
@@ -138,27 +175,59 @@ const topGroups = [
                        </div>
                     </CardContent>
                 </Card>
-                <Card className="col-span-4 lg:col-span-3">
-                    <CardHeader>
-                    <CardTitle className="font-headline">Top Groups</CardTitle>
-                    <CardDescription>
-                        Groups with the most points this week.
-                    </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {topGroups.map((group) => (
-                                <div key={group.name} className="space-y-1">
-                                    <div className="flex justify-between items-baseline">
-                                        <p className="text-sm font-medium">{group.name}</p>
-                                        <p className="text-sm font-bold text-primary">{group.points.toLocaleString()} pts</p>
+                <div className="col-span-full lg:col-span-3 flex flex-col gap-4">
+                    <Card>
+                        <CardHeader>
+                        <CardTitle className="font-headline">Active Classes</CardTitle>
+                        <CardDescription>
+                            Jump into your currently running classes.
+                        </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3">
+                                {activeClasses.length > 0 ? activeClasses.map((cls) => (
+                                    <div key={cls.id} className="flex items-center justify-between p-2 rounded-md bg-secondary/20">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-primary/20 rounded-md">
+                                                <BookOpen className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <span className="font-medium">{cls.name}</span>
+                                        </div>
+                                        <Button asChild size="sm" className="group">
+                                            <Link href={`/dashboard/classes/${cls.id}`}>
+                                                Go to Class
+                                                <MoveRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                            </Link>
+                                        </Button>
                                     </div>
-                                    <Progress value={group.progress} className="h-2" />
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                                )) : (
+                                    <p className="text-sm text-muted-foreground text-center">No active classes right now.</p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                        <CardTitle className="font-headline">Top Groups</CardTitle>
+                        <CardDescription>
+                            Groups with the most points this week.
+                        </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {topGroups.map((group) => (
+                                    <div key={group.name} className="space-y-1">
+                                        <div className="flex justify-between items-baseline">
+                                            <p className="text-sm font-medium">{group.name}</p>
+                                            <p className="text-sm font-bold text-primary">{group.points.toLocaleString()} pts</p>
+                                        </div>
+                                        <Progress value={group.progress} className="h-2" />
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     )
@@ -166,3 +235,4 @@ const topGroups = [
   
 
     
+
