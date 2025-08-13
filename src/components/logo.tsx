@@ -5,7 +5,7 @@ export function Logo() {
   return (
     <Link href="/">
       <Image 
-        src="/LeaderGridMascotLogo.png" 
+        src="/Untitled-1.png" 
         alt="LeaderGrid Mascot" 
         width={40} 
         height={40} 
