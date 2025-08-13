@@ -22,7 +22,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, MinusCircle, Loader2, Download, Check, Play } from 'lucide-react';
-import { format, addMinutes } from 'date-fns';
+import { format, addMinutes, isToday } from 'date-fns';
 import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
@@ -80,30 +80,35 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
 
   useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
-
-    const q = query(
-        collection(db, "checkIns"), 
-        where("classId", "==", classId),
-        where("checkedInAt", ">=", Timestamp.fromDate(today)),
-        where("checkedInAt", "<", Timestamp.fromDate(tomorrow))
-    );
+    // This query will fetch all check-ins for the class.
+    // We will filter by date on the client-side to avoid the composite index requirement.
+    const q = query(collection(db, "checkIns"), where("classId", "==", classId));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const newCheckIns: CheckInRecord[] = [];
+        const allCheckInsForClass: CheckInRecord[] = [];
         querySnapshot.forEach((doc) => {
-            newCheckIns.push(doc.data() as CheckInRecord);
+            allCheckInsForClass.push(doc.data() as CheckInRecord);
         });
+
+        // Filter for today's check-ins on the client
+        const todayCheckIns = allCheckInsForClass.filter(record => 
+            isToday(record.checkedInAt.toDate())
+        );
+
         // Sort by most recent check-in
-        newCheckIns.sort((a, b) => b.checkedInAt.toMillis() - a.checkedInAt.toMillis());
-        setCheckInLog(newCheckIns);
+        todayCheckIns.sort((a, b) => b.checkedInAt.toMillis() - a.checkedInAt.toMillis());
+        setCheckInLog(todayCheckIns);
+    }, (error) => {
+        console.error("Firestore snapshot error:", error);
+        toast({
+            title: "Error fetching attendance",
+            description: "Could not load real-time attendance data. Please check your connection and Firestore setup.",
+            variant: "destructive"
+        });
     });
 
     return () => unsubscribe(); // Cleanup listener on unmount
-  }, [classId]);
+  }, [classId, toast]);
 
   const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
 
