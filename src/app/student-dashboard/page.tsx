@@ -13,7 +13,7 @@ import {
     Upload,
     Check,
     Users,
-    School,
+    Building,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -299,13 +299,13 @@ export default function StudentDashboardPage() {
                         </Card>
                          <Card>
                             <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Users className='h-4 w-4' /> Class Rank</CardDescription>
+                                <CardDescription className="flex items-center gap-2"><Users className='h-4 w-4' /> Current Class Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.classRank}</CardTitle>
                             </CardHeader>
                         </Card>
                          <Card>
                             <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><School className='h-4 w-4' /> School Rank</CardDescription>
+                                <CardDescription className="flex items-center gap-2"><Building className='h-4 w-4' /> Company Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.schoolRank}</CardTitle>
                             </CardHeader>
                         </Card>
