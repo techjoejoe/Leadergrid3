@@ -6,13 +6,10 @@ import {
     Activity,
     Award,
     ChevronDown,
-    ChevronRight,
-    Crown,
     LogOut,
     Settings,
     Star,
     Upload,
-    Check,
     Users,
     Building,
 } from 'lucide-react';
@@ -32,8 +29,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -42,8 +37,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { JoinClassDialog, ClassInfo } from '@/components/join-class-dialog';
-import { cn } from '@/lib/utils';
+import type { ClassInfo } from '@/components/join-class-dialog';
+import { ClassroomHub } from '@/components/classroom-hub';
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
@@ -83,7 +78,6 @@ export default function StudentDashboardPage() {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                // Load avatar from localStorage first for faster load
                 try {
                     const savedAvatar = window.localStorage.getItem('studentAvatar');
                     if (savedAvatar) {
@@ -102,7 +96,6 @@ export default function StudentDashboardPage() {
             }
         });
 
-        // Load classes from localStorage
         try {
             const storedClasses = localStorage.getItem('joinedClasses');
             const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
@@ -132,7 +125,6 @@ export default function StudentDashboardPage() {
         setJoinedClasses(updatedClasses);
         localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
         
-        // Set the newly joined class as active
         handleActiveClassChange(newClass.code);
 
         toast({
@@ -175,9 +167,7 @@ export default function StudentDashboardPage() {
             reader.onloadend = async () => {
                 const base64String = reader.result as string;
                 try {
-                    // Update Firebase profile
                     await updateProfile(user, { photoURL: base64String });
-                    // Update local state and localStorage
                     setAvatarUrl(base64String);
                     window.localStorage.setItem('studentAvatar', base64String);
                     
@@ -201,7 +191,6 @@ export default function StudentDashboardPage() {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            // Clear local storage on logout
             window.localStorage.removeItem('studentAvatar');
             toast({
                 title: "Logged Out",
@@ -224,35 +213,8 @@ export default function StudentDashboardPage() {
 
     return (
         <div className="flex flex-col min-h-dvh bg-background">
-             {/* Header */}
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        {joinedClasses.length > 0 && activeClass ? (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                     <Button variant="outline">
-                                        Class: {activeClass.name}
-                                        <ChevronDown className="ml-2 h-4 w-4" />
-                                     </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                    <DropdownMenuLabel>Select a Class</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                     <DropdownMenuRadioGroup value={activeClass.code} onValueChange={handleActiveClassChange}>
-                                        {joinedClasses.map((cls) => (
-                                             <DropdownMenuRadioItem key={cls.code} value={cls.code}>
-                                                {cls.name}
-                                             </DropdownMenuRadioItem>
-                                        ))}
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">No classes joined.</p>
-                        )}
-                        <JoinClassDialog onClassJoined={handleJoinClass} joinedClasses={joinedClasses} />
-                    </div>
+                <div className="container flex h-14 max-w-screen-2xl items-center justify-end">
                     <div className="flex items-center gap-4">
                         <input
                             type="file"
@@ -303,13 +265,18 @@ export default function StudentDashboardPage() {
 
             <main className="flex-1 p-4 sm:p-6 md:p-8">
                 <div className="max-w-4xl mx-auto space-y-6">
-                    {/* Welcome Header */}
                     <div>
                         <h1 className="text-3xl font-bold font-headline">Welcome Back, {displayName.split(' ')[0]}!</h1>
                         <p className="text-muted-foreground">Here's a summary of your progress and achievements.</p>
                     </div>
 
-                    {/* Stats Grid */}
+                    <ClassroomHub 
+                        joinedClasses={joinedClasses}
+                        activeClass={activeClass}
+                        onJoinClass={handleJoinClass}
+                        onActiveClassChange={handleActiveClassChange}
+                    />
+
                      <div className="grid gap-4 sm:grid-cols-3">
                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
                             <CardHeader className="pb-2">
@@ -331,7 +298,6 @@ export default function StudentDashboardPage() {
                         </Card>
                     </div>
 
-                    {/* My Badges */}
                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
@@ -359,7 +325,6 @@ export default function StudentDashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Recent Activity */}
                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
@@ -384,10 +349,10 @@ export default function StudentDashboardPage() {
                     </Card>
                     
                     <div className='text-center'>
-                         <Button asChild variant="outline">
+                         <Button asChild variant="outline" className="group">
                             <Link href="/leaderboard">
                                 View Full Leaderboard
-                                <ChevronRight className="ml-2 h-4 w-4" />
+                                <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                             </Link>
                         </Button>
                     </div>
