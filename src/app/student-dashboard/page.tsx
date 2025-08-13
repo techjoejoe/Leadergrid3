@@ -203,12 +203,6 @@ export default function StudentDashboardPage() {
     const displayAvatar = user?.photoURL || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
-    const animationClasses = [
-        'animate-pulse-fast',
-        'animate-pulse-medium',
-        'animate-pulse-slow',
-    ];
-
     return (
         <div className="flex flex-col min-h-dvh bg-background">
              {/* Header */}
@@ -298,28 +292,28 @@ export default function StudentDashboardPage() {
 
                     {/* Stats Grid */}
                      <div className="grid gap-4 sm:grid-cols-3">
-                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
+                        <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription className="flex items-center gap-2"><Star className='h-4 w-4' /> Total Points</CardDescription>
                                 <CardTitle className="text-4xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
                             </CardHeader>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
+                         <Card>
                             <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Users className='h-4 w-4' /> Current Class Rank</CardDescription>
+                                <CardDescription className="flex items-center gap-2"><Users className='h-4 w-4' /> Class Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.classRank}</CardTitle>
                             </CardHeader>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-xl">
+                         <Card>
                             <CardHeader className="pb-2">
-                                <CardDescription className="flex items-center gap-2"><Building className='h-4 w-4' /> Company Rank</CardDescription>
+                                <CardDescription className="flex items-center gap-2"><Building className='h-4 w-4' /> School Rank</CardDescription>
                                 <CardTitle className="text-4xl font-bold">#{studentData.schoolRank}</CardTitle>
                             </CardHeader>
                         </Card>
                     </div>
 
                     {/* My Badges */}
-                    <Card className="transition-shadow duration-300 hover:shadow-lg">
+                    <Card>
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
                                <Award className="mr-2" /> My Badges
@@ -330,14 +324,9 @@ export default function StudentDashboardPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
                                     {badges.map((badge, index) => (
                                         <div key={index} className="flex flex-col items-center gap-2">
-                                            <Avatar className={cn(
-                                                "relative group h-20 w-20 border-2 border-primary/50 transition-transform duration-300 hover:scale-110 overflow-hidden",
-                                                animationClasses[index % animationClasses.length]
-                                            )}>
+                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
                                                 <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
                                                 <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
-                                                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent transform -translate-x-full animate-shimmer group-hover:animate-shimmer-hover" />
                                             </Avatar>
                                             <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
                                         </div>
@@ -352,7 +341,7 @@ export default function StudentDashboardPage() {
                     </Card>
 
                     {/* Recent Activity */}
-                    <Card className="transition-shadow duration-300 hover:shadow-lg">
+                    <Card>
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
                                 <Activity className="mr-2" /> Recent Activity
@@ -389,3 +378,5 @@ export default function StudentDashboardPage() {
         </div>
     );
 }
+
+    
