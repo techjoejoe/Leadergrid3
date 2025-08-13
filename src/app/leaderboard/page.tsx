@@ -82,31 +82,23 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Rest of the list */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2">
-                <Table>
-                    <TableBody>
-                    {rest.map((user) => (
-                        <TableRow key={user.rank} className="border-b border-white/10 hover:bg-white/10">
-                        <TableCell className="w-16 text-center text-lg font-bold text-white/70">{user.rank}</TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-4">
-                            <Avatar className="w-10 h-10 border-2 border-white/30">
-                                <AvatarImage src={user.avatar} data-ai-hint={user.hint} />
-                                <AvatarFallback>{user.initial}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium text-white">{user.name}</span>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {rest.map((user) => (
+                    <div key={user.rank} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-white/20">
+                        <div className="text-2xl font-bold text-white/60 w-8 text-center">{user.rank}</div>
+                        <Avatar className="w-12 h-12 border-2 border-white/30">
+                            <AvatarImage src={user.avatar} data-ai-hint={user.hint} />
+                            <AvatarFallback>{user.initial}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                            <h4 className="font-semibold text-white">{user.name}</h4>
+                            <div className="flex items-center gap-2 text-sm text-yellow-300/90">
+                                <Star className="h-4 w-4" />
+                                <span>{user.points.toLocaleString()} pts</span>
                             </div>
-                        </TableCell>
-                        <TableCell className="text-right text-lg font-semibold text-white/90">
-                            <div className="flex items-center justify-end gap-2">
-                                <Star className="h-4 w-4 text-yellow-400/80" />
-                                {user.points.toLocaleString()}
-                            </div>
-                        </TableCell>
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     </div>
