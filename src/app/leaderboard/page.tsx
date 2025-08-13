@@ -62,18 +62,16 @@ export default function LeaderboardPage() {
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600 text-white p-4 sm:p-6 md:p-8">
         <div className="absolute inset-0 bg-[url(https://www.transparenttextures.com/patterns/gplay.png)] opacity-10"></div>
         <div className="relative z-10 w-full max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-start mb-6">
                 <Button variant="outline" size="icon" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
                     <Link href="/student-dashboard">
                         <ArrowLeft className="h-4 w-4" />
                     </Link>
                 </Button>
-                <h1 className="text-4xl font-headline font-bold">Leaderboard</h1>
-                <div className="flex items-center gap-2 p-1 bg-black/20 rounded-full">
-                    <Button size="sm" className="bg-white/20 text-white rounded-full hover:bg-white/30">Today</Button>
-                    <Button size="sm" variant="ghost" className="text-white/70 rounded-full hover:text-white">Month</Button>
-                    <Button size="sm" variant="ghost" className="text-white/70 rounded-full hover:text-white">All Time</Button>
+                <div className="flex-1 text-center">
+                    <h1 className="text-4xl font-headline font-bold">Leaderboard</h1>
                 </div>
+                 <div className="w-10"></div>
             </div>
             
             {/* Podium */}
