@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Dialog,
@@ -21,7 +21,10 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, MinusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, MinusCircle, Loader2, QrCode, Download, Check } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { format } from 'date-fns';
+import { Progress } from './ui/progress';
 
 // Mock data for students in a class
 const mockStudents = [
@@ -32,6 +35,12 @@ const mockStudents = [
   { id: 'stu_5', name: 'Emily Suzuki', points: 885, avatar: 'https://placehold.co/40x40.png?text=ES', initial: 'ES' },
 ];
 
+const mockClassDetails = {
+    "cls-1": { name: "10th Grade Biology" },
+    "cls-2": { name: "Intro to Creative Writing" },
+    "cls-3": { name: "Advanced Placement Calculus" },
+}
+
 const formSchema = z.object({
   points: z.coerce.number().int().min(1, "Points must be a positive number."),
   reason: z.string().min(1, "A reason for the adjustment is required."),
@@ -40,26 +49,51 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 type Student = typeof mockStudents[0];
 
+interface CheckInRecord {
+    studentId: string;
+    studentName: string;
+    classId: string;
+    checkedInAt: string; // ISO String
+}
+
 export function ClassroomManager({ classId }: { classId: string }) {
   const [students, setStudents] = useState(mockStudents);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
+
+  const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
+
+  useEffect(() => {
+    try {
+        const storedLog = window.localStorage.getItem(`checkInLog_${classId}`);
+        if (storedLog) {
+            setCheckInLog(JSON.parse(storedLog));
+        }
+    } catch (error) {
+        console.error("Failed to load check-in log from localStorage", error);
+    }
+  }, [classId]);
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { points: 10, reason: '' },
   });
 
-  const handleOpenDialog = (student: Student, type: 'add' | 'subtract') => {
+  const handleOpenPointsDialog = (student: Student, type: 'add' | 'subtract') => {
     setSelectedStudent(student);
     setAdjustmentType(type);
-    setIsDialogOpen(true);
+    setIsPointsDialogOpen(true);
   };
 
-  const onSubmit = (values: FormValues) => {
+  const onPointsSubmit = (values: FormValues) => {
     if (!selectedStudent) return;
     setIsLoading(true);
 
@@ -84,52 +118,179 @@ export function ClassroomManager({ classId }: { classId: string }) {
       });
 
       setIsLoading(false);
-      setIsDialogOpen(false);
+      setIsPointsDialogOpen(false);
       form.reset({ points: 10, reason: '' });
     }, 1000);
   };
 
-  return (
-    <>
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead className="w-[150px] text-center">Current Points</TableHead>
-                <TableHead className="w-[200px] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map(student => (
-                <TableRow key={student.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-4">
-                      <Avatar>
-                        <AvatarImage src={student.avatar} data-ai-hint="student portrait" />
-                        <AvatarFallback>{student.initial}</AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{student.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center font-bold text-lg">{student.points.toLocaleString()}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenDialog(student, 'add')}>
-                      <PlusCircle className="mr-2 h-4 w-4 text-green-500" /> Add
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog(student, 'subtract')}>
-                      <MinusCircle className="mr-2 h-4 w-4 text-red-500" /> Subtract
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+  const handleGenerateCode = () => {
+    const qrValue = JSON.stringify({
+        type: 'class-check-in',
+        classId: classId,
+        className: className,
+        timestamp: Date.now()
+    });
+    setGeneratedCode(qrValue);
+    setIsQrDialogOpen(true);
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    // Simulate a student scanning the code
+    setTimeout(() => {
+        const uncheckedStudents = mockStudents.filter(s => !checkInLog.some(log => log.studentId === s.id));
+        if (uncheckedStudents.length === 0) {
+            toast({ title: "All students have checked in!", variant: "default" });
+            return;
+        }
+
+        const randomStudent = uncheckedStudents[Math.floor(Math.random() * uncheckedStudents.length)];
+        const newRecord: CheckInRecord = {
+            studentId: randomStudent.id,
+            studentName: randomStudent.name,
+            classId: classId,
+            checkedInAt: new Date().toISOString(),
+        };
+        const updatedLog = [...checkInLog, newRecord];
+        setCheckInLog(updatedLog);
+        window.localStorage.setItem(`checkInLog_${classId}`, JSON.stringify(updatedLog));
+
+        toast({
+            title: "Simulated Check-in",
+            description: `${randomStudent.name} just checked into ${className}.`
+        })
+    }, 3000);
+  }
+
+  const downloadCSV = () => {
+    if (checkInLog.length === 0) {
+        toast({ title: "No Data", description: "There are no check-in records for this class to export."});
+        return;
+    }
+    
+    const filename = `check-in_${className.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    const csvHeader = "Student Name,Date,Time\n";
+    const csvRows = checkInLog.map(r => {
+        const d = new Date(r.checkedInAt);
+        const date = format(d, 'PPP');
+        const time = format(d, 'p');
+        return `"${r.studentName}","${date}","${time}"`;
+    }).join("\n");
+
+    const csvContent = csvHeader + csvRows;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+  };
+  
+  const checkedInPercentage = (checkInLog.length / students.length) * 100;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2">
+        <Card>
+            <CardHeader>
+                <CardTitle>Student Roster</CardTitle>
+                <CardDescription>Manage points for students in this class.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead className="w-[150px] text-center">Current Points</TableHead>
+                    <TableHead className="w-[200px] text-right">Actions</TableHead>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {students.map(student => (
+                    <TableRow key={student.id}>
+                    <TableCell>
+                        <div className="flex items-center gap-4">
+                        <Avatar>
+                            <AvatarImage src={student.avatar} data-ai-hint="student portrait" />
+                            <AvatarFallback>{student.initial}</AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{student.name}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-center font-bold text-lg">{student.points.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
+                        <PlusCircle className="mr-2 h-4 w-4 text-green-500" /> Add
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
+                        <MinusCircle className="mr-2 h-4 w-4 text-red-500" /> Subtract
+                        </Button>
+                    </TableCell>
+                    </TableRow>
+                ))}
+                </TableBody>
+            </Table>
+            </CardContent>
+        </Card>
+      </div>
+      <div className="lg:col-span-1 space-y-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>Class Check-in</CardTitle>
+                <CardDescription>Generate a live QR code for students to check into this class.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button onClick={handleGenerateCode} className="w-full">
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Generate Check-in Code
+                </Button>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <CardTitle>Attendance Log</CardTitle>
+                    <Button variant="outline" size="icon" onClick={downloadCSV} disabled={checkInLog.length === 0}>
+                        <Download className="h-4 w-4" />
+                    </Button>
+                </div>
+                <CardDescription>
+                   {checkInLog.length} of {students.length} students have checked in.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Progress value={checkedInPercentage} className="mb-4 h-2" />
+                 {checkInLog.length === 0 ? (
+                    <div className='flex flex-col items-center justify-center text-center text-sm text-muted-foreground h-24'>
+                        <Check className="h-8 w-8 mb-2" />
+                        <p>No check-ins yet.</p>
+                    </div>
+                 ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Student</TableHead>
+                                <TableHead className="text-right">Time</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                         <TableBody>
+                            {checkInLog.slice().reverse().map((record) => (
+                                <TableRow key={record.studentId}>
+                                    <TableCell className="font-medium">{record.studentName}</TableCell>
+                                    <TableCell className="text-right">{format(new Date(record.checkedInAt), 'p')}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                 )}
+            </CardContent>
+        </Card>
+      </div>
+
+      <Dialog open={isPointsDialogOpen} onOpenChange={setIsPointsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -140,7 +301,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onPointsSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="points"
@@ -168,7 +329,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                 )}
               />
               <DialogFooter>
-                <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)}>
+                <Button type="button" variant="ghost" onClick={() => setIsPointsDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isLoading}>
@@ -180,6 +341,21 @@ export function ClassroomManager({ classId }: { classId: string }) {
           </Form>
         </DialogContent>
       </Dialog>
-    </>
+       <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Live Check-in for {className}</DialogTitle>
+            <DialogDescription>Students can scan this code with their device to check in.</DialogDescription>
+          </DialogHeader>
+          {generatedCode && (
+            <div className="flex justify-center p-4">
+              <div className="p-4 bg-white rounded-lg">
+                <QRCodeSVG value={generatedCode} size={256} includeMargin />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
