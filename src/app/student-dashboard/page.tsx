@@ -142,6 +142,17 @@ export default function StudentDashboardPage() {
         return () => unsubscribe();
     }, [auth, router]);
     
+    useEffect(() => {
+        try {
+            const savedAvatar = window.localStorage.getItem('studentAvatar');
+            if (savedAvatar) {
+                setAvatarUrl(savedAvatar);
+            }
+        } catch (error) {
+            console.error("Failed to load student avatar from localStorage", error);
+        }
+    }, []);
+
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses, newClass];
         setJoinedClasses(updatedClasses);
@@ -261,24 +272,45 @@ export default function StudentDashboardPage() {
                         onActiveClassChange={handleActiveClassChange}
                     />
 
-                     <div className="grid gap-4 sm:grid-cols-3">
-                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg text-center">
-                            <CardHeader className="pb-4">
-                                <CardDescription className="flex items-center justify-center gap-2"><Star className='h-4 w-4' /> Lifetime points earned</CardDescription>
-                                <CardTitle className="text-4xl font-bold">{studentData.points.toLocaleString()}</CardTitle>
-                            </CardHeader>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-full bg-primary/10 text-primary">
+                                        <Star className='h-6 w-6' /> 
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Lifetime Points</p>
+                                        <p className="text-2xl font-bold">{studentData.points.toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg text-center">
-                            <CardHeader className="pb-4">
-                                <CardDescription className="flex items-center justify-center gap-2"><Users className='h-4 w-4' /> Current Class Rank</CardDescription>
-                                <CardTitle className="text-4xl font-bold">#{studentData.classRank}</CardTitle>
-                            </CardHeader>
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
+                             <CardContent className="pt-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-full bg-primary/10 text-primary">
+                                        <Users className='h-6 w-6' />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Class Rank</p>
+                                        <p className="text-2xl font-bold">#{studentData.classRank}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg text-center">
-                            <CardHeader className="pb-4">
-                                <CardDescription className="flex items-center justify-center gap-2"><Building className='h-4 w-4' /> Company Rank</CardDescription>
-                                <CardTitle className="text-4xl font-bold">#{studentData.schoolRank}</CardTitle>
-                            </CardHeader>
+                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg">
+                             <CardContent className="pt-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-full bg-primary/10 text-primary">
+                                         <Building className='h-6 w-6' />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Company Rank</p>
+                                        <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
+                                    </div>
+                                </div>
+                            </CardContent>
                         </Card>
                     </div>
 
