@@ -48,17 +48,20 @@ export function ClassroomHub({ joinedClasses, activeClass, onJoinClass, onActive
   const [isLoading, setIsLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false)
 
-  const form = useForm<FormValues>({
+  const joinForm = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { joinCode: "" }
   });
+  
+  // A dummy form for the selector, which doesn't need validation but needs the context for the label.
+  const selectForm = useForm();
 
   function onSubmit(values: FormValues) {
     setIsLoading(true);
 
     const isAlreadyJoined = joinedClasses.some(c => c.code.toUpperCase() === values.joinCode.toUpperCase());
     if (isAlreadyJoined) {
-        form.setError("joinCode", {
+        joinForm.setError("joinCode", {
             type: "manual",
             message: "You have already joined this class.",
         });
@@ -72,9 +75,9 @@ export function ClassroomHub({ joinedClasses, activeClass, onJoinClass, onActive
 
         if (foundClass) {
             onJoinClass(foundClass);
-            form.reset();
+            joinForm.reset();
         } else {
-            form.setError("joinCode", {
+            joinForm.setError("joinCode", {
                 type: "manual",
                 message: "Invalid join code. Please try again.",
             });
@@ -91,10 +94,10 @@ export function ClassroomHub({ joinedClasses, activeClass, onJoinClass, onActive
         </CardHeader>
         <CardContent>
             <div className="grid md:grid-cols-2 gap-6 items-end">
-                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+                 <Form {...joinForm}>
+                    <form onSubmit={joinForm.handleSubmit(onSubmit)} className="space-y-2">
                         <FormField
-                            control={form.control}
+                            control={joinForm.control}
                             name="joinCode"
                             render={({ field }) => (
                                 <FormItem>
@@ -115,55 +118,56 @@ export function ClassroomHub({ joinedClasses, activeClass, onJoinClass, onActive
                     </form>
                 </Form>
                 
-                <div className="space-y-2">
-                    <FormLabel>Select Active Class</FormLabel>
-                    {joinedClasses.length > 0 ? (
-                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={popoverOpen}
-                                className="w-full justify-between"
-                                >
-                                {activeClass
-                                    ? activeClass.name
-                                    : "Select a class..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                                <Command>
-                                <CommandInput placeholder="Search classes..." />
-                                <CommandEmpty>No classes found.</CommandEmpty>
-                                <CommandGroup>
-                                    {joinedClasses.map((cls) => (
-                                    <CommandItem
-                                        key={cls.code}
-                                        value={cls.name}
-                                        onSelect={() => {
-                                          onActiveClassChange(cls.code)
-                                          setPopoverOpen(false)
-                                        }}
+                <Form {...selectForm}>
+                   <form className="space-y-2">
+                        <FormLabel>Select Active Class</FormLabel>
+                        {joinedClasses.length > 0 ? (
+                            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={popoverOpen}
+                                    className="w-full justify-between"
                                     >
-                                        <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            activeClass?.code === cls.code ? "opacity-100" : "opacity-0"
-                                        )}
-                                        />
-                                        {cls.name}
-                                    </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
-                    ) : (
-                        <p className="text-sm text-muted-foreground pt-2">You haven't joined any classes yet.</p>
-                    )}
-                </div>
-
+                                    {activeClass
+                                        ? activeClass.name
+                                        : "Select a class..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                    <CommandInput placeholder="Search classes..." />
+                                    <CommandEmpty>No classes found.</CommandEmpty>
+                                    <CommandGroup>
+                                        {joinedClasses.map((cls) => (
+                                        <CommandItem
+                                            key={cls.code}
+                                            value={cls.name}
+                                            onSelect={() => {
+                                              onActiveClassChange(cls.code)
+                                              setPopoverOpen(false)
+                                            }}
+                                        >
+                                            <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                activeClass?.code === cls.code ? "opacity-100" : "opacity-0"
+                                            )}
+                                            />
+                                            {cls.name}
+                                        </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        ) : (
+                            <p className="text-sm text-muted-foreground pt-2">You haven't joined any classes yet.</p>
+                        )}
+                   </form>
+                </Form>
             </div>
         </CardContent>
     </Card>
