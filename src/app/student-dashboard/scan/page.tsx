@@ -1,6 +1,5 @@
 
-addDoc(
-    'use client';
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -11,7 +10,7 @@ import { ArrowLeft, Rss } from 'lucide-react';
 import Link from 'next/link';
 import { isBefore, parseISO } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, writeBatch } from 'firebase/firestore';
 
 export default function ScanPage() {
     const router = useRouter();
@@ -25,25 +24,53 @@ export default function ScanPage() {
 
                 // This is a mock student for the demo. In a real app, you'd get this from the logged-in user's state.
                 const mockStudent = { id: 'stu_5', name: 'Emily Suzuki' };
+                const now = new Date();
+                const scanTimestamp = Timestamp.fromDate(now);
+
+                // Centralized logging to the 'scans' collection
+                const logScan = async (type: string, activityName: string, points: number) => {
+                    const scanLogRef = doc(collection(db, "scans"));
+                    await setDoc(scanLogRef, {
+                        studentId: mockStudent.id,
+                        studentName: mockStudent.name,
+                        scanDate: scanTimestamp,
+                        activityName: activityName,
+                        pointsAwarded: points,
+                        type: type,
+                    });
+                };
 
                 if (data && data.type === 'class-check-in' && data.points && data.name && data.onTimeUntil) {
                     
-                    const now = new Date();
                     const onTimeDeadline = parseISO(data.onTimeUntil);
                     const isOnTime = isBefore(now, onTimeDeadline);
-                    
                     const pointsAwarded = isOnTime ? data.points : 0;
+                    
+                    // Use a batch write to ensure both records are created
+                    const batch = writeBatch(db);
 
-                    // Create a new check-in record in Firestore
-                    await addDoc(collection(db, ""), {
+                    const checkInRef = doc(collection(db, "checkIns"));
+                    batch.set(checkInRef, {
                         studentId: mockStudent.id,
                         studentName: mockStudent.name,
                         classId: data.classId,
                         sessionName: data.name,
-                        checkedInAt: Timestamp.fromDate(now),
+                        checkedInAt: scanTimestamp,
                         isOnTime: isOnTime,
                         pointsAwarded: pointsAwarded
                     });
+
+                    const scanLogRef = doc(collection(db, "scans"));
+                    batch.set(scanLogRef, {
+                        studentId: mockStudent.id,
+                        studentName: mockStudent.name,
+                        scanDate: scanTimestamp,
+                        activityName: data.name,
+                        pointsAwarded: pointsAwarded,
+                        type: 'Class Check-in',
+                    });
+
+                    await batch.commit();
                     
                     if (isOnTime) {
                         localStorage.setItem('lastScannedPoints', pointsAwarded.toString());
@@ -74,6 +101,10 @@ export default function ScanPage() {
                         router.push('/student-dashboard');
                         return;
                     }
+                    
+                    // Log the activity scan to the 'scans' collection
+                    await logScan('Activity', data.name, data.points);
+
                     localStorage.setItem('lastScannedPoints', data.points.toString());
                     toast({
                         title: 'Success!',
@@ -137,5 +168,3 @@ export default function ScanPage() {
         </div>
     );
 }
-
-    
