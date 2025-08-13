@@ -15,6 +15,9 @@ const leaderboardData = [
   { rank: 5, name: "Emily S.", points: 8850, avatar: "https://placehold.co/40x40.png", initial: "ES", hint: "person nature" },
   { rank: 6, name: "Frank G.", points: 8200, avatar: "https://placehold.co/40x40.png", initial: "FG", hint: "student sports" },
   { rank: 7, name: "Grace H.", points: 7900, avatar: "https://placehold.co/40x40.png", initial: "GH", hint: "student art" },
+  { rank: 8, name: "Ivy J.", points: 7600, avatar: "https://placehold.co/40x40.png", initial: "IJ", hint: "student nature" },
+  { rank: 9, name: "Kevin M.", points: 7350, avatar: "https://placehold.co/40x40.png", initial: "KM", hint: "student glasses" },
+  { rank: 10, name: "Laura N.", points: 7100, avatar: "https://placehold.co/40x40.png", initial: "LN", hint: "student art" },
 ];
 
 const PodiumPlace = ({ user, place }: { user: typeof leaderboardData[0], place: number }) => {
@@ -61,7 +64,7 @@ export default function LeaderboardPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600 text-white p-4 sm:p-6 md:p-8">
         <div className="absolute inset-0 bg-[url(https://www.transparenttextures.com/patterns/gplay.png)] opacity-10"></div>
-        <div className="relative z-10 w-full max-w-4xl mx-auto">
+        <div className="relative z-10 w-full max-w-5xl mx-auto">
             <div className="flex items-center justify-start mb-6">
                 <Button variant="outline" size="icon" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
                     <Link href="/student-dashboard">
@@ -82,18 +85,18 @@ export default function LeaderboardPage() {
             </div>
 
             {/* Rest of the list */}
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {rest.map((user) => (
-                    <div key={user.rank} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4 transition-all hover:bg-white/20">
-                        <div className="text-2xl font-bold text-white/60 w-8 text-center">{user.rank}</div>
-                        <Avatar className="w-12 h-12 border-2 border-white/30">
+                    <div key={user.rank} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex flex-col items-center justify-center gap-2 aspect-square transition-all hover:bg-white/20 hover:scale-105">
+                         <div className="absolute top-2 left-3 text-2xl font-bold text-white/50">{user.rank}</div>
+                        <Avatar className="w-16 h-16 border-2 border-white/30">
                             <AvatarImage src={user.avatar} data-ai-hint={user.hint} />
                             <AvatarFallback>{user.initial}</AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
-                            <h4 className="font-semibold text-white">{user.name}</h4>
-                            <div className="flex items-center gap-2 text-sm text-yellow-300/90">
-                                <Star className="h-4 w-4" />
+                        <div className="text-center">
+                            <h4 className="font-semibold text-white truncate">{user.name}</h4>
+                            <div className="flex items-center justify-center gap-1.5 text-sm text-yellow-300/90">
+                                <Star className="h-3 w-3" />
                                 <span>{user.points.toLocaleString()} pts</span>
                             </div>
                         </div>
