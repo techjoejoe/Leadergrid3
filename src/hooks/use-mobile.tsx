@@ -13,8 +13,10 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     }
     
-    // Check on initial mount
-    checkDevice()
+    // Check on initial mount only on the client
+    if (typeof window !== 'undefined') {
+        checkDevice();
+    }
 
     // Add listener for window resize
     window.addEventListener("resize", checkDevice)
