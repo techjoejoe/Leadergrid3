@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { QrCode, BarChart, Users, Star } from 'lucide-react';
+import { Logo } from '@/components/logo';
 
 export default function Home() {
   const features = [
@@ -37,9 +38,9 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 max-w-screen-2xl items-center">
-          <Link href="/" className="flex items-center gap-2 mr-6 font-headline text-2xl font-bold text-primary">
-            LeaderGrid
-          </Link>
+          <div className="mr-6">
+            <Logo />
+          </div>
           <div className="flex-1" />
           <nav className="flex items-center gap-2">
             <Button asChild variant="ghost">

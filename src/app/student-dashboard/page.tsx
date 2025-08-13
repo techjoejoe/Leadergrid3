@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { Logo } from '@/components/logo';
 
 // Mock Data - this would eventually come from your database
 const initialStudent = {
@@ -172,9 +173,9 @@ export default function StudentDashboardPage() {
              {/* Header */}
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 mr-6 font-headline text-2xl font-bold text-primary">
-                        LeaderGrid
-                    </Link>
+                    <div className="mr-6">
+                        <Logo />
+                    </div>
                     <div className="flex items-center gap-4">
                         <input
                             type="file"
@@ -227,7 +228,7 @@ export default function StudentDashboardPage() {
                 <div className="max-w-4xl mx-auto space-y-6">
                     {/* Welcome Header */}
                     <div>
-                        <h1 className="text-3xl font-bold font-headline">Welcome Back, {student.name}!</h1>
+                        <h1 className="text-3xl font-bold font-headline">Welcome Back, {student.name.split(' ')[0]}!</h1>
                         <p className="text-muted-foreground">Here's a summary of your progress and achievements.</p>
                     </div>
 
