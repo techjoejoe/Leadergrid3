@@ -1,6 +1,8 @@
 
 'use client';
 
+import { useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +24,15 @@ const mockClass = {
 export default function ClassDetailsPage() {
     const params = useParams();
     const classId = Array.isArray(params.classId) ? params.classId[0] : params.classId;
+    
+    const [openAccordion, setOpenAccordion] = useState('');
+    const isMobile = useIsMobile();
+
+    const handleHover = (value: string) => {
+        if (!isMobile) {
+            setOpenAccordion(value);
+        }
+    }
 
     // In a real app, you might fetch class details here using the classId
     // For now, we'll just use the mock data name.
@@ -47,8 +58,18 @@ export default function ClassDetailsPage() {
             </Card>
             <ClassroomManager classId={classId} />
             <Separator />
-            <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
+            <Accordion 
+                type="single" 
+                collapsible 
+                className="w-full"
+                value={openAccordion}
+                onValueChange={setOpenAccordion}
+            >
+                <AccordionItem 
+                    value="item-1"
+                    onMouseEnter={() => handleHover('item-1')}
+                    onMouseLeave={() => handleHover('')}
+                >
                     <AccordionTrigger>
                         <CardHeader className="p-0">
                             <CardTitle className="font-headline text-2xl">Class Analytics</CardTitle>
