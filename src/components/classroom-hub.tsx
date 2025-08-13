@@ -88,11 +88,7 @@ export function ClassroomHub({ joinedClasses, activeClass, onJoinClass, onActive
 
   return (
     <Card>
-        <CardHeader>
-            <CardTitle className="font-headline text-2xl">Classroom Hub</CardTitle>
-            <CardDescription>Join a new class or switch between your existing ones.</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
             <div className="grid md:grid-cols-2 gap-6 items-end">
                  <Form {...joinForm}>
                     <form onSubmit={joinForm.handleSubmit(onSubmit)} className="space-y-2">
@@ -120,52 +116,54 @@ export function ClassroomHub({ joinedClasses, activeClass, onJoinClass, onActive
                 
                 <Form {...selectForm}>
                    <form className="space-y-2">
-                        <FormLabel>Select Active Class</FormLabel>
-                        {joinedClasses.length > 0 ? (
-                            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={popoverOpen}
-                                    className="w-full justify-between"
-                                    >
-                                    {activeClass
-                                        ? activeClass.name
-                                        : "Select a class..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command>
-                                    <CommandInput placeholder="Search classes..." />
-                                    <CommandEmpty>No classes found.</CommandEmpty>
-                                    <CommandGroup>
-                                        {joinedClasses.map((cls) => (
-                                        <CommandItem
-                                            key={cls.code}
-                                            value={cls.name}
-                                            onSelect={() => {
-                                              onActiveClassChange(cls.code)
-                                              setPopoverOpen(false)
-                                            }}
+                        <FormItem>
+                            <FormLabel>Select Active Class</FormLabel>
+                            {joinedClasses.length > 0 ? (
+                                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={popoverOpen}
+                                        className="w-full justify-between"
                                         >
-                                            <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                activeClass?.code === cls.code ? "opacity-100" : "opacity-0"
-                                            )}
-                                            />
-                                            {cls.name}
-                                        </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        ) : (
-                            <p className="text-sm text-muted-foreground pt-2">You haven't joined any classes yet.</p>
-                        )}
+                                        {activeClass
+                                            ? activeClass.name
+                                            : "Select a class..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                        <Command>
+                                        <CommandInput placeholder="Search classes..." />
+                                        <CommandEmpty>No classes found.</CommandEmpty>
+                                        <CommandGroup>
+                                            {joinedClasses.map((cls) => (
+                                            <CommandItem
+                                                key={cls.code}
+                                                value={cls.name}
+                                                onSelect={() => {
+                                                  onActiveClassChange(cls.code)
+                                                  setPopoverOpen(false)
+                                                }}
+                                            >
+                                                <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    activeClass?.code === cls.code ? "opacity-100" : "opacity-0"
+                                                )}
+                                                />
+                                                {cls.name}
+                                            </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            ) : (
+                                <p className="text-sm text-muted-foreground pt-2">You haven't joined any classes yet.</p>
+                            )}
+                        </FormItem>
                    </form>
                 </Form>
             </div>
