@@ -95,11 +95,22 @@ export default function StudentDashboardPage() {
                     }
                 }
             } else {
-                setUser({
+                // For "pretend" login, create a mock user
+                const mockUser = {
                     displayName: 'Student',
                     email: 'student@example.com',
-                    photoURL: avatarUrl,
-                } as User);
+                    photoURL: null,
+                    uid: 'mock-user-id',
+                } as User;
+                setUser(mockUser);
+                 try {
+                    const savedAvatar = window.localStorage.getItem('studentAvatar');
+                    if (savedAvatar) {
+                        setAvatarUrl(savedAvatar);
+                    }
+                } catch (error) {
+                    console.error("Failed to access localStorage", error);
+                }
             }
         });
 
@@ -126,7 +137,7 @@ export default function StudentDashboardPage() {
         }
 
         return () => unsubscribe();
-    }, [auth, router, avatarUrl]);
+    }, [auth, router]);
     
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses, newClass];
@@ -159,7 +170,7 @@ export default function StudentDashboardPage() {
 
     const handleLogout = async () => {
         // For real users, we sign out. For mock users, we just redirect.
-        if (user && user.uid) { // Check if it's a real Firebase user
+        if (user && user.uid !== 'mock-user-id') { // Check if it's a real Firebase user
              try {
                 await signOut(auth);
                 window.localStorage.removeItem('studentAvatar');
@@ -183,7 +194,7 @@ export default function StudentDashboardPage() {
 
     const displayName = user?.displayName || 'Student';
     const displayEmail = user?.email || 'student@example.com';
-    const displayAvatar = avatarUrl || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
+    const displayAvatar = avatarUrl || user?.photoURL || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     return (
