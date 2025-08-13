@@ -237,9 +237,12 @@ export function ProfileEditor({
     }}>
       <DialogContent className="sm:max-w-[480px]">
         {!user ? (
+          <DialogHeader>
+            <DialogTitle>Loading Profile</DialogTitle>
             <div className="flex items-center justify-center h-48">
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
+          </DialogHeader>
         ) : !isCropping ? (
             <>
             <DialogHeader>
