@@ -77,7 +77,8 @@ export default function StudentDashboardPage() {
             if (currentUser) {
                 setUser(currentUser);
             } else {
-                router.push('/student-login');
+                // Commenting this out to allow pretend login
+                // router.push('/student-login');
             }
         });
 
