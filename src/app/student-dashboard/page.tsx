@@ -5,9 +5,9 @@ import {
     Activity,
     Award,
     ChevronRight,
-    CircleUserRound,
     Crown,
     Star,
+    Upload,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,12 +18,13 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import React, { useState, useRef, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock Data - this would eventually come from your database
-const student = {
+const initialStudent = {
     name: 'Emily S.',
     avatar: 'https://placehold.co/100x100.png?text=ES',
     initial: 'ES',
@@ -47,6 +48,69 @@ const recentActivity = [
 
 
 export default function StudentDashboardPage() {
+    const [student, setStudent] = useState(initialStudent);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        try {
+            const savedAvatar = window.localStorage.getItem('studentAvatar');
+            if (savedAvatar) {
+                setStudent(prev => ({...prev, avatar: savedAvatar}));
+            }
+        } catch (error) {
+            console.error("Failed to load avatar from localStorage", error);
+        }
+    }, []);
+
+    const handleAvatarClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit
+                toast({
+                    title: "Image Too Large",
+                    description: "Please select an image smaller than 2MB.",
+                    variant: "destructive",
+                });
+                return;
+            }
+            if (!file.type.startsWith('image/')) {
+                 toast({
+                    title: "Invalid File Type",
+                    description: "Please select an image file (e.g., PNG, JPG).",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setStudent(prev => ({ ...prev, avatar: base64String }));
+                try {
+                    window.localStorage.setItem('studentAvatar', base64String);
+                    toast({
+                        title: "Profile Photo Updated!",
+                        description: "Your new avatar has been saved."
+                    });
+                } catch (error) {
+                    console.error("Failed to save avatar to localStorage", error);
+                    toast({
+                        title: "Error",
+                        description: "Could not save your new photo.",
+                        variant: "destructive",
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+
     return (
         <div className="flex flex-col min-h-dvh bg-background">
              {/* Header */}
@@ -57,10 +121,22 @@ export default function StudentDashboardPage() {
                     </Link>
                     <div className="flex items-center gap-4">
                         <span className="text-sm font-medium hidden sm:inline">{student.name}</span>
-                        <Avatar>
-                            <AvatarImage src={student.avatar} data-ai-hint="student smiling" />
-                            <AvatarFallback>{student.initial}</AvatarFallback>
-                        </Avatar>
+                        <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
+                            <Avatar>
+                                <AvatarImage src={student.avatar} data-ai-hint="student smiling" />
+                                <AvatarFallback>{student.initial}</AvatarFallback>
+                            </Avatar>
+                             <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Upload className="h-6 w-6 text-white" />
+                            </div>
+                        </div>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept="image/*"
+                        />
                     </div>
                 </div>
             </header>
