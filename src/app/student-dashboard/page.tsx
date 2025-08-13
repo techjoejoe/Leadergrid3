@@ -6,6 +6,7 @@ import {
     Award,
     ChevronRight,
     Crown,
+    Settings,
     Star,
     Upload,
 } from 'lucide-react';
@@ -22,12 +23,14 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 // Mock Data - this would eventually come from your database
 const initialStudent = {
-    name: 'Emily S.',
-    avatar: 'https://placehold.co/100x100.png?text=ES',
-    initial: 'ES',
+    name: 'Student',
+    avatar: 'https://placehold.co/100x100.png?text=??',
+    initial: '??',
     points: 8850,
     rank: 5,
 };
@@ -49,25 +52,45 @@ const recentActivity = [
 
 export default function StudentDashboardPage() {
     const [student, setStudent] = useState(initialStudent);
+    const [user, setUser] = useState<User | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
+    const auth = getAuth(app);
 
     useEffect(() => {
-        try {
-            const savedAvatar = window.localStorage.getItem('studentAvatar');
-            if (savedAvatar) {
-                setStudent(prev => ({...prev, avatar: savedAvatar}));
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                setStudent(prev => ({
+                    ...prev, 
+                    name: currentUser.displayName || 'Student',
+                    initial: currentUser.displayName?.substring(0,2).toUpperCase() || '??',
+                    avatar: currentUser.photoURL || `https://placehold.co/100x100.png?text=${currentUser.displayName?.substring(0,2).toUpperCase() || '??'}`
+                }));
             }
-        } catch (error) {
-            console.error("Failed to load avatar from localStorage", error);
+        });
+        return () => unsubscribe();
+    }, [auth]);
+
+    useEffect(() => {
+        if (user) {
+            try {
+                const savedAvatar = window.localStorage.getItem(`studentAvatar_${user.uid}`);
+                if (savedAvatar) {
+                    setStudent(prev => ({...prev, avatar: savedAvatar}));
+                }
+            } catch (error) {
+                console.error("Failed to load avatar from localStorage", error);
+            }
         }
-    }, []);
+    }, [user]);
 
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
     };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user) return;
         const file = event.target.files?.[0];
         if (file) {
             if (file.size > 2 * 1024 * 1024) { // 2MB limit
@@ -92,7 +115,7 @@ export default function StudentDashboardPage() {
                 const base64String = reader.result as string;
                 setStudent(prev => ({ ...prev, avatar: base64String }));
                 try {
-                    window.localStorage.setItem('studentAvatar', base64String);
+                    window.localStorage.setItem(`studentAvatar_${user.uid}`, base64String);
                     toast({
                         title: "Profile Photo Updated!",
                         description: "Your new avatar has been saved."
@@ -121,6 +144,11 @@ export default function StudentDashboardPage() {
                     </Link>
                     <div className="flex items-center gap-4">
                         <span className="text-sm font-medium hidden sm:inline">{student.name}</span>
+                         <Button variant="ghost" size="icon" asChild>
+                            <Link href="/student-dashboard/settings">
+                                <Settings className="h-5 w-5" />
+                            </Link>
+                        </Button>
                         <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
                             <Avatar>
                                 <AvatarImage src={student.avatar} data-ai-hint="student smiling" />
@@ -203,7 +231,7 @@ export default function StudentDashboardPage() {
                                             <p className="font-medium">{activity.description}</p>
                                             <div className="flex items-center gap-4">
                                                 <Badge variant="secondary">+{activity.points} pts</Badge>
-                                                <span className="text-xs text-muted-foreground hidden sm:block">{activity.date}</span>
+                                                <span className="text-sm text-muted-foreground hidden sm:block">{activity.date}</span>
                                             </div>
                                         </div>
                                     </div>

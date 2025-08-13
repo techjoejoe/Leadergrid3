@@ -12,6 +12,7 @@ import {
     QrCode,
     Users,
     Zap,
+    Settings,
 } from 'lucide-react';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar"
 
@@ -25,26 +26,50 @@ const links = [
     { href: "/dashboard/buzzer", label: "Live Buzzer", icon: Zap },
 ];
 
+const bottomLinks = [
+    { href: "/dashboard/settings", label: "Settings", icon: Settings },
+]
+
 export function DashboardNav() {
     const pathname = usePathname()
 
     return (
-        <SidebarMenu>
-            {links.map((link) => (
-                <SidebarMenuItem key={link.href}>
-                    <SidebarMenuButton
-                        asChild
-                        isActive={pathname === link.href}
-                        className="w-full"
-                        tooltip={link.label}
-                    >
-                        <Link href={link.href}>
-                            <link.icon className="h-4 w-4" />
-                            <span>{link.label}</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            ))}
-        </SidebarMenu>
+        <>
+            <SidebarMenu>
+                {links.map((link) => (
+                    <SidebarMenuItem key={link.href}>
+                        <SidebarMenuButton
+                            asChild
+                            isActive={pathname === link.href}
+                            className="w-full"
+                            tooltip={link.label}
+                        >
+                            <Link href={link.href}>
+                                <link.icon className="h-4 w-4" />
+                                <span>{link.label}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+            <div className="flex-1" />
+             <SidebarMenu>
+                {bottomLinks.map((link) => (
+                    <SidebarMenuItem key={link.href}>
+                        <SidebarMenuButton
+                            asChild
+                            isActive={pathname === link.href}
+                            className="w-full"
+                            tooltip={link.label}
+                        >
+                            <Link href={link.href}>
+                                <link.icon className="h-4 w-4" />
+                                <span>{link.label}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        </>
     )
 }
