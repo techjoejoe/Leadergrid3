@@ -3,6 +3,7 @@ import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarTrigger
 import { UserNav } from '@/components/user-nav';
 import { DashboardNav } from '@/components/dashboard-nav';
 import Link from 'next/link';
+import { Logo } from '@/components/logo';
 
 export const metadata: Metadata = {
   title: 'LeaderGrid Dashboard',
@@ -18,7 +19,7 @@ export default function DashboardLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className='p-4'>
-            
+            <Logo />
         </SidebarHeader>
         <SidebarContent>
             <DashboardNav />
