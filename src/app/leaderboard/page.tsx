@@ -46,7 +46,7 @@ const PodiumPlace = ({ user, place }: { user: typeof leaderboardData[0], place: 
                 }}
             >
                 <span className={cn("absolute text-5xl font-extrabold opacity-20", isFirst && "text-7xl -bottom-2")}>{place}</span>
-                <div className="z-10 flex items-center gap-1.5 px-3 py-1.5 bg-pink-500/80 rounded-full text-white font-bold shadow-lg">
+                <div className="z-10 flex items-center gap-1.5 px-3 py-1.5 bg-primary/80 rounded-full text-white font-bold shadow-lg">
                     <Star className="w-4 h-4" />
                     <span>{user.points.toLocaleString()}</span>
                 </div>
@@ -59,7 +59,7 @@ export default function LeaderboardPage() {
     const [top3, rest] = [leaderboardData.slice(0, 3), leaderboardData.slice(3)];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-pink-400 via-purple-500 to-indigo-600 text-white p-4 sm:p-6 md:p-8">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600 text-white p-4 sm:p-6 md:p-8">
         <div className="absolute inset-0 bg-[url(https://www.transparenttextures.com/patterns/gplay.png)] opacity-10"></div>
         <div className="relative z-10 w-full max-w-4xl mx-auto">
             <div className="flex items-center justify-start mb-6">
