@@ -63,7 +63,18 @@ export function QrCodeGenerator() {
     try {
         const item = window.localStorage.getItem('generatedQrCodes');
         if (item) {
-            setGeneratedCodes(JSON.parse(item));
+            const allCodes: GeneratedQrCode[] = JSON.parse(item);
+            const now = new Date();
+            const activeCodes = allCodes.filter(code => new Date(code.expirationDate) > now);
+            
+            if(allCodes.length !== activeCodes.length) {
+                toast({
+                    title: "Expired Codes Removed",
+                    description: `${allCodes.length - activeCodes.length} QR code(s) have expired and were deleted.`
+                });
+            }
+            
+            setGeneratedCodes(activeCodes);
         }
     } catch (error) {
         console.error("Failed to parse QR codes from localStorage", error);
@@ -72,13 +83,15 @@ export function QrCodeGenerator() {
 
   useEffect(() => {
      try {
-        if(generatedCodes.length > 0) {
+        // We save all codes, even if there are none, to clear out the storage
+        // if the last one is deleted.
+        if (isClient) {
             window.localStorage.setItem('generatedQrCodes', JSON.stringify(generatedCodes));
         }
     } catch (error) {
         console.error("Failed to save QR codes to localStorage", error);
     }
-  }, [generatedCodes]);
+  }, [generatedCodes, isClient]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -93,12 +106,21 @@ export function QrCodeGenerator() {
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
     
+    // Set expiration to 5 PM CST on the selected date.
+    // NOTE: This uses the host's idea of CST/CDT. For true timezone support,
+    // a library like date-fns-tz would be needed.
+    const expirationDate = new Date(values.expirationDate);
+    expirationDate.setHours(17, 0, 0, 0); // 5:00:00 PM
+    
+    // For a rough CST (UTC-5/UTC-6) approximation, we could adjust hours,
+    // but for this mock app, we'll assume the server/user is in a compatible timezone.
+    
     const qrId = `qr-${Date.now()}`;
     const qrCodeValue = JSON.stringify({
         id: qrId,
         name: values.name,
         points: values.points,
-        expires: values.expirationDate.toISOString(),
+        expires: expirationDate.toISOString(),
     });
 
     const newCode: GeneratedQrCode = {
@@ -107,7 +129,7 @@ export function QrCodeGenerator() {
         name: values.name,
         description: values.description,
         points: values.points,
-        expirationDate: values.expirationDate.toISOString(),
+        expirationDate: expirationDate.toISOString(),
     };
 
     setGeneratedCodes(prev => [newCode, ...prev]);
@@ -160,8 +182,6 @@ export function QrCodeGenerator() {
     }
     const now = new Date();
     const expiry = new Date(expirationDate);
-    // Set expiry to the end of the day
-    expiry.setHours(23, 59, 59, 999);
     return now > expiry ? "Expired" : "Active";
   }
 
@@ -252,7 +272,7 @@ export function QrCodeGenerator() {
                           />
                         </PopoverContent>
                       </Popover>
-                      <FormMessage />
+                       <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -330,7 +350,7 @@ export function QrCodeGenerator() {
                                     <TableCell>
                                             <Badge variant="secondary">{code.points} pts</Badge>
                                     </TableCell>
-                                    <TableCell>{isValidDate ? format(date, "PPP") : "Invalid Date"}</TableCell>
+                                    <TableCell>{isValidDate ? format(date, "Pp") : "Invalid Date"}</TableCell>
                                     <TableCell>
                                             <Badge
                                                 variant={getStatus(code.expirationDate) === "Active" ? "default" : "destructive"}
@@ -379,5 +399,7 @@ export function QrCodeGenerator() {
     </div>
   );
 }
+
+    
 
     
