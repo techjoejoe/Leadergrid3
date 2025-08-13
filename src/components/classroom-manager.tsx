@@ -21,11 +21,9 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, MinusCircle, Loader2, QrCode, Download, Check, Play, Clock } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { PlusCircle, MinusCircle, Loader2, Download, Check, Play } from 'lucide-react';
 import { format, addMinutes } from 'date-fns';
 import { Progress } from './ui/progress';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 // Mock data for students in a class
@@ -49,6 +47,7 @@ const pointsFormSchema = z.object({
 });
 
 const checkInFormSchema = z.object({
+    sessionName: z.string().min(1, "Please provide a name for this check-in session."),
     onTime: z.string().min(1, "Please set an on-time arrival time."),
 });
 
@@ -61,6 +60,7 @@ interface CheckInRecord {
     studentName: string;
     classId: string;
     checkedInAt: string; // ISO String
+    sessionName: string;
 }
 
 export function ClassroomManager({ classId }: { classId: string }) {
@@ -79,10 +79,13 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
   useEffect(() => {
     try {
-        const storedLog = window.localStorage.getItem(`checkInLog_${classId}`);
-        if (storedLog) {
-            setCheckInLog(JSON.parse(storedLog));
-        }
+        const allKeys = Object.keys(window.localStorage);
+        const classLogKeys = allKeys.filter(key => key.startsWith(`checkInLog_${classId}`));
+        const allLogs = classLogKeys.flatMap(key => {
+            const item = window.localStorage.getItem(key);
+            return item ? JSON.parse(item) : [];
+        });
+        setCheckInLog(allLogs);
     } catch (error) {
         console.error("Failed to load check-in log from localStorage", error);
     }
@@ -96,7 +99,10 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
   const checkInForm = useForm<CheckInFormValues>({
       resolver: zodResolver(checkInFormSchema),
-      defaultValues: { onTime: format(addMinutes(new Date(), 15), "HH:mm") },
+      defaultValues: { 
+          sessionName: '',
+          onTime: format(addMinutes(new Date(), 15), "HH:mm") 
+        },
   })
 
   const handleOpenPointsDialog = (student: Student, type: 'add' | 'subtract') => {
@@ -141,9 +147,15 @@ export function ClassroomManager({ classId }: { classId: string }) {
       onTimeDeadline.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
       // Clear the log for a new session
-      window.localStorage.removeItem(`checkInLog_${classId}`);
+      const sessionLogKey = `checkInLog_${classId}_${values.sessionName.replace(/\s+/g, '-')}`;
+      window.localStorage.removeItem(sessionLogKey);
       
-      router.push(`/dashboard/classes/${classId}/check-in?onTimeUntil=${onTimeDeadline.toISOString()}`)
+      const queryParams = new URLSearchParams({
+          onTimeUntil: onTimeDeadline.toISOString(),
+          sessionName: values.sessionName,
+      });
+
+      router.push(`/dashboard/classes/${classId}/check-in?${queryParams.toString()}`)
   }
 
   const downloadCSV = () => {
@@ -153,12 +165,14 @@ export function ClassroomManager({ classId }: { classId: string }) {
     }
     
     const filename = `check-in_${className.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    const csvHeader = "Student Name,Date,Time\n";
+    const csvHeader = "Student Name,Session,Date,Time\n";
     const csvRows = checkInLog.map(r => {
         const d = new Date(r.checkedInAt);
         const date = format(d, 'PPP');
         const time = format(d, 'p');
-        return `"${r.studentName}","${date}","${time}"`;
+        // Fallback for older records without a session name
+        const session = r.sessionName || 'Check-in';
+        return `"${r.studentName}","${session}","${date}","${time}"`;
     }).join("\n");
 
     const csvContent = csvHeader + csvRows;
@@ -176,7 +190,8 @@ export function ClassroomManager({ classId }: { classId: string }) {
     }
   };
   
-  const checkedInPercentage = (checkInLog.length / students.length) * 100;
+  const checkedInCount = new Set(checkInLog.map(r => r.studentId)).size;
+  const checkedInPercentage = (checkedInCount / students.length) * 100;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -234,18 +249,31 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     <DialogTrigger asChild>
                          <Button className="w-full">
                             <Play className="mr-2 h-4 w-4" />
-                            Launch Fullscreen Check-in
+                            Launch New Check-in Session
                          </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Set On-Time Deadline</DialogTitle>
+                            <DialogTitle>New Check-in Session</DialogTitle>
                             <DialogDescription>
-                                Students must check in by this time to receive points. Late check-ins will still be recorded.
+                                Set a name and on-time deadline for this session. A unique QR code will be generated.
                             </DialogDescription>
                         </DialogHeader>
                         <Form {...checkInForm}>
                             <form onSubmit={checkInForm.handleSubmit(onCheckInSubmit)} className="space-y-4">
+                                <FormField
+                                    control={checkInForm.control}
+                                    name="sessionName"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Session Name</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g., Morning Arrival" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                                 <FormField
                                     control={checkInForm.control}
                                     name="onTime"
@@ -281,7 +309,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     </Button>
                 </div>
                 <CardDescription>
-                   {checkInLog.length} of {students.length} students have checked in.
+                   {checkedInCount} of {students.length} students have checked in today across all sessions.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -296,13 +324,15 @@ export function ClassroomManager({ classId }: { classId: string }) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Student</TableHead>
+                                <TableHead>Session</TableHead>
                                 <TableHead className="text-right">Time</TableHead>
                             </TableRow>
                         </TableHeader>
                          <TableBody>
-                            {checkInLog.slice().reverse().map((record) => (
-                                <TableRow key={record.studentId}>
+                            {checkInLog.slice().reverse().map((record, index) => (
+                                <TableRow key={`${record.studentId}-${index}`}>
                                     <TableCell className="font-medium">{record.studentName}</TableCell>
+                                    <TableCell>{record.sessionName || 'Check-in'}</TableCell>
                                     <TableCell className="text-right">{format(new Date(record.checkedInAt), 'p')}</TableCell>
                                 </TableRow>
                             ))}

@@ -51,6 +51,7 @@ export default function CheckInPage() {
     const [bonusAwarded, setBonusAwarded] = useState(false);
     
     const onTimeUntilParam = searchParams.get('onTimeUntil');
+    const sessionNameParam = searchParams.get('sessionName') || 'Class Check-in';
 
     const onTimeDeadline = useMemo(() => {
         return onTimeUntilParam ? parseISO(onTimeUntilParam) : addMinutes(new Date(), 5);
@@ -58,20 +59,21 @@ export default function CheckInPage() {
 
     const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
     const totalStudents = mockStudents.length;
+    const sessionLogKey = `checkInLog_${classId}_${sessionNameParam.replace(/\s+/g, '-')}`;
 
     useEffect(() => {
         // Generate QR value only on the client side to avoid hydration mismatch
         setQrValue(JSON.stringify({
             type: 'class-check-in',
             classId: classId,
-            name: `Check-in for ${className}`,
+            name: sessionNameParam,
             timestamp: new Date().toISOString(),
             onTimeUntil: onTimeDeadline.toISOString(),
             points: CHECK_IN_POINTS
         }));
 
         try {
-            const storedLog = window.localStorage.getItem(`checkInLog_${classId}`);
+            const storedLog = window.localStorage.getItem(sessionLogKey);
             if (storedLog) {
                 const parsedLog: CheckInRecord[] = JSON.parse(storedLog);
                 setCheckInLog(parsedLog);
@@ -79,13 +81,13 @@ export default function CheckInPage() {
                     setIsSessionOver(true);
                 }
             } else {
-                 // Clear log for new session
-                window.localStorage.removeItem(`checkInLog_${classId}`);
+                 // Clear log for a new session instance
+                window.localStorage.removeItem(sessionLogKey);
             }
         } catch (error) {
             console.error("Failed to load check-in log from localStorage", error);
         }
-    }, [classId, className, onTimeDeadline, totalStudents]);
+    }, [classId, className, onTimeDeadline, totalStudents, sessionLogKey, sessionNameParam]);
 
     // Simulate students checking in
     useEffect(() => {
@@ -117,7 +119,7 @@ export default function CheckInPage() {
                 const updatedLog = [...prevLog, newRecord];
 
                 try {
-                     window.localStorage.setItem(`checkInLog_${classId}`, JSON.stringify(updatedLog));
+                     window.localStorage.setItem(sessionLogKey, JSON.stringify(updatedLog));
                 } catch(e) { console.error(e) }
 
                 return updatedLog;
@@ -125,7 +127,7 @@ export default function CheckInPage() {
         }, 3000); // Check in a new student every 3 seconds
 
         return () => clearInterval(interval);
-    }, [classId, isSessionOver, onTimeDeadline, totalStudents]);
+    }, [classId, isSessionOver, onTimeDeadline, totalStudents, sessionLogKey]);
 
     // Effect to show toast messages
     useEffect(() => {
@@ -133,10 +135,10 @@ export default function CheckInPage() {
         const lastRecord = checkInLog[checkInLog.length - 1];
         if (lastRecord) {
              toast({
-                description: `${lastRecord.studentName} just checked in ${lastRecord.isOnTime ? 'on time' : 'late'}!`
+                description: `${lastRecord.studentName} just checked in for "${sessionNameParam}" ${lastRecord.isOnTime ? 'on time' : 'late'}!`
             });
         }
-    }, [checkInLog.length, toast]);
+    }, [checkInLog, toast, sessionNameParam]);
 
 
     const { onTimeCount, lateCount } = useMemo(() => {
@@ -179,8 +181,8 @@ export default function CheckInPage() {
             
             <div className="w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
                 <div className="flex flex-col items-center text-center">
-                     <h1 className="text-4xl font-bold font-headline mb-2">Check-in for {className}</h1>
-                    <p className="text-lg text-slate-400 mb-6">Scan the code to mark your attendance.</p>
+                     <h1 className="text-4xl font-bold font-headline mb-2">{sessionNameParam}</h1>
+                    <p className="text-lg text-slate-400 mb-6">Scan the code to mark your attendance for {className}.</p>
                      <div className="flex items-center gap-2 text-yellow-400 mb-4 text-lg">
                         <Clock className="h-5 w-5" />
                         <span>On-time until: {format(onTimeDeadline, 'p')}</span>
