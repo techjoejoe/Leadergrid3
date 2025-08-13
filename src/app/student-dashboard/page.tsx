@@ -63,11 +63,16 @@ const recentActivity = [
     { description: 'Answered question in class', points: 20, date: '5d ago' },
 ];
 
+const mockJoinedClasses: ClassInfo[] = [
+    { code: "BIOLOGY101", name: "10th Grade Biology" },
+    { code: "WRITE2024", name: "Intro to Creative Writing" },
+];
+
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-    const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
+    const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>(mockJoinedClasses);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -98,7 +103,7 @@ export default function StudentDashboardPage() {
 
         try {
             const storedClasses = localStorage.getItem('joinedClasses');
-            const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
+            const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : mockJoinedClasses;
             setJoinedClasses(classes);
 
             const storedActiveClassCode = localStorage.getItem('activeClassCode');
@@ -111,6 +116,11 @@ export default function StudentDashboardPage() {
             }
         } catch (error) {
             console.error("Failed to parse data from localStorage", error);
+            // If localstorage is corrupt, start with mock data
+            setJoinedClasses(mockJoinedClasses);
+            if(mockJoinedClasses.length > 0) {
+                setActiveClass(mockJoinedClasses[0]);
+            }
         }
 
         return () => unsubscribe();
