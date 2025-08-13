@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -110,6 +111,14 @@ export default {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
           '50%': { opacity: '0.6', transform: 'scale(1.1)' },
         },
+        'shimmer': {
+          '0%': { transform: 'translateX(-150%) skewX(-30deg)' },
+          '100%': { transform: 'translateX(150%) skewX(-30deg)' },
+        },
+        'shimmer-hover': {
+          '0%': { transform: 'translateX(-150%) skewX(-30deg)' },
+          '100%': { transform: 'translateX(150%) skewX(-30deg)' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -118,6 +127,8 @@ export default {
         'pulse-slow': 'pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-medium': 'pulse-medium 6s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'pulse-fast': 'pulse-fast 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shimmer': 'shimmer 3s infinite linear',
+        'shimmer-hover': 'shimmer 1.5s linear',
       },
     },
   },

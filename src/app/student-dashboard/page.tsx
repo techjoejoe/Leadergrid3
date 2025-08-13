@@ -323,9 +323,11 @@ export default function StudentDashboardPage() {
                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
                                     {badges.map((badge, index) => (
                                         <div key={index} className="flex flex-col items-center gap-2">
-                                            <Avatar className="h-20 w-20 border-2 border-primary/50 transition-transform duration-300 hover:scale-110">
+                                            <Avatar className="relative group h-20 w-20 border-2 border-primary/50 transition-transform duration-300 hover:scale-110 overflow-hidden">
                                                 <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
                                                 <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
+                                                <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent transform -translate-x-full animate-shimmer group-hover:animate-shimmer-hover" />
                                             </Avatar>
                                             <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
                                         </div>
