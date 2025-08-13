@@ -36,6 +36,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut, updateProfile } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
+import { JoinClassDialog } from '@/components/join-class-dialog';
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
@@ -61,6 +62,7 @@ const recentActivity = [
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
+    const [joinedClass, setJoinedClass] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const auth = getAuth(app);
@@ -74,12 +76,28 @@ export default function StudentDashboardPage() {
                 router.push('/student-login');
             }
         });
+        
+        // Check localStorage for joined class
+        const storedClass = localStorage.getItem('joinedClass');
+        if (storedClass) {
+            setJoinedClass(storedClass);
+        }
+
         return () => unsubscribe();
     }, [auth, router]);
     
     const handleAvatarClick = () => {
         fileInputRef.current?.click();
     };
+    
+    const handleJoinClass = (className: string) => {
+        setJoinedClass(className);
+        localStorage.setItem('joinedClass', className);
+        toast({
+            title: "Success!",
+            description: `You have joined the class: ${className}.`
+        })
+    }
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!user) return;
@@ -156,7 +174,11 @@ export default function StudentDashboardPage() {
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
                     <div className="mr-6">
-                        
+                        {joinedClass ? (
+                             <Badge variant="secondary" className="text-sm">Class: {joinedClass}</Badge>
+                        ) : (
+                            <JoinClassDialog onClassJoined={handleJoinClass} />
+                        )}
                     </div>
                     <div className="flex items-center gap-4">
                         <input

@@ -12,6 +12,17 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function StudentSettingsPage() {
     const router = useRouter();
@@ -22,6 +33,7 @@ export default function StudentSettingsPage() {
     const [displayName, setDisplayName] = useState('');
     const [isLoadingName, setIsLoadingName] = useState(false);
     const [isLoadingPassword, setIsLoadingPassword] = useState(false);
+    const [joinedClass, setJoinedClass] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -32,6 +44,12 @@ export default function StudentSettingsPage() {
                 router.push('/student-login');
             }
         });
+        
+        const storedClass = localStorage.getItem('joinedClass');
+        if (storedClass) {
+            setJoinedClass(storedClass);
+        }
+
         return () => unsubscribe();
     }, [auth, router]);
 
@@ -85,6 +103,15 @@ export default function StudentSettingsPage() {
         }
     };
 
+    const handleLeaveClass = () => {
+        localStorage.removeItem('joinedClass');
+        setJoinedClass(null);
+        toast({
+            title: 'You have left the class.',
+            description: `You are no longer a member of ${joinedClass}.`
+        });
+    }
+
     if (!user) {
         return (
             <div className="flex h-screen w-full items-center justify-center">
@@ -95,8 +122,8 @@ export default function StudentSettingsPage() {
 
     return (
         <div className="flex flex-col min-h-screen items-center justify-center p-4 bg-secondary/50">
-             <div className="w-full max-w-md">
-                <div className="mb-4">
+             <div className="w-full max-w-md space-y-6">
+                <div>
                      <Button variant="outline" size="sm" asChild>
                         <Link href="/student-dashboard">
                             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -133,12 +160,45 @@ export default function StudentSettingsPage() {
                                 Click the button below to receive an email to reset your password.
                             </p>
                         </div>
-                        <Button variant="destructive" onClick={handlePasswordReset} disabled={isLoadingPassword}>
+                        <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword}>
                             {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Send Password Reset Email
                         </Button>
                     </CardFooter>
                 </Card>
+                
+                {joinedClass && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline text-2xl">Class Settings</CardTitle>
+                            <CardDescription>Manage your class membership.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p>You are currently in the class: <span className='font-semibold'>{joinedClass}</span>.</p>
+                        </CardContent>
+                        <CardFooter>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">Leave Class</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. You will need to be re-invited to join the class again.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleLeaveClass}>
+                                        Leave Class
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </CardFooter>
+                    </Card>
+                )}
             </div>
         </div>
     );
