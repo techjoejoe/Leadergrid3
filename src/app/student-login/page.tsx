@@ -76,11 +76,11 @@ export default function StudentLoginPage() {
                 displayName: signupName,
                 email: signupEmail,
                 role: 'student',
-                lifetimePoints: 0,
+                lifetimePoints: 100, // Award 100 points for signing up
                 createdAt: Timestamp.fromDate(new Date()),
             });
             
-            toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid!" });
+            toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid! You've earned 100 points." });
             router.push('/student-dashboard');
         } catch (error: any)
 {

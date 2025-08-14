@@ -29,7 +29,8 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { getAuth, sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
+import { doc, updateDoc, increment } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -52,6 +53,7 @@ interface ProfileEditorProps {
 }
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const PHOTO_UPLOAD_BONUS = 500;
 
 export function ProfileEditor({ 
     user,
@@ -75,6 +77,8 @@ export function ProfileEditor({
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const imgRef = useRef<HTMLImageElement>(null);
   const [isCropping, setIsCropping] = useState(false);
+  const [hasAwardedPhotoBonus, setHasAwardedPhotoBonus] = useState(false);
+
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -264,13 +268,30 @@ export function ProfileEditor({
             // For mock users, we don't call firebase
             if (user.uid !== 'mock-user-id') {
                 await updateProfile(user, { photoURL: croppedImageUrl });
+                
+                // Award points only once
+                if (!hasAwardedPhotoBonus) {
+                    const userRef = doc(db, "users", user.uid);
+                    await updateDoc(userRef, {
+                        lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
+                    });
+                    setHasAwardedPhotoBonus(true);
+                     toast({
+                        title: 'BONUS!',
+                        description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
+                        className: 'bg-yellow-500 text-white',
+                    });
+                }
             }
             window.localStorage.setItem(storageKey, croppedImageUrl);
             onAvatarChange(croppedImageUrl);
-            toast({
-              title: 'Profile Photo Updated',
-              description: 'Your new photo has been set.',
-            });
+            if (!hasAwardedPhotoBonus) {
+                 toast({
+                    title: 'Profile Photo Updated',
+                    description: 'Your new photo has been set.',
+                });
+            }
+
         } catch (error) {
              toast({
                 title: "Error",
