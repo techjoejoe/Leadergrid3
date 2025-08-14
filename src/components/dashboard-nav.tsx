@@ -20,11 +20,10 @@ import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar"
 
 const links = [
     { href: "/dashboard", label: "Overview", icon: Grip },
-    { href: "/dashboard/company", label: "Company", icon: Building },
-    { href: "/dashboard/qrcodes", label: "QR Codes", icon: QrCode },
     { href: "/dashboard/classes", label: "Classes", icon: Users },
+    { href: "/dashboard/qrcodes", label: "QR Codes", icon: QrCode },
     { href: "/dashboard/badges", label: "Badges", icon: Badge },
-    { href: "/dashboard/buzzer", label: "Live Buzzer", icon: Zap },
+    { href: "/dashboard/company", label: "Company", icon: Building },
 ];
 
 const bottomLinks = [
