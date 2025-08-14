@@ -51,6 +51,8 @@ interface ProfileEditorProps {
   storageKey: string;
 }
 
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+
 export function ProfileEditor({ 
     user,
     open, 
@@ -145,23 +147,94 @@ export function ProfileEditor({
     if (!user) return;
     fileInputRef.current?.click();
   };
+  
+  const resizeImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) return reject(new Error('Could not get canvas context'));
 
-  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+          let { width, height } = img;
+          const MAX_WIDTH = 1024;
+          const MAX_HEIGHT = 1024;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Start with high quality
+          let quality = 0.9;
+          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+          // Iteratively reduce quality until the size is below the limit
+          while (dataUrl.length > MAX_FILE_SIZE && quality > 0.1) {
+            quality -= 0.1;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+          
+          if (dataUrl.length > MAX_FILE_SIZE) {
+            return reject(new Error("Image is too large to be resized automatically."));
+          }
+
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const onSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-       if (file.size > 4 * 1024 * 1024) {
-        toast({
-            title: "Image Too Large",
-            description: "Please select an image smaller than 4MB.",
-            variant: "destructive",
-        });
-        return;
+      setCrop(undefined); // Makes crop preview update between images.
+      
+      try {
+        let imageDataUrl: string;
+        if (file.size > MAX_FILE_SIZE) {
+            toast({
+                title: 'Resizing Image...',
+                description: 'Your image is large, we are optimizing it for you.',
+            });
+            imageDataUrl = await resizeImage(file);
+        } else {
+          imageDataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.addEventListener('load', () => resolve(reader.result?.toString() || ''));
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+          });
+        }
+        
+        setImgSrc(imageDataUrl);
+        setIsCropping(true);
+
+      } catch (error: any) {
+          toast({
+              title: "Error processing image",
+              description: error.message || "Could not process the selected file.",
+              variant: "destructive",
+          });
       }
-      setCrop(undefined) // Makes crop preview update between images.
-      const reader = new FileReader();
-      reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
-      reader.readAsDataURL(e.target.files[0]);
-      setIsCropping(true);
     }
   };
 
@@ -214,6 +287,11 @@ export function ProfileEditor({
     const canvas = document.createElement('canvas');
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
+    
+    if (!crop.width || !crop.height) {
+        throw new Error("Crop dimensions are not valid");
+    }
+
     canvas.width = crop.width * scaleX;
     canvas.height = crop.height * scaleY;
     const ctx = canvas.getContext('2d');
