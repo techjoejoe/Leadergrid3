@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { QrReader } from 'react-qr-reader';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -13,8 +13,29 @@ import { db, app } from '@/lib/firebase';
 import { collection, addDoc, Timestamp, writeBatch, doc, increment } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
+const createMockUser = (): User => ({
+    uid: 'mock-user-id',
+    displayName: 'Emily Suzuki',
+    email: 'emily@leadergrid.com',
+    photoURL: `https://placehold.co/100x100.png?text=ES`,
+    emailVerified: true,
+    isAnonymous: false,
+    metadata: {},
+    providerData: [],
+    providerId: 'password',
+    tenantId: null,
+    delete: async () => {},
+    getIdToken: async () => '',
+    getIdTokenResult: async () => ({} as any),
+    reload: async () => {},
+    toJSON: () => ({}),
+});
+
+
 export default function ScanPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const isMock = searchParams.get('mock') === 'true';
     const { toast } = useToast();
     const auth = getAuth(app);
 
@@ -23,21 +44,34 @@ export default function ScanPage() {
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-            } else {
-                // Handle case where user is not logged in, redirect or show message
-                toast({ title: 'Not Authenticated', description: 'Please log in to scan codes.', variant: 'destructive' });
-                router.push('/student-login');
-            }
-        });
-        return () => unsubscribe();
-    }, [auth, router, toast]);
+        if (isMock) {
+            setUser(createMockUser());
+        } else {
+            const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+                if (currentUser) {
+                    setUser(currentUser);
+                } else {
+                    toast({ title: 'Not Authenticated', description: 'Please log in to scan codes.', variant: 'destructive' });
+                    router.push('/student-login');
+                }
+            });
+            return () => unsubscribe();
+        }
+    }, [auth, router, toast, isMock]);
 
     const handleResult = async (result: any, error: any) => {
         if (!!result && !isProcessing && user) {
             setIsProcessing(true); // Prevent multiple scans
+
+            if (isMock) {
+                toast({
+                    title: 'Scan Successful (Mock Mode)',
+                    description: `This would have awarded points for the scanned activity.`,
+                });
+                router.push('/student-dashboard?mock=true');
+                return;
+            }
+
             try {
                 const data = JSON.parse(result.text);
                 const now = new Date();
@@ -177,7 +211,7 @@ export default function ScanPage() {
         <div className="relative flex flex-col items-center justify-center min-h-screen bg-slate-900 text-white p-4">
              <div className="absolute top-4 left-4 z-20">
                 <Button variant="outline" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-                    <Link href="/student-dashboard">
+                    <Link href={`/student-dashboard${isMock ? '?mock=true' : ''}`}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Dashboard
                     </Link>
