@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { collection, getDocs, query, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Class } from "@/components/create-class-form";
@@ -18,6 +19,7 @@ import { BookOpen, ChevronDown, Loader2, MoveRight } from "lucide-react";
 export function ActiveClassMenu() {
     const [activeClasses, setActiveClasses] = useState<Class[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         async function fetchActiveClasses() {
@@ -80,10 +82,8 @@ export function ActiveClassMenu() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
                 {activeClasses.map((cls) => (
-                    <DropdownMenuItem key={cls.id} asChild>
-                        <Link href={`/dashboard/classes/${cls.id}`}>
-                            {cls.name}
-                        </Link>
+                    <DropdownMenuItem key={cls.id} onSelect={() => router.push(`/dashboard/classes/${cls.id}`)}>
+                        {cls.name}
                     </DropdownMenuItem>
                 ))}
             </DropdownMenuContent>
