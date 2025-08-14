@@ -1,16 +1,10 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import { Mascot } from './mascot';
 
 export function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2" prefetch={false}>
-      <Image 
-        src="/logo.png" 
-        alt="LeaderGrid Mascot" 
-        width={140} 
-        height={32}
-        priority
-      />
+      <Mascot className="h-8 w-auto" />
     </Link>
   );
 }
