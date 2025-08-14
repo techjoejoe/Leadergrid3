@@ -5,15 +5,12 @@ export function Logo() {
   return (
     <Link href="/" className="flex items-center gap-2" prefetch={false}>
       <Image 
-        src="https://placehold.co/32x32.png" 
+        src="/logo.png" 
         alt="LeaderGrid Mascot" 
-        width={32} 
+        width={140} 
         height={32}
-        data-ai-hint="mascot character"
+        priority
       />
-      <span className="font-headline text-xl font-bold text-foreground">
-        LeaderGrid
-      </span>
     </Link>
   );
 }
