@@ -325,24 +325,24 @@ export default function StudentDashboardPage() {
                     </Card>
 
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
-                             <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                        <Card>
+                             <CardContent className="flex flex-col items-center justify-center p-4 text-center">
                                 <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
-                                    <Users className='h-6 w-6' />
+                                    <Users className='h-5 w-5' />
                                 </div>
-                                <p className="text-sm text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
-                                <p className="text-3xl font-bold">#{studentData.classRank}</p>
-                                <p className="text-sm font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
+                                <p className="text-xs text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
+                                <p className="text-2xl font-bold">#{studentData.classRank}</p>
+                                <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
                             </CardContent>
                         </Card>
-                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
-                             <CardContent className="flex flex-col items-center justify-center p-6 text-center">
+                         <Card>
+                             <CardContent className="flex flex-col items-center justify-center p-4 text-center">
                                 <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
-                                     <Building className='h-6 w-6' />
+                                     <Building className='h-5 w-5' />
                                 </div>
-                                <p className="text-sm text-muted-foreground">Company Rank</p>
-                                <p className="text-3xl font-bold">#{studentData.schoolRank}</p>
-                                <p className="text-sm font-semibold text-primary">{studentData.points.toLocaleString()} lifetime pts</p>
+                                <p className="text-xs text-muted-foreground">Company Rank</p>
+                                <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
+                                <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} lifetime pts</p>
                             </CardContent>
                         </Card>
                     </div>
