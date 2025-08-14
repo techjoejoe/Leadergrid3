@@ -56,32 +56,14 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
-    points: 1250, 
-    classRank: 3,
-    classPoints: 850,
-    schoolRank: 5,
+    points: 0, 
+    classRank: 0,
+    classPoints: 0,
+    schoolRank: 0,
 };
 
-const initialBadges = [
-    { name: 'Math Master', imageUrl: 'https://placehold.co/80x80.png?text=M', hint: 'math logo' },
-    { name: 'Science Star', imageUrl: 'https://placehold.co/80x80.png?text=S', hint: 'atom icon' },
-    { name: 'Perfect Attendance', imageUrl: 'https://placehold.co/80x80.png?text=PA', hint: 'calendar icon' },
-    { name: 'Team Player', imageUrl: 'https://placehold.co/80x80.png?text=TP', hint: 'group icon' },
-    { name: 'Book Worm', imageUrl: 'https://placehold.co/80x80.png?text=BW', hint: 'book icon' },
-    { name: 'Artful Dodger', imageUrl: 'https://placehold.co/80x80.png?text=AD', hint: 'paint icon' },
-    { name: 'History Buff', imageUrl: 'https://placehold.co/80x80.png?text=HB', hint: 'scroll icon' },
-    { name: 'Music Maestro', imageUrl: 'https://placehold.co/80x80.png?text=MM', hint: 'music note icon' },
-    { name: 'Sportsmanship', imageUrl: 'https://placehold.co/80x80.png?text=SS', hint: 'trophy icon' },
-    { name: 'Volunteer Virtuoso', imageUrl: 'https://placehold.co/80x80.png?text=VV', hint: 'heart icon' },
-];
-
-
-const recentActivity = [
-    { description: 'Earned "Math Master" badge', points: 250, date: '2d ago' },
-    { description: 'Completed Library Visit QR', points: 50, date: '3d ago' },
-    { description: 'Team project submission', points: 150, date: '4d ago' },
-    { description: 'Answered question in class', points: 20, date: '5d ago' },
-];
+const initialBadges: { name: string; imageUrl: string; hint: string; }[] = [];
+const initialRecentActivity: { description: string; points: number; date: string; }[] = [];
 
 const mockJoinedClasses: ClassInfo[] = [
     { code: "BIOLOGY101", name: "10th Grade Biology" },
@@ -113,6 +95,8 @@ export default function StudentDashboardPage() {
     const isMock = searchParams.get('mock') === 'true';
 
     const [studentData, setStudentData] = useState(initialStudentData);
+    const [badges, setBadges] = useState(initialBadges);
+    const [recentActivity, setRecentActivity] = useState(initialRecentActivity);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [displayName, setDisplayName] = useState('Student');
@@ -138,6 +122,26 @@ export default function StudentDashboardPage() {
             setUser(mockUser);
             setDisplayName(mockUser.displayName || 'Student');
             setAvatarUrl(mockUser.photoURL);
+            // In mock mode, we'll populate with some sample data for demonstration
+            setStudentData({ points: 1250, classRank: 3, classPoints: 850, schoolRank: 5 });
+            setBadges([
+                { name: 'Math Master', imageUrl: 'https://placehold.co/80x80.png?text=M', hint: 'math logo' },
+                { name: 'Science Star', imageUrl: 'https://placehold.co/80x80.png?text=S', hint: 'atom icon' },
+                { name: 'Perfect Attendance', imageUrl: 'https://placehold.co/80x80.png?text=PA', hint: 'calendar icon' },
+                { name: 'Team Player', imageUrl: 'https://placehold.co/80x80.png?text=TP', hint: 'group icon' },
+                { name: 'Book Worm', imageUrl: 'https://placehold.co/80x80.png?text=BW', hint: 'book icon' },
+                { name: 'Artful Dodger', imageUrl: 'https://placehold.co/80x80.png?text=AD', hint: 'paint icon' },
+                { name: 'History Buff', imageUrl: 'https://placehold.co/80x80.png?text=HB', hint: 'scroll icon' },
+                { name: 'Music Maestro', imageUrl: 'https://placehold.co/80x80.png?text=MM', hint: 'music note icon' },
+                { name: 'Sportsmanship', imageUrl: 'https://placehold.co/80x80.png?text=SS', hint: 'trophy icon' },
+                { name: 'Volunteer Virtuoso', imageUrl: 'https://placehold.co/80x80.png?text=VV', hint: 'heart icon' },
+            ]);
+            setRecentActivity([
+                { description: 'Earned "Math Master" badge', points: 250, date: '2d ago' },
+                { description: 'Completed Library Visit QR', points: 50, date: '3d ago' },
+                { description: 'Team project submission', points: 150, date: '4d ago' },
+                { description: 'Answered question in class', points: 20, date: '5d ago' },
+            ]);
         } else {
             const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
                 if (currentUser) {
@@ -150,6 +154,8 @@ export default function StudentDashboardPage() {
                     if (userDocSnap.exists()) {
                         const userData = userDocSnap.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
+                        // In a real app, you would fetch badges and activity here.
+                        // For now, we leave them as their initial empty state for new users.
                     }
                     
                     setAvatarUrl(savedAvatar);
@@ -351,14 +357,14 @@ export default function StudentDashboardPage() {
                                         </DialogTrigger>
                                         <DialogContent className="max-w-2xl">
                                             <DialogHeader>
-                                                <DialogTitle>All My Badges ({initialBadges.length})</DialogTitle>
+                                                <DialogTitle>All My Badges ({badges.length})</DialogTitle>
                                                 <DialogDescription>
                                                    Here is your complete collection of earned badges. Keep up the great work!
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <ScrollArea className="max-h-[60vh]">
                                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 text-center p-4">
-                                                    {initialBadges.map((badge, index) => (
+                                                    {badges.map((badge, index) => (
                                                         <div key={index} className="flex flex-col items-center gap-2">
                                                             <Avatar className="h-20 w-20 border-2 border-primary/50">
                                                                 <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
@@ -373,7 +379,7 @@ export default function StudentDashboardPage() {
                                     </Dialog>
                                 </CardHeader>
                                 <CardContent>
-                                    {initialBadges.length > 0 ? (
+                                    {badges.length > 0 ? (
                                         <Carousel
                                             opts={{
                                                 align: "start",
@@ -382,7 +388,7 @@ export default function StudentDashboardPage() {
                                             className="w-full"
                                         >
                                             <CarouselContent>
-                                                {initialBadges.map((badge, index) => (
+                                                {badges.map((badge, index) => (
                                                     <CarouselItem key={index} className="basis-1/3 md:basis-1/4 lg:basis-1/5">
                                                         <div className="p-1">
                                                             <div className="flex flex-col items-center gap-2">
@@ -416,19 +422,25 @@ export default function StudentDashboardPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {recentActivity.map((activity, index) => (
-                                    <div key={index}>
-                                        <div className="flex items-center justify-between">
-                                            <p className="font-medium">{activity.description}</p>
-                                            <div className="flex items-center gap-4">
-                                                <UiBadge variant="secondary">+{activity.points} pts</UiBadge>
-                                                <span className="text-sm text-muted-foreground hidden sm:block">{activity.date}</span>
+                            {recentActivity.length > 0 ? (
+                                <div className="space-y-4">
+                                    {recentActivity.map((activity, index) => (
+                                        <div key={index}>
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-medium">{activity.description}</p>
+                                                <div className="flex items-center gap-4">
+                                                    <UiBadge variant="secondary">+{activity.points} pts</UiBadge>
+                                                    <span className="text-sm text-muted-foreground hidden sm:block">{activity.date}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center text-muted-foreground py-8">
+                                    <p>Your recent activity will appear here once you start earning points and badges.</p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -450,3 +462,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
