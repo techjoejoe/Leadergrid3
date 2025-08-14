@@ -288,6 +288,33 @@ export default function StudentDashboardPage() {
                         onActiveClassChange={handleActiveClassChange}
                     />
 
+                    <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
+                        <CardHeader>
+                            <CardTitle className="font-headline flex items-center">
+                               <Award className="mr-2" /> My Badges
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {initialBadges.length > 0 ? (
+                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
+                                    {initialBadges.map((badge, index) => (
+                                        <div key={index} className="flex flex-col items-center gap-2">
+                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
+                                                <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
+                                                <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ): (
+                                <div className="text-center text-muted-foreground py-8">
+                                    <p>No badges earned yet. Keep participating!</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
                     <div className="grid gap-4 sm:grid-cols-3">
                         <Card className="transition-transform duration-300 ease-in-out hover:scale-105 hover:shadow-lg hover:shadow-primary/30">
                             <CardContent className="flex items-center justify-center p-6">
@@ -329,33 +356,6 @@ export default function StudentDashboardPage() {
                             </CardContent>
                         </Card>
                     </div>
-
-                    <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="font-headline flex items-center">
-                               <Award className="mr-2" /> My Badges
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {initialBadges.length > 0 ? (
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
-                                    {initialBadges.map((badge, index) => (
-                                        <div key={index} className="flex flex-col items-center gap-2">
-                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
-                                                <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            ): (
-                                <div className="text-center text-muted-foreground py-8">
-                                    <p>No badges earned yet. Keep participating!</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
 
                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
                         <CardHeader>
@@ -406,3 +406,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
