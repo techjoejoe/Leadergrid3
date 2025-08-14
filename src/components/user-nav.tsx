@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User as UserIcon } from "lucide-react"
+import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge, Building } from "lucide-react"
 import { getAuth, signOut, User } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -99,6 +99,33 @@ export function UserNav() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+           <DropdownMenuGroup>
+             <DropdownMenuItem asChild>
+                <Link href="/dashboard/classes">
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>Classes</span>
+                </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+               <Link href="/dashboard/qrcodes">
+                    <QrCode className="mr-2 h-4 w-4" />
+                    <span>QR Codes</span>
+                </Link>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+               <Link href="/dashboard/badges">
+                    <Badge className="mr-2 h-4 w-4" />
+                    <span>Badges</span>
+                </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/company">
+                <Building className="mr-2 h-4 w-4" />
+                <span>Company</span>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
               <UserIcon className="mr-2 h-4 w-4" />
@@ -119,11 +146,12 @@ export function UserNav() {
         </DropdownMenuContent>
       </DropdownMenu>
       {mockUser && (
-        <ProfileEditor 
+        <ProfileEditor
             user={mockUser}
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatar}
+            onNameChange={() => {}}
             currentAvatar={avatar}
             currentInitial={initial}
             currentDisplayName={"Admin"}
