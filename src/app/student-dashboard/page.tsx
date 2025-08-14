@@ -39,7 +39,7 @@ import { app, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
-import { ClassroomHub } from '@/components/classroom-hub';
+import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
 
 // Mock Data - this would eventually come from your database
@@ -230,13 +230,21 @@ export default function StudentDashboardPage() {
         <>
         <div className="flex flex-col min-h-dvh bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900">
             <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
+                <div className="container flex h-14 max-w-screen-2xl items-center justify-between gap-4">
                      <Button asChild variant="outline">
                         <Link href="/student-dashboard/scan">
                             <QrCode className="mr-2 h-4 w-4" />
                             Scan QR Code
                         </Link>
                     </Button>
+                    <div className="flex-1 flex justify-center">
+                        <StudentClassManager
+                            joinedClasses={joinedClasses}
+                            activeClass={activeClass}
+                            onJoinClass={handleJoinClass}
+                            onActiveClassChange={handleActiveClassChange}
+                        />
+                    </div>
                     <div className="flex items-center gap-4">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -281,14 +289,7 @@ export default function StudentDashboardPage() {
                         <p className="text-muted-foreground">Here's a summary of your progress and achievements.</p>
                     </div>
 
-                    <ClassroomHub 
-                        joinedClasses={joinedClasses}
-                        activeClass={activeClass}
-                        onJoinClass={handleJoinClass}
-                        onActiveClassChange={handleActiveClassChange}
-                    />
-
-                    <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
+                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
                                <Award className="mr-2" /> My Badges
@@ -406,5 +407,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
