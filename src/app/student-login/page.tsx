@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 
 export default function StudentLoginPage() {
@@ -46,10 +47,11 @@ export default function StudentLoginPage() {
             toast({ title: "Login Successful", description: "Welcome back!" });
             router.push('/student-dashboard');
         } catch (error: any) {
-            setError(error.message);
+            const errorMessage = "Invalid email or password. Please try again.";
+            setError(errorMessage);
              toast({
                 title: "Login Failed",
-                description: error.message,
+                description: errorMessage,
                 variant: "destructive"
             });
         } finally {
@@ -65,29 +67,28 @@ export default function StudentLoginPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
             const user = userCredential.user;
             
-            // Update the user's profile with the name in Firebase Auth
             await updateProfile(user, {
                 displayName: signupName
             });
 
-            // Create a corresponding user document in Firestore
             const userDocRef = doc(db, "users", user.uid);
             await setDoc(userDocRef, {
                 uid: user.uid,
                 displayName: signupName,
                 email: signupEmail,
                 role: 'student',
-                lifetimePoints: 100, // Award 100 points for signing up
+                lifetimePoints: 100,
                 createdAt: Timestamp.fromDate(new Date()),
             });
             
             toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid! You've earned 100 points." });
             router.push('/student-dashboard');
         } catch (error: any) {
-            setError(error.message);
+            const errorMessage = "Could not create account. The email might be in use or the password is too weak.";
+            setError(errorMessage);
             toast({
                 title: "Sign Up Failed",
-                description: error.message,
+                description: errorMessage,
                 variant: "destructive"
             });
         } finally {
@@ -135,6 +136,11 @@ export default function StudentLoginPage() {
                                     onChange={(e) => setLoginPassword(e.target.value)}
                                 />
                             </div>
+                             {error && (
+                                <Alert variant="destructive">
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
                             <Button type="submit" className="w-full" disabled={isLoading}>
                                 {isLoading ? <Loader2 className="animate-spin" /> : 'Login'}
                             </Button>
@@ -194,6 +200,11 @@ export default function StudentLoginPage() {
                                     onChange={(e) => setSignupPassword(e.target.value)}
                                 />
                             </div>
+                             {error && (
+                                <Alert variant="destructive">
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
                             <Button type="submit" className="w-full" disabled={isLoading}>
                                 {isLoading ? <Loader2 className="animate-spin" /> : 'Sign Up'}
                             </Button>

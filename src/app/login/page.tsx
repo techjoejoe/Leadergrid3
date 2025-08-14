@@ -1,4 +1,13 @@
+
+'use client';
+
 import Link from "next/link"
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { app } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -10,41 +19,89 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const auth = getAuth(app);
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Login Successful", description: "Welcome, Admin!" });
+      router.push('/dashboard');
+    } catch (error: any) {
+      const errorMessage = "Invalid email or password. Please try again.";
+      setError(errorMessage);
+      toast({
+          title: "Login Failed",
+          description: errorMessage,
+          variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   return (
     <div className="flex items-center justify-center min-h-screen">
       <Card className="mx-auto max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-headline">Login</CardTitle>
+          <CardTitle className="text-2xl font-headline">Admin Login</CardTitle>
           <CardDescription>
             Enter your email below to login to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
-                <Link href="#" className="ml-auto inline-block text-sm underline">
-                  Forgot your password?
-                </Link>
+          <form onSubmit={handleLogin}>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="m@example.com"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-              <Input id="password" type="password" required />
+              <div className="grid gap-2">
+                <div className="flex items-center">
+                  <Label htmlFor="password">Password</Label>
+                  <Link href="#" className="ml-auto inline-block text-sm underline">
+                    Forgot your password?
+                  </Link>
+                </div>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  required 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              {error && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? <Loader2 className="animate-spin" /> : 'Login'}
+              </Button>
             </div>
-            <Button type="submit" className="w-full">
-              Login
-            </Button>
-          </div>
+          </form>
           <div className="mt-4 text-center text-sm">
             Admin Registration?{" "}
             <Link href="#" className="underline">
