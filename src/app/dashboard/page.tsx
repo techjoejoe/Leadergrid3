@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Users, QrCode, Badge, Building, ArrowRight } from "lucide-react";
+import { Users, QrCode, Award, Building, ArrowRight } from "lucide-react";
 
 const navItems = [
     {
@@ -26,7 +26,7 @@ const navItems = [
         href: "/dashboard/badges",
         label: "Badges",
         description: "Create and manage achievement badges.",
-        icon: Badge
+        icon: Award
     },
     {
         href: "/dashboard/company",
@@ -46,15 +46,13 @@ export default function DashboardPage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {navItems.map((item) => (
                     <Link href={item.href} key={item.href}>
-                        <Card className="h-full hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+                        <Card className="aspect-square flex flex-col justify-between hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
                            <CardHeader>
                                 <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="font-headline text-2xl">{item.label}</CardTitle>
-                                        <CardDescription className="pt-2">{item.description}</CardDescription>
-                                    </div>
+                                    <CardTitle className="font-headline text-2xl">{item.label}</CardTitle>
                                     <item.icon className="h-8 w-8 text-muted-foreground" />
                                 </div>
+                                <CardDescription className="pt-2">{item.description}</CardDescription>
                            </CardHeader>
                            <CardContent>
                                 <div className="text-sm font-medium text-primary flex items-center gap-2 group-hover:gap-3 transition-all">
