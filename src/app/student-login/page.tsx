@@ -5,7 +5,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { app, db } from "@/lib/firebase";
+import { doc, setDoc, Timestamp } from "firebase/firestore";
+
 
 import { Button } from "@/components/ui/button"
 import {
@@ -61,14 +63,27 @@ export default function StudentLoginPage() {
         setError(null);
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
-            // Update the user's profile with the name
-            await updateProfile(userCredential.user, {
+            const user = userCredential.user;
+            
+            // Update the user's profile with the name in Firebase Auth
+            await updateProfile(user, {
                 displayName: signupName
+            });
+
+            // Create a corresponding user document in Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                displayName: signupName,
+                email: signupEmail,
+                role: 'student',
+                lifetimePoints: 0,
+                createdAt: Timestamp.fromDate(new Date()),
             });
             
             toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid!" });
             router.push('/student-dashboard');
-        } catch (error: any) {
+        } catch (error: any)
+{
             setError(error.message);
             toast({
                 title: "Sign Up Failed",

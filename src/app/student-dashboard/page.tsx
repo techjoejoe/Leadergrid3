@@ -35,7 +35,8 @@ import Link from 'next/link';
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { ClassroomHub } from '@/components/classroom-hub';
@@ -43,7 +44,7 @@ import { ProfileEditor } from '@/components/profile-editor';
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
-    points: 8850,
+    points: 0, // This will be fetched from Firestore
     classRank: 3,
     schoolRank: 5,
 };
@@ -89,10 +90,19 @@ export default function StudentDashboardPage() {
     useEffect(() => {
         if (!isClient) return;
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 setDisplayName(currentUser.displayName || 'Student');
+                
+                // Fetch user data from Firestore
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
+                }
+
                 const savedAvatar = window.localStorage.getItem('studentAvatar');
                 if (savedAvatar) {
                     setAvatarUrl(savedAvatar);
@@ -100,29 +110,8 @@ export default function StudentDashboardPage() {
                     setAvatarUrl(currentUser.photoURL);
                 }
             } else {
-                const mockUser = {
-                    displayName: 'Student',
-                    email: 'student@example.com',
-                    photoURL: null,
-                    uid: 'mock-user-id',
-                    emailVerified: true,
-                    isAnonymous: false,
-                    metadata: {},
-                    providerData: [],
-                    providerId: "password",
-                    tenantId: null,
-                    delete: async () => {},
-                    getIdToken: async () => "",
-                    getIdTokenResult: async () => ({} as any),
-                    reload: async () => {},
-                    toJSON: () => ({}),
-                } as User;
-                setUser(mockUser);
-                setDisplayName('Student');
-                const savedAvatar = window.localStorage.getItem('studentAvatar');
-                if (savedAvatar) {
-                    setAvatarUrl(savedAvatar);
-                }
+                // If not logged in, you might want to redirect
+                 router.push('/student-login');
             }
         });
 
@@ -145,16 +134,6 @@ export default function StudentDashboardPage() {
             if(mockJoinedClasses.length > 0) {
                 setActiveClass(mockJoinedClasses[0]);
             }
-        }
-
-        try {
-            const pointsFromScan = localStorage.getItem('lastScannedPoints');
-            if (pointsFromScan) {
-                setStudentData(prevData => ({ ...prevData, points: prevData.points + parseInt(pointsFromScan, 10) }));
-                localStorage.removeItem('lastScannedPoints');
-            }
-        } catch (error) {
-             console.error("Failed to process points from localStorage", error);
         }
 
         return () => unsubscribe();
@@ -181,7 +160,7 @@ export default function StudentDashboardPage() {
     }
 
     const handleLogout = async () => {
-        if (user && user.uid !== 'mock-user-id') {
+        if (user) {
              try {
                 await signOut(auth);
                 window.localStorage.removeItem('studentAvatar');
@@ -202,7 +181,7 @@ export default function StudentDashboardPage() {
         }
     }
 
-    if (!isClient) {
+    if (!isClient || !user) {
         return (
              <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900">
                 <Loader2 className="h-8 w-8 animate-spin text-white" />
