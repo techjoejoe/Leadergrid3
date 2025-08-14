@@ -34,9 +34,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge as UiBadge } from '@/components/ui/badge';
@@ -145,13 +145,13 @@ export default function StudentDashboardPage() {
         } else {
             const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
                 if (currentUser) {
+                    // Clear any mock data to ensure a clean slate for real users
+                    setBadges(initialBadges);
+                    setRecentActivity(initialRecentActivity);
+                    setStudentData(initialStudentData);
+
                     setUser(currentUser);
                     setDisplayName(currentUser.displayName || 'Student');
-
-                    // Clear any mock data to ensure a clean slate for real users
-                    setBadges([]);
-                    setRecentActivity([]);
-                    setStudentData(initialStudentData);
                     
                     // Fetch real user data from Firestore
                     const userDocRef = doc(db, 'users', currentUser.uid);
@@ -467,5 +467,7 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
 
     
