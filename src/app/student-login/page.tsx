@@ -71,7 +71,8 @@ export default function StudentLoginPage() {
             });
 
             // Create a corresponding user document in Firestore
-            await setDoc(doc(db, "users", user.uid), {
+            const userDocRef = doc(db, "users", user.uid);
+            await setDoc(userDocRef, {
                 uid: user.uid,
                 displayName: signupName,
                 email: signupEmail,
@@ -82,8 +83,7 @@ export default function StudentLoginPage() {
             
             toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid! You've earned 100 points." });
             router.push('/student-dashboard');
-        } catch (error: any)
-{
+        } catch (error: any) {
             setError(error.message);
             toast({
                 title: "Sign Up Failed",
