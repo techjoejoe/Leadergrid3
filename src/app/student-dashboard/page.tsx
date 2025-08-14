@@ -11,6 +11,7 @@ import {
     User as UserIcon,
     Loader2,
     QrCode,
+    View,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -238,13 +239,19 @@ export default function StudentDashboardPage() {
                             Scan QR Code
                         </Link>
                     </Button>
-                    <div className="flex-1 flex justify-center">
+                    <div className="flex-1 flex justify-center items-center gap-2">
                         <StudentClassManager
                             joinedClasses={joinedClasses}
                             activeClass={activeClass}
                             onJoinClass={handleJoinClass}
                             onActiveClassChange={handleActiveClassChange}
                         />
+                         <Button asChild variant="outline" className="group">
+                            <Link href="/leaderboard">
+                                <View className="mr-2 h-4 w-4" />
+                                <span className="hidden sm:inline">Leaderboard</span>
+                            </Link>
+                        </Button>
                     </div>
                     <div className="flex items-center gap-4">
                         <DropdownMenu>
@@ -362,14 +369,6 @@ export default function StudentDashboardPage() {
                             </div>
                         </CardContent>
                     </Card>
-                    
-                    <div className='text-center'>
-                         <Button asChild variant="outline" className="group">
-                            <Link href="/leaderboard">
-                                View Full Leaderboard
-                            </Link>
-                        </Button>
-                    </div>
 
                 </div>
             </main>
@@ -389,4 +388,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
