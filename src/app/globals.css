@@ -6,7 +6,7 @@
   :root {
     --background: 217 71% 11%; /* Depth Navy */
     --foreground: 220 14% 96%; /* Lighter version of Card Tint 2 for text */
-    --card: 216 70% 20%; /* Darker blue for cards */
+    --card: 220 14% 96% / 0.05; /* Semi-transparent white for glass effect */
     --card-foreground: 220 14% 96%;
     --popover: 217 71% 11%;
     --popover-foreground: 220 14% 96%;
@@ -16,11 +16,11 @@
     --secondary-foreground: 217 71% 11%;
     --muted: 215 28% 17%;
     --muted-foreground: 215 20% 65%; /* Secondary Text */
-    --accent: 195 99% 46%; /* Sky Accent */
-    --accent-foreground: 217 71% 11%;
+    --accent: 195 99% 46% / 0.1; /* Semi-transparent accent */
+    --accent-foreground: 195 99% 60%;
     --destructive: 0 84% 60%; /* Danger */
     --destructive-foreground: 210 40% 98%;
-    --border: 215 28% 17%; /* Dividers */
+    --border: 220 14% 96% / 0.1; /* Semi-transparent border for glass */
     --input: 215 28% 17%;
     --ring: 214 100% 38%; /* Leadership Blue */
     --radius: 0.5rem;
@@ -42,7 +42,7 @@
   .dark {
     --background: 217 71% 11%; /* Depth Navy */
     --foreground: 220 14% 96%; /* Lighter version of Card Tint 2 for text */
-    --card: 216 70% 20%; /* Darker blue for cards */
+    --card: 220 14% 96% / 0.05; /* Semi-transparent white for glass effect */
     --card-foreground: 220 14% 96%;
     --popover: 217 71% 11%;
     --popover-foreground: 220 14% 96%;
@@ -52,11 +52,11 @@
     --secondary-foreground: 217 71% 11%;
     --muted: 215 28% 17%;
     --muted-foreground: 215 20% 65%; /* Secondary Text */
-    --accent: 195 99% 46%; /* Sky Accent */
-    --accent-foreground: 217 71% 11%;
+    --accent: 195 99% 46% / 0.1; /* Semi-transparent accent */
+    --accent-foreground: 195 99% 60%;
     --destructive: 0 84% 60%; /* Danger */
     --destructive-foreground: 210 40% 98%;
-    --border: 215 28% 17%; /* Dividers */
+    --border: 220 14% 96% / 0.1; /* Semi-transparent border for glass */
     --input: 215 28% 17%;
     --ring: 214 100% 38%; /* Leadership Blue */
   }

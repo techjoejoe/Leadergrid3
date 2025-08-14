@@ -18,8 +18,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col min-h-screen">
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 sticky top-0 z-50">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background to-slate-900">
+        <header className="flex h-14 items-center gap-4 border-b border-white/10 bg-black/20 backdrop-blur-lg px-4 lg:h-[60px] lg:px-6 sticky top-0 z-50">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                 <Logo />
             </Link>
@@ -28,7 +28,7 @@ export default function DashboardLayout({
             </div>
             <UserNav />
         </header>
-        <main className="flex-1 p-4 sm:p-6 bg-background">
+        <main className="flex-1 p-4 sm:p-6">
             {children}
         </main>
     </div>
