@@ -39,51 +39,36 @@ export default function ClassDetailsPage() {
 
     return (
         <div className="space-y-6">
+            <div className="flex items-center gap-4">
+                <Button variant="outline" size="icon" asChild>
+                    <Link href="/dashboard/classes">
+                        <ArrowLeft className="h-4 w-4" />
+                    </Link>
+                </Button>
+                <h1 className="font-headline text-3xl font-bold">{mockClass.name}</h1>
+            </div>
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="flex items-center gap-4">
-                                <Button variant="outline" size="icon" asChild>
-                                    <Link href="/dashboard/classes">
-                                        <ArrowLeft className="h-4 w-4" />
-                                    </Link>
-                                </Button>
-                                <CardTitle className="font-headline text-3xl">{mockClass.name}</CardTitle>
-                            </div>
-                            <CardDescription className="mt-2 ml-14">Manage students, award points, and view progress for this class.</CardDescription>
-                        </div>
-                    </div>
+                    <CardTitle>Classroom Manager</CardTitle>
+                    <CardDescription>Manage students, award points, and view progress for this class.</CardDescription>
                 </CardHeader>
+                <CardContent>
+                    <ClassroomManager classId={classId} />
+                </CardContent>
             </Card>
-            <ClassroomManager classId={classId} />
             <Separator />
-            <Accordion 
-                type="single" 
-                collapsible 
-                className="w-full"
-                value={openAccordion}
-                onValueChange={setOpenAccordion}
-            >
-                <AccordionItem 
-                    value="item-1"
-                    onMouseEnter={() => handleHover('item-1')}
-                    onMouseLeave={() => handleHover('')}
-                >
-                    <AccordionTrigger>
-                        <CardHeader className="p-0">
-                            <CardTitle className="font-headline text-2xl">Class Analytics</CardTitle>
-                            <CardDescription>View engagement reports, badge counts, and more for this class.</CardDescription>
-                        </CardHeader>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <div className="space-y-6 pt-4">
-                            <ReportCharts />
-                            <ScanHistoryReport classId={classId} />
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">Class Analytics</CardTitle>
+                    <CardDescription>View engagement reports, badge counts, and more for this class.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-6 pt-4">
+                        <ReportCharts />
+                        <ScanHistoryReport classId={classId} />
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     )
 }

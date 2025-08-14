@@ -1,4 +1,5 @@
 
+
 'use client'
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -15,7 +16,6 @@ import {
     Settings,
     Building,
 } from 'lucide-react';
-import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar"
 
 
 const links = [
@@ -33,43 +33,9 @@ const bottomLinks = [
 export function DashboardNav() {
     const pathname = usePathname()
 
-    return (
-        <>
-            <SidebarMenu>
-                {links.map((link) => (
-                    <SidebarMenuItem key={link.href}>
-                        <SidebarMenuButton
-                            asChild
-                            isActive={pathname.startsWith(link.href) && (link.href !== '/dashboard' || pathname === '/dashboard')}
-                            className="w-full"
-                            tooltip={link.label}
-                        >
-                            <Link href={link.href}>
-                                <link.icon className="h-4 w-4" />
-                                <span>{link.label}</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-            <div className="flex-1" />
-             <SidebarMenu>
-                {bottomLinks.map((link) => (
-                    <SidebarMenuItem key={link.href}>
-                        <SidebarMenuButton
-                            asChild
-                            isActive={pathname === link.href}
-                            className="w-full"
-                            tooltip={link.label}
-                        >
-                            <Link href={link.href}>
-                                <link.icon className="h-4 w-4" />
-                                <span>{link.label}</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
-        </>
-    )
+    // This component is not currently used for primary navigation,
+    // but is kept for potential future use or alternative layouts.
+    // The main navigation has been moved to cards on the dashboard page.
+
+    return null;
 }
