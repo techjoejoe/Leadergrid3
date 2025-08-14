@@ -37,14 +37,14 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { ClassroomHub } from '@/components/classroom-hub';
 import { ProfileEditor } from '@/components/profile-editor';
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
-    points: 0, // This will be fetched from Firestore
+    points: 1250, 
     classRank: 3,
     schoolRank: 5,
 };
@@ -70,7 +70,30 @@ const mockJoinedClasses: ClassInfo[] = [
     { code: "WRITE2024", name: "Intro to Creative Writing" },
 ];
 
+const createMockUser = (avatar: string): User => ({
+    uid: 'mock-user-id',
+    displayName: 'Emily Suzuki',
+    email: 'emily@leadergrid.com',
+    photoURL: avatar,
+    // Add other required User properties with mock values
+    emailVerified: true,
+    isAnonymous: false,
+    metadata: {},
+    providerData: [],
+    providerId: 'password',
+    tenantId: null,
+    delete: async () => {},
+    getIdToken: async () => '',
+    getIdTokenResult: async () => ({} as any),
+    reload: async () => {},
+    toJSON: () => ({}),
+});
+
+
 export default function StudentDashboardPage() {
+    const searchParams = useSearchParams();
+    const isMock = searchParams.get('mock') === 'true';
+
     const [studentData, setStudentData] = useState(initialStudentData);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -89,33 +112,41 @@ export default function StudentDashboardPage() {
 
     useEffect(() => {
         if (!isClient) return;
+        
+        const savedAvatar = window.localStorage.getItem('studentAvatar') || 'https://placehold.co/100x100.png?text=ES';
 
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                setUser(currentUser);
-                setDisplayName(currentUser.displayName || 'Student');
-                
-                // Fetch user data from Firestore
-                const userDocRef = doc(db, 'users', currentUser.uid);
-                const userDocSnap = await getDoc(userDocRef);
-                if (userDocSnap.exists()) {
-                    const userData = userDocSnap.data();
-                    setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
-                }
-
-                const savedAvatar = window.localStorage.getItem('studentAvatar');
-                if (savedAvatar) {
+        if (isMock) {
+            const mockUser = createMockUser(savedAvatar);
+            setUser(mockUser);
+            setDisplayName(mockUser.displayName || 'Student');
+            setAvatarUrl(mockUser.photoURL);
+        } else {
+            const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+                if (currentUser) {
+                    setUser(currentUser);
+                    setDisplayName(currentUser.displayName || 'Student');
+                    
+                    // Fetch user data from Firestore
+                    const userDocRef = doc(db, 'users', currentUser.uid);
+                    const userDocSnap = await getDoc(userDocRef);
+                    if (userDocSnap.exists()) {
+                        const userData = userDocSnap.data();
+                        setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
+                    }
+                    
                     setAvatarUrl(savedAvatar);
-                } else if (currentUser.photoURL) {
-                    setAvatarUrl(currentUser.photoURL);
+                } else {
+                    router.push('/student-login');
                 }
-            } else {
-                // If not logged in, you might want to redirect
-                 router.push('/student-login');
-            }
-        });
+            });
+            return () => unsubscribe();
+        }
 
-        try {
+    }, [auth, router, isClient, isMock]);
+
+    useEffect(() => {
+        if (!isClient) return;
+         try {
             const storedClasses = localStorage.getItem('joinedClasses');
             const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : mockJoinedClasses;
             setJoinedClasses(classes);
@@ -135,9 +166,7 @@ export default function StudentDashboardPage() {
                 setActiveClass(mockJoinedClasses[0]);
             }
         }
-
-        return () => unsubscribe();
-    }, [auth, router, isClient]);
+    }, [isClient]);
 
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses, newClass];
@@ -160,6 +189,10 @@ export default function StudentDashboardPage() {
     }
 
     const handleLogout = async () => {
+        if (isMock) {
+            router.push('/student-login');
+            return;
+        }
         if (user) {
              try {
                 await signOut(auth);

@@ -139,7 +139,7 @@ export default function StudentLoginPage() {
                                 {isLoading ? <Loader2 className="animate-spin" /> : 'Login'}
                             </Button>
                             <Button variant="outline" className="w-full" asChild>
-                                <Link href="/student-dashboard">
+                                <Link href="/student-dashboard?mock=true">
                                     Pretend to Login as Student
                                 </Link>
                             </Button>
