@@ -31,7 +31,15 @@ import {
   DropdownMenuGroup,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Badge as UiBadge } from '@/components/ui/badge';
 import Link from 'next/link';
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +50,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+
 
 // Mock Data - this would eventually come from your database
 const initialStudentData = {
@@ -58,7 +69,12 @@ const initialBadges = [
     { name: 'Team Player', imageUrl: 'https://placehold.co/80x80.png?text=TP', hint: 'group icon' },
     { name: 'Book Worm', imageUrl: 'https://placehold.co/80x80.png?text=BW', hint: 'book icon' },
     { name: 'Artful Dodger', imageUrl: 'https://placehold.co/80x80.png?text=AD', hint: 'paint icon' },
+    { name: 'History Buff', imageUrl: 'https://placehold.co/80x80.png?text=HB', hint: 'scroll icon' },
+    { name: 'Music Maestro', imageUrl: 'https://placehold.co/80x80.png?text=MM', hint: 'music note icon' },
+    { name: 'Sportsmanship', imageUrl: 'https://placehold.co/80x80.png?text=SS', hint: 'trophy icon' },
+    { name: 'Volunteer Virtuoso', imageUrl: 'https://placehold.co/80x80.png?text=VV', hint: 'heart icon' },
 ];
+
 
 const recentActivity = [
     { description: 'Earned "Math Master" badge', points: 250, date: '2d ago' },
@@ -291,62 +307,108 @@ export default function StudentDashboardPage() {
             </header>
 
             <main className="flex-1 p-4 sm:p-6 md:p-8">
-                <div className="max-w-4xl mx-auto space-y-6">
+                <div className="max-w-6xl mx-auto space-y-6">
                     <div>
                         <h1 className="text-3xl font-bold font-headline">Welcome Back, {displayName.split(' ')[0]}!</h1>
                         <p className="text-muted-foreground">Here's a summary of your progress and achievements.</p>
                     </div>
 
-                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
-                        <CardHeader>
-                            <CardTitle className="font-headline flex items-center">
-                               <Award className="mr-2" /> My Badges
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {initialBadges.length > 0 ? (
-                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 text-center">
-                                    {initialBadges.map((badge, index) => (
-                                        <div key={index} className="flex flex-col items-center gap-2">
-                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
-                                                <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1 space-y-6">
+                             <Card>
+                                 <CardContent className="flex flex-col items-center justify-center p-4 text-center">
+                                    <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
+                                        <Users className='h-5 w-5' />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
+                                    <p className="text-2xl font-bold">#{studentData.classRank}</p>
+                                    <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
+                                </CardContent>
+                            </Card>
+                             <Card>
+                                 <CardContent className="flex flex-col items-center justify-center p-4 text-center">
+                                    <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
+                                         <Building className='h-5 w-5' />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Company Rank</p>
+                                    <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
+                                    <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} lifetime pts</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="lg:col-span-2">
+                            <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg h-full">
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <div className="space-y-1.5">
+                                        <CardTitle className="font-headline flex items-center">
+                                        <Award className="mr-2" /> My Badges
+                                        </CardTitle>
+                                        <CardDescription>Your collection of earned achievement badges.</CardDescription>
+                                    </div>
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" size="sm">See All</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-2xl">
+                                            <DialogHeader>
+                                                <DialogTitle>All My Badges ({initialBadges.length})</DialogTitle>
+                                                <DialogDescription>
+                                                   Here is your complete collection of earned badges. Keep up the great work!
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <ScrollArea className="max-h-[60vh]">
+                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 text-center p-4">
+                                                    {initialBadges.map((badge, index) => (
+                                                        <div key={index} className="flex flex-col items-center gap-2">
+                                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
+                                                                <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
+                                                                <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
+                                                            </Avatar>
+                                                            <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </ScrollArea>
+                                        </DialogContent>
+                                    </Dialog>
+                                </CardHeader>
+                                <CardContent>
+                                    {initialBadges.length > 0 ? (
+                                        <Carousel
+                                            opts={{
+                                                align: "start",
+                                                loop: true,
+                                            }}
+                                            className="w-full"
+                                        >
+                                            <CarouselContent>
+                                                {initialBadges.map((badge, index) => (
+                                                    <CarouselItem key={index} className="basis-1/3 md:basis-1/4 lg:basis-1/5">
+                                                        <div className="p-1">
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <Avatar className="h-20 w-20 border-2 border-primary/50">
+                                                                    <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
+                                                                    <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
+                                                                </Avatar>
+                                                                <span className="text-xs font-medium text-muted-foreground text-center">{badge.name}</span>
+                                                            </div>
+                                                        </div>
+                                                    </CarouselItem>
+                                                ))}
+                                            </CarouselContent>
+                                            <CarouselPrevious className="ml-4" />
+                                            <CarouselNext className="mr-4" />
+                                        </Carousel>
+                                    ): (
+                                        <div className="text-center text-muted-foreground py-8">
+                                            <p>No badges earned yet. Keep participating!</p>
                                         </div>
-                                    ))}
-                                </div>
-                            ): (
-                                <div className="text-center text-muted-foreground py-8">
-                                    <p>No badges earned yet. Keep participating!</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <Card>
-                             <CardContent className="flex flex-col items-center justify-center p-4 text-center">
-                                <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
-                                    <Users className='h-5 w-5' />
-                                </div>
-                                <p className="text-xs text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
-                                <p className="text-2xl font-bold">#{studentData.classRank}</p>
-                                <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
-                            </CardContent>
-                        </Card>
-                         <Card>
-                             <CardContent className="flex flex-col items-center justify-center p-4 text-center">
-                                <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
-                                     <Building className='h-5 w-5' />
-                                </div>
-                                <p className="text-xs text-muted-foreground">Company Rank</p>
-                                <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
-                                <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} lifetime pts</p>
-                            </CardContent>
-                        </Card>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
-
+                    
                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
@@ -360,7 +422,7 @@ export default function StudentDashboardPage() {
                                         <div className="flex items-center justify-between">
                                             <p className="font-medium">{activity.description}</p>
                                             <div className="flex items-center gap-4">
-                                                <Badge variant="secondary">+{activity.points} pts</Badge>
+                                                <UiBadge variant="secondary">+{activity.points} pts</UiBadge>
                                                 <span className="text-sm text-muted-foreground hidden sm:block">{activity.date}</span>
                                             </div>
                                         </div>
