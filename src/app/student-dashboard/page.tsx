@@ -232,7 +232,7 @@ export default function StudentDashboardPage() {
             <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-between gap-4">
                      <Button asChild variant="outline">
-                        <Link href="/student-dashboard/scan">
+                        <Link href={`/student-dashboard/scan${isMock ? '?mock=true' : ''}`}>
                             <QrCode className="mr-2 h-4 w-4" />
                             Scan QR Code
                         </Link>
