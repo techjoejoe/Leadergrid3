@@ -147,15 +147,20 @@ export default function StudentDashboardPage() {
                 if (currentUser) {
                     setUser(currentUser);
                     setDisplayName(currentUser.displayName || 'Student');
+
+                    // Clear any mock data to ensure a clean slate for real users
+                    setBadges([]);
+                    setRecentActivity([]);
+                    setStudentData(initialStudentData);
                     
-                    // Fetch user data from Firestore
+                    // Fetch real user data from Firestore
                     const userDocRef = doc(db, 'users', currentUser.uid);
                     const userDocSnap = await getDoc(userDocRef);
                     if (userDocSnap.exists()) {
                         const userData = userDocSnap.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
-                        // In a real app, you would fetch badges and activity here.
-                        // For now, we leave them as their initial empty state for new users.
+                        // In a real app, you would fetch user-specific badges and activity here.
+                        // Since they start with none, the empty arrays set above are correct.
                     }
                     
                     setAvatarUrl(savedAvatar);
