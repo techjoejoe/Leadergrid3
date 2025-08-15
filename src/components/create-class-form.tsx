@@ -207,9 +207,12 @@ export function CreateClassForm({ onClassCreated }: CreateClassFormProps) {
                   )}
                 />
                 <DialogFooter>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="animate-spin" /> : "Create Class"}
-                    </Button>
+                    <div className="flex items-center gap-4 w-full">
+                         <p className="text-xs text-muted-foreground text-left flex-1">Class will auto delete 30 days after class end date.</p>
+                        <Button type="submit" disabled={isLoading}>
+                          {isLoading ? <Loader2 className="animate-spin" /> : "Create Class"}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </form>
         </Form>
