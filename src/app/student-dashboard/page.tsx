@@ -316,27 +316,28 @@ export default function StudentDashboardPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
                              <Card>
-                                 <CardHeader>
-                                     <CardTitle className="font-headline text-lg">My Ranking</CardTitle>
-                                 </CardHeader>
-                                 <CardContent className="flex items-center justify-around p-4 text-center">
-                                    <div className="flex flex-col items-center gap-1">
-                                        <Avatar className="w-10 h-10 mb-2">
-                                            <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                 <CardContent className="grid grid-cols-3 items-center p-4">
+                                    <div className="col-span-1 flex justify-center">
+                                        <Avatar className="h-24 w-24 border-4 border-primary/20">
+                                             <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
                                             <AvatarFallback>{displayInitial}</AvatarFallback>
                                         </Avatar>
-                                        <p className="text-xs text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
-                                        <p className="text-2xl font-bold">#{studentData.classRank}</p>
-                                        <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
                                     </div>
-                                    <Separator orientation="vertical" className="h-20" />
-                                     <div className="flex flex-col items-center gap-1">
-                                        <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
-                                             <Building className='h-5 w-5' />
+                                    <Separator orientation="vertical" className="h-24 mx-auto" />
+                                    <div className="col-span-1 flex flex-col items-center justify-center text-center">
+                                        <CardTitle className="font-headline mb-2 text-lg">My Ranking</CardTitle>
+                                        <div className="grid grid-cols-2 gap-4 w-full">
+                                            <div className="flex flex-col items-center">
+                                                <p className="text-xs text-muted-foreground">Class</p>
+                                                <p className="text-2xl font-bold">#{studentData.classRank}</p>
+                                                <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
+                                            </div>
+                                             <div className="flex flex-col items-center">
+                                                <p className="text-xs text-muted-foreground">Company</p>
+                                                <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
+                                                 <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} pts</p>
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground">Company Rank</p>
-                                        <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
-                                        <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} lifetime pts</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -461,5 +462,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
