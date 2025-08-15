@@ -165,7 +165,7 @@ export default function ClassesPage() {
                                                 <Wrench className="h-4 w-4" />
                                             </Link>
                                         </Button>
-                                        <AlertDialog onOpenChange={(e) => e.stopPropagation()}>
+                                        <AlertDialog>
                                             <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
                                                 <Button variant="ghost" size="icon">
                                                     <Trash2 className="h-4 w-4 text-destructive" />
