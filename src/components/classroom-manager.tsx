@@ -21,12 +21,12 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, MinusCircle, Loader2, Download, Check, Play } from 'lucide-react';
+import { PlusCircle, MinusCircle, Loader2, Download, Check, Play, UserPlus, Trash2, Search } from 'lucide-react';
 import { format, addMinutes, isToday } from 'date-fns';
 import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDocs, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDocs, updateDoc, increment, addDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
 interface Student {
     id: string;
@@ -53,82 +53,99 @@ interface CheckInRecord {
     studentId: string;
     studentName: string;
     classId: string;
-    checkedInAt: Timestamp; // Changed to Firestore Timestamp
+    checkedInAt: Timestamp;
     sessionName: string;
     isOnTime: boolean;
 }
 
 export function ClassroomManager({ classId }: { classId: string }) {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [enrolledStudents, setEnrolledStudents] = useState<Student[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
   const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
+  const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
   const [isLoading, setIsLoading] = useState(false);
   const [isStudentsLoading, setIsStudentsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const router = useRouter();
   
   const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
 
   useEffect(() => {
-        async function fetchStudents() {
-            setIsStudentsLoading(true);
-            try {
-                // For now, we assume all users with 'student' role are in every class.
-                // A real-world app might have a 'class_students' subcollection.
-                const usersCollection = collection(db, 'users');
-                const q = query(usersCollection, where('role', '==', 'student'));
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    const fetchedStudents = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    } as Student));
-                    setStudents(fetchedStudents);
-                    setIsStudentsLoading(false);
-                });
-                return unsubscribe;
-            } catch (error) {
-                console.error("Error fetching students:", error);
-                toast({ title: 'Error', description: 'Could not load students.', variant: 'destructive' });
-                setIsStudentsLoading(false);
-            }
+    // Fetch all students in the system for the "Add Student" dialog
+    async function fetchAllStudents() {
+        try {
+            const usersCollection = collection(db, 'users');
+            const q = query(usersCollection, where('role', '==', 'student'));
+            const querySnapshot = await getDocs(q);
+            const fetchedStudents = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            } as Student));
+            setAllStudents(fetchedStudents);
+        } catch (error) {
+            console.error("Error fetching all students:", error);
+            toast({ title: 'Error', description: 'Could not load student list for adding.', variant: 'destructive' });
         }
-        const unsubscribe = fetchStudents();
-        return () => {
-            unsubscribe.then(unsub => unsub && unsub());
-        }
-    }, [toast]);
+    }
+    fetchAllStudents();
+  }, [toast]);
 
   useEffect(() => {
-    // This query will fetch all check-ins for the class.
-    // We will filter by date on the client-side to avoid the composite index requirement.
-    const q = query(collection(db, "checkIns"), where("classId", "==", classId));
+    // Listen for changes in class enrollments
+    setIsStudentsLoading(true);
+    const enrollmentsQuery = query(collection(db, "class_enrollments"), where("classId", "==", classId));
+    
+    const unsubscribe = onSnapshot(enrollmentsQuery, async (snapshot) => {
+        const studentIds = snapshot.docs.map(doc => doc.data().studentId);
+        if (studentIds.length === 0) {
+            setEnrolledStudents([]);
+            setIsStudentsLoading(false);
+            return;
+        }
 
+        // Fetch the student details for the enrolled students
+        const studentsQuery = query(collection(db, "users"), where("uid", "in", studentIds));
+        const studentsSnapshot = await getDocs(studentsQuery);
+        const fetchedStudents = studentsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        } as Student));
+        setEnrolledStudents(fetchedStudents);
+        setIsStudentsLoading(false);
+    }, (error) => {
+        console.error("Error fetching enrolled students:", error);
+        toast({ title: 'Error', description: 'Could not load enrolled students.', variant: 'destructive' });
+        setIsStudentsLoading(false);
+    });
+
+    return () => unsubscribe();
+}, [classId, toast]);
+
+  useEffect(() => {
+    const q = query(collection(db, "checkIns"), where("classId", "==", classId));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const allCheckInsForClass: CheckInRecord[] = [];
         querySnapshot.forEach((doc) => {
             allCheckInsForClass.push(doc.data() as CheckInRecord);
         });
-
-        // Filter for today's check-ins on the client
         const todayCheckIns = allCheckInsForClass.filter(record => 
             isToday(record.checkedInAt.toDate())
         );
-
-        // Sort by most recent check-in
         todayCheckIns.sort((a, b) => b.checkedInAt.toMillis() - a.checkedInAt.toMillis());
         setCheckInLog(todayCheckIns);
     }, (error) => {
         console.error("Firestore snapshot error:", error);
         toast({
             title: "Error fetching attendance",
-            description: "Could not load real-time attendance data. Please check your connection and Firestore setup.",
+            description: "Could not load real-time attendance data.",
             variant: "destructive"
         });
     });
-
-    return () => unsubscribe(); // Cleanup listener on unmount
+    return () => unsubscribe();
   }, [classId, toast]);
 
   const pointsForm = useForm<PointsFormValues>({
@@ -149,18 +166,55 @@ export function ClassroomManager({ classId }: { classId: string }) {
     setAdjustmentType(type);
     setIsPointsDialogOpen(true);
   };
+  
+  const handleAddStudent = async (student: Student) => {
+    try {
+        const enrollment = {
+            classId: classId,
+            studentId: student.id,
+            enrolledAt: Timestamp.now()
+        };
+        await addDoc(collection(db, "class_enrollments"), enrollment);
+        toast({
+            title: "Student Added",
+            description: `${student.displayName} has been added to the class.`
+        });
+    } catch (error) {
+        console.error("Error adding student to class:", error);
+        toast({ title: 'Error', description: 'Could not add student.', variant: 'destructive' });
+    }
+  }
+
+  const handleRemoveStudent = async (student: Student) => {
+    try {
+        const q = query(collection(db, 'class_enrollments'), where('classId', '==', classId), where('studentId', '==', student.id));
+        const querySnapshot = await getDocs(q);
+        const batch = writeBatch(db);
+        querySnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        toast({
+            title: 'Student Removed',
+            description: `${student.displayName} has been removed from the class.`,
+            variant: 'destructive',
+        })
+    } catch (error) {
+        console.error("Error removing student:", error);
+        toast({ title: 'Error', description: 'Could not remove student.', variant: 'destructive' });
+    }
+  };
 
   const onPointsSubmit = async (values: PointsFormValues) => {
     if (!selectedStudent) return;
     setIsLoading(true);
-
     try {
         const studentRef = doc(db, 'users', selectedStudent.id);
         const pointsToAdd = adjustmentType === 'add' ? values.points : -values.points;
         await updateDoc(studentRef, {
             lifetimePoints: increment(pointsToAdd)
         });
-
         toast({
             title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
             description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.displayName} for: ${values.reason}.`,
@@ -179,12 +233,10 @@ export function ClassroomManager({ classId }: { classId: string }) {
       const [hours, minutes] = values.onTime.split(':');
       const onTimeDeadline = new Date();
       onTimeDeadline.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-      
       const queryParams = new URLSearchParams({
           onTimeUntil: onTimeDeadline.toISOString(),
           sessionName: values.sessionName,
       });
-
       router.push(`/dashboard/classes/${classId}/check-in?${queryParams.toString()}`)
   }
 
@@ -193,7 +245,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
         toast({ title: "No Data", description: "There are no check-in records for this class to export."});
         return;
     }
-    
     const filename = `check-in_report_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     const csvHeader = "Student Name,Session,Date,Time,On Time\n";
     const csvRows = checkInLog.map(r => {
@@ -204,9 +255,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
         const onTime = r.isOnTime ? 'Yes' : 'No';
         return `"${r.studentName}","${session}","${date}","${time}","${onTime}"`;
     }).join("\n");
-
     const csvContent = csvHeader + csvRows;
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     if (link.download !== undefined) {
@@ -221,15 +270,68 @@ export function ClassroomManager({ classId }: { classId: string }) {
   };
   
   const checkedInCount = new Set(checkInLog.map(r => r.studentId)).size;
-  const checkedInPercentage = students.length > 0 ? (checkedInCount / students.length) * 100 : 0;
+  const checkedInPercentage = enrolledStudents.length > 0 ? (checkedInCount / enrolledStudents.length) * 100 : 0;
+  
+  const availableStudents = allStudents.filter(s => 
+    !enrolledStudents.some(es => es.id === s.id) &&
+    (s.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || s.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-2">
         <Card>
-            <CardHeader>
-                <CardTitle>Student Roster</CardTitle>
-                <CardDescription>Manage points for students in this class.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Student Roster</CardTitle>
+                    <CardDescription>Manage points for students in this class.</CardDescription>
+                </div>
+                <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Add Student
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>Add Student to Class</DialogTitle>
+                            <DialogDescription>Search for a student to enroll them in this class.</DialogDescription>
+                        </DialogHeader>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input 
+                                placeholder="Search by name or email..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10"
+                            />
+                        </div>
+                        <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
+                           {availableStudents.length > 0 ? availableStudents.map(student => (
+                               <div key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                   <div className="flex items-center gap-3">
+                                       <Avatar>
+                                           {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
+                                           <AvatarFallback>{student.displayName.substring(0,2).toUpperCase()}</AvatarFallback>
+                                       </Avatar>
+                                       <div>
+                                           <p className="font-medium">{student.displayName}</p>
+                                           <p className="text-sm text-muted-foreground">{student.email}</p>
+                                       </div>
+                                   </div>
+                                   <Button size="sm" onClick={() => handleAddStudent(student)}>
+                                       <PlusCircle className="mr-2 h-4 w-4"/>
+                                       Add
+                                   </Button>
+                               </div>
+                           )) : (
+                               <p className="text-center text-muted-foreground p-4">No students found matching your search.</p>
+                           )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </CardHeader>
             <CardContent>
             {isStudentsLoading ? (
@@ -241,12 +343,12 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     <TableHeader>
                     <TableRow>
                         <TableHead>Student</TableHead>
-                        <TableHead className="w-[150px] text-center">Current Points</TableHead>
-                        <TableHead className="w-[200px] text-right">Actions</TableHead>
+                        <TableHead className="w-[150px] text-center">Total Points</TableHead>
+                        <TableHead className="w-[250px] text-right">Actions</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {students.map(student => (
+                    {enrolledStudents.map(student => (
                         <TableRow key={student.id}>
                         <TableCell>
                             <div className="flex items-center gap-4">
@@ -259,15 +361,25 @@ export function ClassroomManager({ classId }: { classId: string }) {
                         </TableCell>
                         <TableCell className="text-center font-bold text-lg">{student.lifetimePoints.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
-                            <Button variant="outline" size="icon" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
-                            <PlusCircle className="h-4 w-4 text-green-500" />
+                            <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
+                                <PlusCircle className="h-4 w-4 mr-1 text-green-500" /> Add
                             </Button>
-                            <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
-                            <MinusCircle className="h-4 w-4 text-red-500" />
+                            <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
+                                <MinusCircle className="h-4 w-4 mr-1 text-red-500" /> Subtract
+                            </Button>
+                             <Button variant="destructive" size="icon" onClick={() => handleRemoveStudent(student)}>
+                                <Trash2 className="h-4 w-4" />
                             </Button>
                         </TableCell>
                         </TableRow>
                     ))}
+                     {enrolledStudents.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                No students enrolled in this class yet.
+                            </TableCell>
+                        </TableRow>
+                     )}
                     </TableBody>
                 </Table>
             )}
@@ -345,7 +457,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     </Button>
                 </div>
                 <CardDescription>
-                   {checkedInCount} of {students.length} students have checked in today across all sessions.
+                   {checkedInCount} of {enrolledStudents.length} students have checked in today across all sessions.
                 </CardDescription>
             </CardHeader>
             <CardContent>

@@ -21,7 +21,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import type { ClassInfo } from "./join-class-dialog"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import { collection, getDocs, query, where, addDoc, Timestamp } from "firebase/firestore"
+import { getAuth } from "firebase/auth"
+import { useToast } from "@/hooks/use-toast"
 
 const formSchema = z.object({
   joinCode: z.string().min(1, "A join code is required."),
@@ -39,6 +41,8 @@ interface StudentClassManagerProps {
 export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, onActiveClassChange }: StudentClassManagerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false)
+  const auth = getAuth();
+  const { toast } = useToast();
 
   const joinForm = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -47,6 +51,13 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
   
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
+    const user = auth.currentUser;
+
+    if (!user) {
+        toast({ title: "Not Authenticated", description: "You must be logged in to join a class.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+    }
 
     const isAlreadyJoined = joinedClasses.some(c => c.code.toUpperCase() === values.joinCode.toUpperCase());
     if (isAlreadyJoined) {
@@ -66,6 +77,14 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
         if (!querySnapshot.empty) {
             const classDoc = querySnapshot.docs[0];
             const classData = classDoc.data();
+            
+            // Add enrollment to the new collection
+            await addDoc(collection(db, "class_enrollments"), {
+                classId: classDoc.id,
+                studentId: user.uid,
+                enrolledAt: Timestamp.now()
+            });
+
             const classInfo: ClassInfo = {
                 name: classData.name,
                 code: classData.joinCode
