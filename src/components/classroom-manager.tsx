@@ -95,10 +95,9 @@ export function ClassroomManager({ classId }: { classId: string }) {
   }, [toast]);
 
   useEffect(() => {
-    // Listen for changes in class enrollments
     setIsStudentsLoading(true);
     const enrollmentsQuery = query(collection(db, "class_enrollments"), where("classId", "==", classId));
-    
+
     const unsubscribe = onSnapshot(enrollmentsQuery, async (snapshot) => {
         const studentIds = snapshot.docs.map(doc => doc.data().studentId);
         if (studentIds.length === 0) {
@@ -107,15 +106,20 @@ export function ClassroomManager({ classId }: { classId: string }) {
             return;
         }
 
-        // Fetch the student details for the enrolled students
-        const studentsQuery = query(collection(db, "users"), where("uid", "in", studentIds));
-        const studentsSnapshot = await getDocs(studentsQuery);
-        const fetchedStudents = studentsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        } as Student));
+        // Fetch student details for each enrolled student
+        const studentPromises = studentIds.map(async (studentId) => {
+            const studentDocRef = doc(db, "users", studentId);
+            const studentDocSnap = await getDoc(studentDocRef);
+            if (studentDocSnap.exists()) {
+                return { id: studentDocSnap.id, ...studentDocSnap.data() } as Student;
+            }
+            return null;
+        });
+
+        const fetchedStudents = (await Promise.all(studentPromises)).filter(Boolean) as Student[];
         setEnrolledStudents(fetchedStudents);
         setIsStudentsLoading(false);
+
     }, (error) => {
         console.error("Error fetching enrolled students:", error);
         toast({ title: 'Error', description: 'Could not load enrolled students.', variant: 'destructive' });
