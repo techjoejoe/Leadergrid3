@@ -120,8 +120,19 @@ export function ClassroomManager({ classId }: { classId: string }) {
             return null;
         });
 
-        const fetchedStudents = (await Promise.all(studentPromises)).filter(Boolean) as Student[];
-        setEnrolledStudents(fetchedStudents);
+        const fetchedStudentsData = (await Promise.all(studentPromises)).filter(Boolean) as Student[];
+
+        setEnrolledStudents(currentStudents => {
+            const newStudents = fetchedStudentsData.filter(fs => !currentStudents.some(cs => cs.id === fs.id));
+            const updatedStudents = currentStudents
+                .filter(cs => fetchedStudentsData.some(fs => fs.id === cs.id))
+                .map(cs => {
+                    const updatedData = fetchedStudentsData.find(fs => fs.id === cs.id);
+                    return updatedData ? { ...cs, ...updatedData } : cs;
+                });
+            return [...updatedStudents, ...newStudents];
+        });
+        
         setIsStudentsLoading(false);
 
     }, (error) => {
@@ -369,15 +380,17 @@ export function ClassroomManager({ classId }: { classId: string }) {
                         </TableCell>
                         <TableCell className="text-center font-bold text-lg">{student.lifetimePoints.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
-                            <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
-                                <PlusCircle className="h-4 w-4 mr-1 text-green-500" /> Add
-                            </Button>
-                            <Button variant="outline" size="sm" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
-                                <MinusCircle className="h-4 w-4 mr-1 text-red-500" /> Subtract
-                            </Button>
-                             <Button variant="destructive" size="icon" onClick={() => handleRemoveStudent(student)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                                <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'add')}>
+                                    <PlusCircle className="h-4 w-4 text-green-500" />
+                                </Button>
+                                <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
+                                    <MinusCircle className="h-4 w-4 text-red-500" />
+                                </Button>
+                                <Button variant="destructive" size="icon" onClick={() => handleRemoveStudent(student)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </TableCell>
                         </TableRow>
                     ))}
