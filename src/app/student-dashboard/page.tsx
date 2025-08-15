@@ -53,6 +53,7 @@ import { ProfileEditor } from '@/components/profile-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { formatDistanceToNow } from 'date-fns';
+import { Separator } from '@/components/ui/separator';
 
 interface StudentData {
     points: number; 
@@ -315,24 +316,28 @@ export default function StudentDashboardPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
                              <Card>
-                                 <CardContent className="flex flex-col items-center justify-center p-4 text-center">
-                                     <Avatar className="w-10 h-10 mb-2">
-                                        <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
-                                        <AvatarFallback>{displayInitial}</AvatarFallback>
-                                    </Avatar>
-                                    <p className="text-xs text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
-                                    <p className="text-2xl font-bold">#{studentData.classRank}</p>
-                                    <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                 <CardContent className="flex flex-col items-center justify-center p-4 text-center">
-                                    <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
-                                         <Building className='h-5 w-5' />
+                                 <CardHeader>
+                                     <CardTitle className="font-headline text-lg">My Ranking</CardTitle>
+                                 </CardHeader>
+                                 <CardContent className="flex items-center justify-around p-4 text-center">
+                                    <div className="flex flex-col items-center gap-1">
+                                        <Avatar className="w-10 h-10 mb-2">
+                                            <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                            <AvatarFallback>{displayInitial}</AvatarFallback>
+                                        </Avatar>
+                                        <p className="text-xs text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
+                                        <p className="text-2xl font-bold">#{studentData.classRank}</p>
+                                        <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Company Rank</p>
-                                    <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
-                                    <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} lifetime pts</p>
+                                    <Separator orientation="vertical" className="h-20" />
+                                     <div className="flex flex-col items-center gap-1">
+                                        <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
+                                             <Building className='h-5 w-5' />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">Company Rank</p>
+                                        <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
+                                        <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} lifetime pts</p>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -456,3 +461,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
