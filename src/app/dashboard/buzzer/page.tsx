@@ -4,19 +4,18 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { List, Play, Trash2, Trophy, Zap } from 'lucide-react';
+import { List, Play, Trash2, Trophy, Zap, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
-const mockStudents = [
-  { id: 'stu_1', name: 'Alice' },
-  { id: 'stu_2', name: 'Bob' },
-  { id: 'stu_3', name: 'Charlie' },
-  { id: 'stu_4', name: 'Diana' },
-  { id: 'stu_5', name: 'Eve' },
-  { id: 'stu_6', name: 'Frank' },
-];
+interface Student {
+  id: string;
+  displayName: string;
+}
 
 interface BuzzerEntry {
     name: string;
@@ -26,6 +25,32 @@ interface BuzzerEntry {
 export default function BuzzerPage() {
     const [buzzerList, setBuzzerList] = useState<BuzzerEntry[]>([]);
     const [isLive, setIsLive] = useState(false);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
+
+
+    useEffect(() => {
+        async function fetchStudents() {
+            setIsLoading(true);
+            try {
+                const usersCollection = collection(db, 'users');
+                const q = query(usersCollection, where('role', '==', 'student'));
+                const querySnapshot = await getDocs(q);
+                const fetchedStudents = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    displayName: doc.data().displayName || 'Anonymous',
+                }));
+                setStudents(fetchedStudents);
+            } catch (error) {
+                 console.error("Error fetching students:", error);
+                 toast({ title: 'Error', description: 'Could not load students.', variant: 'destructive' });
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchStudents();
+    }, [toast]);
 
     const handleBuzz = (name: string) => {
         if (!isLive) return;
@@ -59,20 +84,26 @@ export default function BuzzerPage() {
                     <CardDescription>Click a student's name to simulate them buzzing in. The first to buzz wins!</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {mockStudents.map((student) => (
-                            <Button
-                                key={student.id}
-                                variant="outline"
-                                size="lg"
-                                disabled={!isLive || buzzerList.some(b => b.name === student.name)}
-                                onClick={() => handleBuzz(student.name)}
-                                className="h-20 text-lg"
-                            >
-                                {student.name}
-                            </Button>
-                        ))}
-                    </div>
+                    {isLoading ? (
+                        <div className="flex justify-center items-center h-40">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {students.map((student) => (
+                                <Button
+                                    key={student.id}
+                                    variant="outline"
+                                    size="lg"
+                                    disabled={!isLive || buzzerList.some(b => b.name === student.displayName)}
+                                    onClick={() => handleBuzz(student.displayName)}
+                                    className="h-20 text-lg"
+                                >
+                                    {student.displayName}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
                 </CardContent>
                 <CardFooter className="flex-col items-start gap-4">
                      <Button onClick={handleToggleLive} size="lg" className="w-full">
@@ -115,7 +146,7 @@ export default function BuzzerPage() {
                                         <span className="font-medium">{entry.name}</span>
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                        +{(entry.timestamp.getTime() - firstBuzzer.timestamp.getTime()) / 1000}s
+                                        {firstBuzzer ? `+${(entry.timestamp.getTime() - firstBuzzer.timestamp.getTime()) / 1000}s` : ''}
                                     </span>
                                 </div>
                             ))}

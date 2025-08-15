@@ -53,7 +53,6 @@ import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { formatDistanceToNow } from 'date-fns';
 
 interface StudentData {
@@ -70,8 +69,7 @@ const initialStudentData: StudentData = {
     schoolRank: 0,
 };
 
-interface Badge { name: string; imageUrl: string; hint: string; }
-const initialBadges: Badge[] = [];
+interface Badge { id: string, name: string; imageUrl: string; hint: string; }
 
 interface RecentActivity { description: string; points: number; date: string; }
 const initialRecentActivity: RecentActivity[] = [];
@@ -86,7 +84,7 @@ interface LeaderboardEntry {
 
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
-    const [badges, setBadges] = useState(initialBadges);
+    const [badges, setBadges] = useState<Badge[]>([]);
     const [recentActivity, setRecentActivity] = useState(initialRecentActivity);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -130,6 +128,21 @@ export default function StudentDashboardPage() {
                         setAvatarUrl(getAvatarFromStorage(userData.photoURL));
                     }
                 });
+                
+                // Fetch badges
+                const unsubBadges = onSnapshot(collection(db, "badges"), (snapshot) => {
+                     const fetchedBadges = snapshot.docs.map(doc => {
+                         const data = doc.data();
+                         return {
+                           id: doc.id,
+                           name: data.name,
+                           imageUrl: data.imageUrl,
+                           hint: data.name.toLowerCase().split(' ').slice(0,2).join(' ')
+                         } as Badge;
+                     });
+                     // For now, we assume user has all badges. A real app would have a user_badges collection.
+                     setBadges(fetchedBadges);
+                });
 
                 // Setup listener for recent activity
                  const scansRef = collection(db, "scans");
@@ -145,7 +158,6 @@ export default function StudentDashboardPage() {
                      }).slice(0, 4);
                      setRecentActivity(activities);
                  }, (error) => {
-                    // This is where we will handle the index error silently for the user
                     console.warn("Firestore query failed, likely due to a missing index. Falling back to client-side sorting for recent activity.", error);
                     const fallbackQuery = query(scansRef, where("studentId", "==", currentUser.uid));
                     getDocs(fallbackQuery).then(snapshot => {
@@ -166,7 +178,7 @@ export default function StudentDashboardPage() {
 
                 // Fetch top 5 students for leaderboard
                 const usersRef = collection(db, 'users');
-                const leaderboardQuery = query(usersRef, where('role', '==', 'student'), limit(50));
+                const leaderboardQuery = query(usersRef, where('role', '==', 'student'));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
                      const data = snapshot.docs.map((doc) => {
                         const userData = doc.data();
@@ -186,6 +198,7 @@ export default function StudentDashboardPage() {
 
                 return () => {
                     unsubUser();
+                    unsubBadges();
                     unsubScans();
                     unsubLeaderboard();
                 };
@@ -243,8 +256,6 @@ export default function StudentDashboardPage() {
         if (user) {
              try {
                 await signOut(auth);
-                // Don't remove all of local storage, just the active user avatar if needed
-                // window.localStorage.removeItem('studentAvatar');
                 toast({
                     title: "Logged Out",
                     description: "You have been successfully logged out."

@@ -16,8 +16,7 @@ import {
     CardHeader,
     CardTitle,
   } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
@@ -29,13 +28,6 @@ interface RecentActivity {
   action: string;
   timestamp: string;
 }
-
-const topGroups = [
-  { name: 'Gryffindor', points: 4520, progress: 90 },
-  { name: 'Slytherin', points: 4100, progress: 82 },
-  { name: 'Hufflepuff', points: 3850, progress: 77 },
-  { name: 'Ravenclaw', points: 3700, progress: 74 },
-];
   
 export default function CompanyPage() {
     const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -82,9 +74,9 @@ export default function CompanyPage() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">45,231</div>
+                    <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                        +20.1% from last month
+                        Realtime stats coming soon
                     </p>
                     </CardContent>
                 </Card>
@@ -96,9 +88,9 @@ export default function CompanyPage() {
                     <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">+2350</div>
+                    <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                        +180.1% from last month
+                        Realtime stats coming soon
                     </p>
                     </CardContent>
                 </Card>
@@ -108,9 +100,9 @@ export default function CompanyPage() {
                     <Award className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">+12,234</div>
+                    <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                        +19% from last month
+                        Realtime stats coming soon
                     </p>
                     </CardContent>
                 </Card>
@@ -120,15 +112,15 @@ export default function CompanyPage() {
                     <Activity className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                    <div className="text-2xl font-bold">+573</div>
+                    <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                        +201 since last hour
+                       Realtime stats coming soon
                     </p>
                     </CardContent>
                 </Card>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-full lg:col-span-4">
+                <Card className="col-span-full">
                     <CardHeader>
                     <CardTitle className="font-headline">Recent Activity</CardTitle>
                     <CardDescription>
@@ -157,27 +149,6 @@ export default function CompanyPage() {
                             ))}
                            </div>
                        )}
-                    </CardContent>
-                </Card>
-                <Card className="col-span-full lg:col-span-3">
-                    <CardHeader>
-                    <CardTitle className="font-headline">Top Groups</CardTitle>
-                    <CardDescription>
-                        Groups with the most points this week.
-                    </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {topGroups.map((group) => (
-                                <div key={group.name} className="space-y-1">
-                                    <div className="flex justify-between items-baseline">
-                                        <p className="text-sm font-medium">{group.name}</p>
-                                        <p className="text-sm font-bold text-primary">{group.points.toLocaleString()} pts</p>
-                                    </div>
-                                    <Progress value={group.progress} className="h-2" />
-                                </div>
-                            ))}
-                        </div>
                     </CardContent>
                 </Card>
             </div>
