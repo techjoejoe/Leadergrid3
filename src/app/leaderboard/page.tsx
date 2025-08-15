@@ -92,7 +92,6 @@ export default function LeaderboardPage() {
                     };
                 })
                 .sort((a,b) => b.points - a.points)
-                .slice(0, 10)
                 .map((user, index) => ({...user, rank: index + 1}));
 
                 setLeaderboardData(data);

@@ -13,6 +13,7 @@ import {
     QrCode,
     View,
     Crown,
+    Separator,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,6 @@ import { ProfileEditor } from '@/components/profile-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { formatDistanceToNow } from 'date-fns';
-import { Separator } from '@/components/ui/separator';
 
 interface StudentData {
     points: number; 
@@ -166,7 +166,7 @@ export default function StudentDashboardPage() {
 
                 // Fetch top 5 students for leaderboard
                 const usersRef = collection(db, 'users');
-                const leaderboardQuery = query(usersRef, where('role', '==', 'student'), orderBy('lifetimePoints', 'desc'), limit(5));
+                const leaderboardQuery = query(usersRef, where('role', '==', 'student'), limit(50));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
                      const data = snapshot.docs.map((doc) => {
                         const userData = doc.data();
@@ -177,7 +177,9 @@ export default function StudentDashboardPage() {
                             avatar: getAvatarFromStorage(userData.photoURL),
                             initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
                         };
-                    });
+                    })
+                    .sort((a, b) => b.points - a.points)
+                    .slice(0, 5);
                     setLeaderboard(data);
                 });
 
@@ -345,7 +347,7 @@ export default function StudentDashboardPage() {
                         <div className="lg:col-span-1 space-y-6">
                              <Card>
                                 <CardHeader>
-                                    <CardTitle className="font-headline text-lg text-center text-yellow-400">My Ranking</CardTitle>
+                                    <CardTitle className="font-headline text-lg text-yellow-400">My Ranking</CardTitle>
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 items-center justify-center gap-4 p-6 pt-0">
                                     <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
@@ -504,5 +506,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
