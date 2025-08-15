@@ -315,7 +315,7 @@ export default function StudentDashboardPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
-                            <Card>
+                             <Card>
                                 <CardHeader>
                                     <CardTitle className="font-headline text-lg text-center text-yellow-400">My Ranking</CardTitle>
                                 </CardHeader>
@@ -346,7 +346,7 @@ export default function StudentDashboardPage() {
                             </Card>
                         </div>
                         <div className="lg:col-span-2">
-                            <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg h-full">
+                             <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg h-full flex flex-col">
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <div className="space-y-1.5">
                                         <CardTitle className="font-headline flex items-center">
@@ -381,35 +381,23 @@ export default function StudentDashboardPage() {
                                         </DialogContent>
                                     </Dialog>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="flex-1">
                                     {badges.length > 0 ? (
-                                        <Carousel
-                                            opts={{
-                                                align: "start",
-                                                loop: true,
-                                            }}
-                                            className="w-full"
-                                        >
-                                            <CarouselContent>
+                                        <ScrollArea className="h-full max-h-[220px] pr-4">
+                                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-4">
                                                 {badges.map((badge, index) => (
-                                                    <CarouselItem key={index} className="basis-1/3 md:basis-1/4 lg:basis-1/5">
-                                                        <div className="p-1">
-                                                            <div className="flex flex-col items-center gap-2">
-                                                                <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                                    <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
-                                                                    <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
-                                                                </Avatar>
-                                                                <span className="text-xs font-medium text-muted-foreground text-center">{badge.name}</span>
-                                                            </div>
-                                                        </div>
-                                                    </CarouselItem>
+                                                    <div key={index} className="flex flex-col items-center gap-2 text-center">
+                                                        <Avatar className="h-20 w-20 border-2 border-primary/50">
+                                                            <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
+                                                            <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
+                                                    </div>
                                                 ))}
-                                            </CarouselContent>
-                                            <CarouselPrevious className="ml-4" />
-                                            <CarouselNext className="mr-4" />
-                                        </Carousel>
+                                            </div>
+                                        </ScrollArea>
                                     ): (
-                                        <div className="text-center text-muted-foreground py-8">
+                                        <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
                                             <p>No badges earned yet. Keep participating!</p>
                                         </div>
                                     )}
