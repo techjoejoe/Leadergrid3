@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { collection, getDocs, query, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Class } from "@/components/create-class-form";
@@ -20,6 +20,9 @@ export function ActiveClassMenu() {
     const [activeClasses, setActiveClasses] = useState<Class[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
+    const pathname = usePathname();
+
+    const currentClassId = pathname.startsWith('/dashboard/classes/') ? pathname.split('/')[3] : null;
 
     useEffect(() => {
         async function fetchActiveClasses() {
@@ -55,11 +58,25 @@ export function ActiveClassMenu() {
         return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /><span>Loading classes...</span></div>
     }
 
-    if (activeClasses.length === 0) {
-        return null; // Don't show anything if no classes are active
+    const isCurrentClassActive = currentClassId && activeClasses.some(c => c.id === currentClassId);
+    
+    if (currentClassId && !isCurrentClassActive && !isLoading) {
+        return (
+             <Button asChild className="group" variant="outline">
+                <Link href={`/dashboard/classes`}>
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    View Active Classes
+                    <MoveRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+            </Button>
+        )
     }
 
-    if (activeClasses.length === 1) {
+    if (activeClasses.length === 0) {
+        return null;
+    }
+
+    if (activeClasses.length === 1 && (!currentClassId || isCurrentClassActive)) {
         const singleClass = activeClasses[0];
         return (
             <Button asChild className="group" variant="outline">
