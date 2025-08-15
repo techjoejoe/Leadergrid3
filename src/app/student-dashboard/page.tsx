@@ -316,9 +316,12 @@ export default function StudentDashboardPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
                             <Card>
-                                <CardContent className="grid grid-cols-2 gap-6 p-6">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-lg text-center text-yellow-400">My Ranking</CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-2 gap-6 p-6 pt-0">
                                     <div className="flex items-center justify-center">
-                                        <Avatar className="h-32 w-32 border-4 border-primary/20 rounded-md">
+                                        <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
                                             <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
                                             <AvatarFallback className="rounded-md text-3xl">{displayInitial}</AvatarFallback>
                                         </Avatar>
