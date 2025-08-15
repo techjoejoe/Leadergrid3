@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, SearchX } from "lucide-react";
 import Link from "next/link";
 import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
@@ -24,7 +24,10 @@ export default function ClassDetailsPage() {
 
     useEffect(() => {
         async function fetchClassDetails() {
-            if (!classId) return;
+            if (!classId) {
+                setIsLoading(false);
+                return;
+            };
             setIsLoading(true);
             try {
                 const classDocRef = doc(db, 'classes', classId);
@@ -33,9 +36,11 @@ export default function ClassDetailsPage() {
                     setClassDetails({ id: classDocSnap.id, ...classDocSnap.data() } as Class);
                 } else {
                     console.error("No such class document!");
+                    setClassDetails(null);
                 }
             } catch (error) {
                 console.error("Error fetching class details:", error);
+                setClassDetails(null);
             } finally {
                 setIsLoading(false);
             }
@@ -52,7 +57,19 @@ export default function ClassDetailsPage() {
     }
 
     if (!classDetails) {
-        return <div>Class not found.</div>
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center gap-4">
+                <SearchX className="h-16 w-16 text-muted-foreground" />
+                <h1 className="text-2xl font-bold">Class Not Found</h1>
+                <p className="text-muted-foreground">The class you are looking for does not exist or may have been deleted.</p>
+                <Button asChild>
+                    <Link href="/dashboard/classes">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Go to Classes
+                    </Link>
+                </Button>
+            </div>
+        )
     }
 
     return (
