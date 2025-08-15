@@ -7,10 +7,10 @@ import { getFirestore } from "firebase/firestore";
 const firebaseConfig = {
   "projectId": "leadergrid3",
   "appId": "1:203876925697:web:ae7d331d075cdf31f81b00",
-  "storageBucket": "leadergrid3.firebasestorage.app",
+  "storageBucket": "leadergrid3.appspot.com",
   "apiKey": "AIzaSyC-lpIVUm3ZEmysGOD_2D6J1ZkAB-sdbn4",
   "authDomain": "leadergrid3.firebaseapp.com",
-  "measurementId": "",
+  "measurementId": "G-S33W4V3GZ3",
   "messagingSenderId": "203876925697"
 };
 
