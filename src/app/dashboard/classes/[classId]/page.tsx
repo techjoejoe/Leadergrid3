@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -14,12 +15,9 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Class } from '@/components/create-class-form';
 
-interface ClassDetailsPageProps {
-    params: { classId: string };
-}
-
-export default function ClassDetailsPage({ params }: ClassDetailsPageProps) {
-    const { classId } = params;
+export default function ClassDetailsPage() {
+    const params = useParams();
+    const classId = params.classId as string;
     const [classDetails, setClassDetails] = useState<Class | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     
