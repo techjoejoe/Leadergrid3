@@ -4,12 +4,12 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Crown, Loader2, Star } from "lucide-react";
+import { ArrowLeft, Crown, Loader2, Star, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 
 interface LeaderboardEntry {
   rank: number;
@@ -78,20 +78,23 @@ export default function LeaderboardPage() {
             setIsLoading(true);
             try {
                 const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('role', '==', 'student'), orderBy('lifetimePoints', 'desc'), limit(10));
+                const q = query(usersRef, where('role', '==', 'student'), limit(50));
                 const querySnapshot = await getDocs(q);
 
-                const data = querySnapshot.docs.map((doc, index) => {
+                const data = querySnapshot.docs.map((doc) => {
                     const userData = doc.data();
                     return {
-                        rank: index + 1,
                         id: doc.id,
                         name: userData.displayName || 'Anonymous',
                         points: userData.lifetimePoints || 0,
                         avatar: userData.photoURL || null,
                         initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
                     };
-                });
+                })
+                .sort((a,b) => b.points - a.points)
+                .slice(0, 10)
+                .map((user, index) => ({...user, rank: index + 1}));
+
                 setLeaderboardData(data);
             } catch (error) {
                 console.error("Error fetching leaderboard:", error);
@@ -108,6 +111,24 @@ export default function LeaderboardPage() {
                 <Loader2 className="h-10 w-10 animate-spin text-white" />
             </div>
         );
+    }
+    
+    if (leaderboardData.length === 0) {
+        return (
+             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600 text-white p-4">
+                 <div className="text-center">
+                    <User className="h-16 w-16 mx-auto text-white/50 mb-4" />
+                    <h1 className="text-4xl font-headline font-bold mb-2">Leaderboard is Empty</h1>
+                    <p className="text-white/80 mb-6">No students have earned points yet. Check back later!</p>
+                     <Button variant="outline" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                        <Link href="/student-dashboard">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back to Dashboard
+                        </Link>
+                    </Button>
+                </div>
+            </div>
+        )
     }
     
     const [top3, rest] = [leaderboardData.slice(0, 3), leaderboardData.slice(3)];

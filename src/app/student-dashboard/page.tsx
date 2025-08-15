@@ -118,16 +118,20 @@ export default function StudentDashboardPage() {
 
                 // Setup listener for recent activity
                 const scansRef = collection(db, "scans");
-                const q = query(scansRef, where("studentId", "==", currentUser.uid), orderBy("scanDate", "desc"), limit(4));
+                const q = query(scansRef, where("studentId", "==", currentUser.uid), limit(25));
                 const unsubScans = onSnapshot(q, (snapshot) => {
                     const activities = snapshot.docs.map(doc => {
                         const data = doc.data();
                         return {
                             description: data.activityName,
                             points: data.pointsAwarded,
+                            scanDate: (data.scanDate as Timestamp).toDate(),
                             date: formatDistanceToNow((data.scanDate as Timestamp).toDate(), { addSuffix: true })
                         }
-                    });
+                    })
+                    .sort((a, b) => b.scanDate.getTime() - a.scanDate.getTime())
+                    .slice(0, 4);
+
                     setRecentActivity(activities);
                 });
 
