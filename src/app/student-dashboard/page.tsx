@@ -316,9 +316,10 @@ export default function StudentDashboardPage() {
                         <div className="lg:col-span-1 space-y-6">
                              <Card>
                                  <CardContent className="flex flex-col items-center justify-center p-4 text-center">
-                                    <div className="p-3 mb-2 rounded-full bg-primary/10 text-primary">
-                                        <Users className='h-5 w-5' />
-                                    </div>
+                                     <Avatar className="w-10 h-10 mb-2">
+                                        <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                        <AvatarFallback>{displayInitial}</AvatarFallback>
+                                    </Avatar>
                                     <p className="text-xs text-muted-foreground">{activeClass?.name || "Class"} Rank</p>
                                     <p className="text-2xl font-bold">#{studentData.classRank}</p>
                                     <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
