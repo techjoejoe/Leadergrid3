@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
 import { Separator } from "@/components/ui/separator";
@@ -15,10 +14,12 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Class } from '@/components/create-class-form';
 
+interface ClassDetailsPageProps {
+    params: { classId: string };
+}
 
-export default function ClassDetailsPage() {
-    const params = useParams();
-    const classId = Array.isArray(params.classId) ? params.classId[0] : params.classId;
+export default function ClassDetailsPage({ params }: ClassDetailsPageProps) {
+    const { classId } = params;
     const [classDetails, setClassDetails] = useState<Class | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     
