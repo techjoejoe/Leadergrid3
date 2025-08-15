@@ -315,29 +315,29 @@ export default function StudentDashboardPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
-                             <Card>
-                                 <CardContent className="grid grid-cols-3 items-center justify-center p-6 gap-6">
-                                    <div className="col-span-1 flex items-center justify-center">
-                                        <Avatar className="h-24 w-24 border-4 border-primary/20 rounded-md">
+                            <Card>
+                                <CardContent className="grid grid-cols-2 gap-6 p-6">
+                                    <div className="flex items-center justify-center">
+                                        <Avatar className="h-32 w-32 border-4 border-primary/20 rounded-md">
                                             <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
-                                            <AvatarFallback className="rounded-md">{displayInitial}</AvatarFallback>
+                                            <AvatarFallback className="rounded-md text-3xl">{displayInitial}</AvatarFallback>
                                         </Avatar>
                                     </div>
-                                    <Separator orientation="vertical" className="h-20 my-auto" />
-                                    <div className="col-span-1 flex flex-col items-center justify-center text-center -ml-4">
-                                        <CardTitle className="font-headline mb-2 text-lg">My Ranking</CardTitle>
-                                        <div className="grid grid-cols-2 gap-4 w-full">
-                                            <div className="flex flex-col items-center">
-                                                <p className="text-xs text-muted-foreground">Class</p>
-                                                <p className="text-2xl font-bold">#{studentData.classRank}</p>
-                                                <p className="text-xs font-semibold text-primary">{studentData.classPoints.toLocaleString()} pts</p>
-                                            </div>
-                                             <div className="flex flex-col items-center">
-                                                <p className="text-xs text-muted-foreground">Company</p>
-                                                <p className="text-2xl font-bold">#{studentData.schoolRank}</p>
-                                                 <p className="text-xs font-semibold text-primary">{studentData.points.toLocaleString()} pts</p>
-                                            </div>
-                                        </div>
+                                    <div className="space-y-4">
+                                        <Card className="bg-yellow-400/10 border-yellow-500/30">
+                                            <CardContent className="p-3 text-center">
+                                                <p className="text-xs text-yellow-200/80">Class Rank</p>
+                                                <p className="text-2xl font-bold text-white">#{studentData.classRank}</p>
+                                                <p className="text-xs font-semibold text-yellow-300">{studentData.classPoints.toLocaleString()} pts</p>
+                                            </CardContent>
+                                        </Card>
+                                        <Card className="bg-yellow-400/10 border-yellow-500/30">
+                                             <CardContent className="p-3 text-center">
+                                                <p className="text-xs text-yellow-200/80">Total Points</p>
+                                                <p className="text-2xl font-bold text-white">#{studentData.schoolRank}</p>
+                                                <p className="text-xs font-semibold text-yellow-300">{studentData.points.toLocaleString()} pts</p>
+                                            </CardContent>
+                                        </Card>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -462,6 +462,8 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
 
     
 
