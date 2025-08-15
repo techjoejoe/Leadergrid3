@@ -12,6 +12,7 @@ import {
     Loader2,
     QrCode,
     View,
+    Crown,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -75,6 +76,13 @@ const initialBadges: Badge[] = [];
 interface RecentActivity { description: string; points: number; date: string; }
 const initialRecentActivity: RecentActivity[] = [];
 
+interface LeaderboardEntry {
+  id: string;
+  name: string;
+  points: number;
+  avatar: string | null;
+  initial: string;
+}
 
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
@@ -87,6 +95,7 @@ export default function StudentDashboardPage() {
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
     const [isClient, setIsClient] = useState(false);
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const { toast } = useToast();
     const auth = getAuth(app);
     const router = useRouter();
@@ -116,7 +125,7 @@ export default function StudentDashboardPage() {
                 const unsubUser = onSnapshot(userDocRef, (doc) => {
                     if (doc.exists()) {
                         const userData = doc.data();
-                        setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
+                        setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0, schoolRank: userData.schoolRank || 0 }));
                         setDisplayName(userData.displayName || 'Student');
                         setAvatarUrl(getAvatarFromStorage(userData.photoURL));
                     }
@@ -155,9 +164,28 @@ export default function StudentDashboardPage() {
                     });
                 });
 
+                // Fetch top 5 students for leaderboard
+                const usersRef = collection(db, 'users');
+                const leaderboardQuery = query(usersRef, where('role', '==', 'student'), orderBy('lifetimePoints', 'desc'), limit(5));
+                const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
+                     const data = snapshot.docs.map((doc) => {
+                        const userData = doc.data();
+                        return {
+                            id: doc.id,
+                            name: userData.displayName || 'Anonymous',
+                            points: userData.lifetimePoints || 0,
+                            avatar: getAvatarFromStorage(userData.photoURL),
+                            initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
+                        };
+                    });
+                    setLeaderboard(data);
+                });
+
+
                 return () => {
                     unsubUser();
                     unsubScans();
+                    unsubLeaderboard();
                 };
 
             } else {
@@ -319,13 +347,11 @@ export default function StudentDashboardPage() {
                                 <CardHeader>
                                     <CardTitle className="font-headline text-lg text-center text-yellow-400">My Ranking</CardTitle>
                                 </CardHeader>
-                                <CardContent className="grid grid-cols-2 gap-6 p-6 pt-0">
-                                    <div className="flex items-center justify-center">
-                                        <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
-                                            <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
-                                            <AvatarFallback className="rounded-md text-3xl">{displayInitial}</AvatarFallback>
-                                        </Avatar>
-                                    </div>
+                                <CardContent className="grid grid-cols-2 items-center justify-center gap-4 p-6 pt-0">
+                                    <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
+                                        <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                        <AvatarFallback className="rounded-md text-3xl">{displayInitial}</AvatarFallback>
+                                    </Avatar>
                                     <div className="space-y-4">
                                         <Card className="bg-yellow-400/10 border-yellow-500/30">
                                             <CardContent className="p-3 text-center">
@@ -406,6 +432,31 @@ export default function StudentDashboardPage() {
                         </div>
                     </div>
                     
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline flex items-center gap-2">
+                                <Crown className="text-yellow-400" />
+                                Live Leaderboard
+                            </CardTitle>
+                            <CardDescription>Top 5 students across the school.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {leaderboard.map((student, index) => (
+                                    <div key={student.id} className="flex items-center gap-4">
+                                        <div className="font-bold text-lg w-6 text-center">{index + 1}</div>
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={student.avatar || undefined} />
+                                            <AvatarFallback>{student.initial}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 font-medium">{student.name}</div>
+                                        <UiBadge variant="secondary" className="font-bold">{student.points.toLocaleString()} pts</UiBadge>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
@@ -453,9 +504,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
-
-    
 
     
