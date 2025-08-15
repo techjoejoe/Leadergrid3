@@ -30,7 +30,7 @@ import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css';
 import { getAuth, sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -77,8 +77,6 @@ export function ProfileEditor({
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const imgRef = useRef<HTMLImageElement>(null);
   const [isCropping, setIsCropping] = useState(false);
-  const [hasAwardedPhotoBonus, setHasAwardedPhotoBonus] = useState(false);
-
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -102,7 +100,6 @@ export function ProfileEditor({
     setIsLoading(true);
     try {
       if (values.displayName !== currentDisplayName) {
-        // For mock users, just update the state. For real users, update Firebase.
         if (user.uid !== 'mock-user-id') {
             await updateProfile(user, { displayName: values.displayName });
             const userDocRef = doc(db, "users", user.uid);
@@ -110,7 +107,6 @@ export function ProfileEditor({
         }
         onNameChange(values.displayName);
       }
-      // Only try to update email for real users, and only if it has changed.
       if (values.email !== currentEmail && user.uid !== 'mock-user-id') {
         await updateEmail(user, values.email);
         const userDocRef = doc(db, "users", user.uid);
@@ -120,7 +116,7 @@ export function ProfileEditor({
         title: 'Success!',
         description: 'Your profile has been updated.',
       });
-      onOpenChange(false); // Close dialog on success
+      onOpenChange(false);
     } catch (error: any) {
        toast({
         title: 'Error updating profile',
@@ -186,12 +182,10 @@ export function ProfileEditor({
           canvas.width = width;
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
-
-          // Start with high quality
+          
           let quality = 0.9;
           let dataUrl = canvas.toDataURL('image/jpeg', quality);
 
-          // Iteratively reduce quality until the size is below the limit
           while (dataUrl.length > MAX_FILE_SIZE && quality > 0.1) {
             quality -= 0.1;
             dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -214,7 +208,7 @@ export function ProfileEditor({
   const onSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      setCrop(undefined); // Makes crop preview update between images.
+      setCrop(undefined); 
       
       try {
         let imageDataUrl: string;
@@ -254,7 +248,7 @@ export function ProfileEditor({
           unit: '%',
           width: 90,
         },
-        1, // aspect ratio 1:1
+        1,
         width,
         height
       ),
@@ -270,36 +264,40 @@ export function ProfileEditor({
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
         const photoUrlIdentifier = `${storageKey}_${user.uid}`;
         try {
-            // For mock users, we don't call firebase
             if (user.uid !== 'mock-user-id') {
                 const userDocRef = doc(db, "users", user.uid);
+                
+                const userDoc = await getDoc(userDocRef);
+                const hadPhoto = userDoc.exists() && !!userDoc.data().photoURL;
 
                 await updateProfile(user, { photoURL: photoUrlIdentifier });
                 await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
                 
-                if (!hasAwardedPhotoBonus) {
+                if (!hadPhoto) {
                     await updateDoc(userDocRef, {
                         lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
                     });
-                    setHasAwardedPhotoBonus(true);
                      toast({
                         title: 'BONUS!',
                         description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
                         className: 'bg-yellow-500 text-white',
                     });
+                } else {
+                     toast({
+                        title: 'Profile Photo Updated',
+                        description: 'Your new photo has been set.',
+                    });
                 }
-            }
-
-            window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
-            onAvatarChange(croppedImageUrl);
-            
-            if (!hasAwardedPhotoBonus) {
+            } else {
                  toast({
                     title: 'Profile Photo Updated',
                     description: 'Your new photo has been set.',
                 });
             }
 
+            window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
+            onAvatarChange(croppedImageUrl);
+            
         } catch (error) {
              toast({
                 title: "Error",
