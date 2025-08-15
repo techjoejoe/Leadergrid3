@@ -20,20 +20,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import type { ClassInfo } from "./join-class-dialog"
 import { cn } from "@/lib/utils"
+import { db } from "@/lib/firebase"
+import { collection, getDocs, query, where } from "firebase/firestore"
 
 const formSchema = z.object({
   joinCode: z.string().min(1, "A join code is required."),
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-// This is a mock list. In a real app, you'd validate this against your database.
-const validClasses: ClassInfo[] = [
-    { code: "BIOLOGY101", name: "10th Grade Biology" },
-    { code: "WRITE2024", name: "Intro to Creative Writing" },
-    { code: "CALCPRO", name: "Advanced Placement Calculus" },
-    { code: "JoinJoe", name: "Joe's Class" },
-];
 
 interface StudentClassManagerProps {
     joinedClasses: ClassInfo[];
@@ -51,7 +45,7 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
     defaultValues: { joinCode: "" }
   });
   
-  function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormValues) {
     setIsLoading(true);
 
     const isAlreadyJoined = joinedClasses.some(c => c.code.toUpperCase() === values.joinCode.toUpperCase());
@@ -64,21 +58,32 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
         return;
     }
 
-    // Simulate checking the code
-    setTimeout(() => {
-        const foundClass = validClasses.find(c => c.code.toUpperCase() === values.joinCode.toUpperCase());
+    try {
+        const classesRef = collection(db, 'classes');
+        const q = query(classesRef, where('joinCode', '==', values.joinCode));
+        const querySnapshot = await getDocs(q);
 
-        if (foundClass) {
-            onJoinClass(foundClass);
+        if (!querySnapshot.empty) {
+            const classDoc = querySnapshot.docs[0];
+            const classData = classDoc.data();
+            const classInfo: ClassInfo = {
+                name: classData.name,
+                code: classData.joinCode
+            };
+            onJoinClass(classInfo);
             joinForm.reset();
         } else {
-            joinForm.setError("joinCode", {
+             joinForm.setError("joinCode", {
                 type: "manual",
                 message: "Invalid code.",
             });
         }
+    } catch (error) {
+        console.error("Error validating join code:", error);
+        joinForm.setError("joinCode", { type: 'manual', message: 'Error checking code.'});
+    } finally {
         setIsLoading(false);
-    }, 1000);
+    }
   }
 
   return (

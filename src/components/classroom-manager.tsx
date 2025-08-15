@@ -26,22 +26,14 @@ import { format, addMinutes, isToday } from 'date-fns';
 import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDocs, getDoc, updateDoc, increment } from 'firebase/firestore';
 
-
-// Mock data for students in a class
-const mockStudents = [
-  { id: 'stu_1', name: 'Alex Thompson', points: 1050, avatar: 'https://placehold.co/40x40.png?text=AT', initial: 'AT' },
-  { id: 'stu_2', name: 'Brianna Miller', points: 980, avatar: 'https://placehold.co/40x40.png?text=BM', initial: 'BM' },
-  { id: 'stu_3', name: 'Charlie Patel', points: 975, avatar: 'https://placehold.co/40x40.png?text=CP', initial: 'CP' },
-  { id: 'stu_4', name: 'David Lee', points: 890, avatar: 'https://placehold.co/40x40.png?text=DL', initial: 'DL' },
-  { id: 'stu_5', name: 'Emily Suzuki', points: 885, avatar: 'https://placehold.co/40x40.png?text=ES', initial: 'ES' },
-];
-
-const mockClassDetails = {
-    "cls-1": { name: "10th Grade Biology" },
-    "cls-2": { name: "Intro to Creative Writing" },
-    "cls-3": { name: "Advanced Placement Calculus" },
+interface Student {
+    id: string;
+    displayName: string;
+    email: string;
+    lifetimePoints: number;
+    photoURL?: string;
 }
 
 const pointsFormSchema = z.object({
@@ -56,7 +48,6 @@ const checkInFormSchema = z.object({
 
 type PointsFormValues = z.infer<typeof pointsFormSchema>;
 type CheckInFormValues = z.infer<typeof checkInFormSchema>;
-type Student = typeof mockStudents[0];
 
 interface CheckInRecord {
     studentId: string;
@@ -68,16 +59,46 @@ interface CheckInRecord {
 }
 
 export function ClassroomManager({ classId }: { classId: string }) {
-  const [students, setStudents] = useState(mockStudents);
+  const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
   const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStudentsLoading, setIsStudentsLoading] = useState(true);
   const { toast } = useToast();
   const router = useRouter();
   
   const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
+
+  useEffect(() => {
+        async function fetchStudents() {
+            setIsStudentsLoading(true);
+            try {
+                // For now, we assume all users with 'student' role are in every class.
+                // A real-world app might have a 'class_students' subcollection.
+                const usersCollection = collection(db, 'users');
+                const q = query(usersCollection, where('role', '==', 'student'));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const fetchedStudents = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    } as Student));
+                    setStudents(fetchedStudents);
+                    setIsStudentsLoading(false);
+                });
+                return unsubscribe;
+            } catch (error) {
+                console.error("Error fetching students:", error);
+                toast({ title: 'Error', description: 'Could not load students.', variant: 'destructive' });
+                setIsStudentsLoading(false);
+            }
+        }
+        const unsubscribe = fetchStudents();
+        return () => {
+            unsubscribe.then(unsub => unsub && unsub());
+        }
+    }, [toast]);
 
   useEffect(() => {
     // This query will fetch all check-ins for the class.
@@ -110,8 +131,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
     return () => unsubscribe(); // Cleanup listener on unmount
   }, [classId, toast]);
 
-  const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
-
   const pointsForm = useForm<PointsFormValues>({
     resolver: zodResolver(pointsFormSchema),
     defaultValues: { points: 10, reason: '' },
@@ -131,34 +150,29 @@ export function ClassroomManager({ classId }: { classId: string }) {
     setIsPointsDialogOpen(true);
   };
 
-  const onPointsSubmit = (values: PointsFormValues) => {
+  const onPointsSubmit = async (values: PointsFormValues) => {
     if (!selectedStudent) return;
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setStudents(prevStudents =>
-        prevStudents.map(student => {
-          if (student.id === selectedStudent.id) {
-            const newPoints =
-              adjustmentType === 'add'
-                ? student.points + values.points
-                : Math.max(0, student.points - values.points); // Prevent negative points
-            return { ...student, points: newPoints };
-          }
-          return student;
-        })
-      );
+    try {
+        const studentRef = doc(db, 'users', selectedStudent.id);
+        const pointsToAdd = adjustmentType === 'add' ? values.points : -values.points;
+        await updateDoc(studentRef, {
+            lifetimePoints: increment(pointsToAdd)
+        });
 
-      toast({
-        title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
-        description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.name} for: ${values.reason}.`,
-      });
-
-      setIsLoading(false);
-      setIsPointsDialogOpen(false);
-      pointsForm.reset({ points: 10, reason: '' });
-    }, 1000);
+        toast({
+            title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
+            description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.displayName} for: ${values.reason}.`,
+        });
+    } catch(error) {
+        console.error("Error updating points:", error);
+        toast({ title: 'Error', description: 'Could not update student points.', variant: 'destructive'});
+    } finally {
+        setIsLoading(false);
+        setIsPointsDialogOpen(false);
+        pointsForm.reset({ points: 10, reason: '' });
+    }
   };
 
   const onCheckInSubmit = (values: CheckInFormValues) => {
@@ -180,7 +194,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
         return;
     }
     
-    const filename = `check-in_${className.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    const filename = `check-in_report_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     const csvHeader = "Student Name,Session,Date,Time,On Time\n";
     const csvRows = checkInLog.map(r => {
         const d = r.checkedInAt.toDate(); // Convert Firestore Timestamp to JS Date
@@ -207,7 +221,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
   };
   
   const checkedInCount = new Set(checkInLog.map(r => r.studentId)).size;
-  const checkedInPercentage = (checkedInCount / students.length) * 100;
+  const checkedInPercentage = students.length > 0 ? (checkedInCount / students.length) * 100 : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -218,39 +232,45 @@ export function ClassroomManager({ classId }: { classId: string }) {
                 <CardDescription>Manage points for students in this class.</CardDescription>
             </CardHeader>
             <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead className="w-[150px] text-center">Current Points</TableHead>
-                    <TableHead className="w-[200px] text-right">Actions</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {students.map(student => (
-                    <TableRow key={student.id}>
-                    <TableCell>
-                        <div className="flex items-center gap-4">
-                        <Avatar>
-                            <AvatarImage src={student.avatar} data-ai-hint="student portrait" />
-                            <AvatarFallback>{student.initial}</AvatarFallback>
-                        </Avatar>
-                        <span className="font-medium">{student.name}</span>
-                        </div>
-                    </TableCell>
-                    <TableCell className="text-center font-bold text-lg">{student.points.toLocaleString()}</TableCell>
-                    <TableCell className="text-right">
-                        <Button variant="outline" size="icon" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
-                          <PlusCircle className="h-4 w-4 text-green-500" />
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
-                          <MinusCircle className="h-4 w-4 text-red-500" />
-                        </Button>
-                    </TableCell>
+            {isStudentsLoading ? (
+                <div className="flex justify-center items-center h-64">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            ) : (
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead className="w-[150px] text-center">Current Points</TableHead>
+                        <TableHead className="w-[200px] text-right">Actions</TableHead>
                     </TableRow>
-                ))}
-                </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                    {students.map(student => (
+                        <TableRow key={student.id}>
+                        <TableCell>
+                            <div className="flex items-center gap-4">
+                            <Avatar>
+                                {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
+                                <AvatarFallback>{student.displayName.substring(0,2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{student.displayName}</span>
+                            </div>
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-lg">{student.lifetimePoints.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">
+                            <Button variant="outline" size="icon" className="mr-2" onClick={() => handleOpenPointsDialog(student, 'add')}>
+                            <PlusCircle className="h-4 w-4 text-green-500" />
+                            </Button>
+                            <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
+                            <MinusCircle className="h-4 w-4 text-red-500" />
+                            </Button>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+            )}
             </CardContent>
         </Card>
       </div>
@@ -363,7 +383,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {adjustmentType === 'add' ? 'Add' : 'Subtract'} Points for {selectedStudent?.name}
+              {adjustmentType === 'add' ? 'Add' : 'Subtract'} Points for {selectedStudent?.displayName}
             </DialogTitle>
             <DialogDescription>
               Enter the number of points and a reason for the adjustment.
@@ -413,5 +433,3 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
-
-    

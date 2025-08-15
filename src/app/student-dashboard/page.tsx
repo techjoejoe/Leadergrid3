@@ -45,55 +45,37 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { formatDistanceToNow } from 'date-fns';
 
+interface StudentData {
+    points: number; 
+    classRank: number;
+    classPoints: number;
+    schoolRank: number;
+};
 
-// Mock Data - this would eventually come from your database
-const initialStudentData = {
+const initialStudentData: StudentData = {
     points: 0, 
     classRank: 0,
     classPoints: 0,
     schoolRank: 0,
 };
 
-const initialBadges: { name: string; imageUrl: string; hint: string; }[] = [];
-const initialRecentActivity: { description: string; points: number; date: string; }[] = [];
+interface Badge { name: string; imageUrl: string; hint: string; }
+const initialBadges: Badge[] = [];
 
-const mockJoinedClasses: ClassInfo[] = [
-    { code: "BIOLOGY101", name: "10th Grade Biology" },
-    { code: "WRITE2024", name: "Intro to Creative Writing" },
-];
-
-const createMockUser = (avatar: string): User => ({
-    uid: 'mock-user-id',
-    displayName: 'Emily Suzuki',
-    email: 'emily@leadergrid.com',
-    photoURL: avatar,
-    // Add other required User properties with mock values
-    emailVerified: true,
-    isAnonymous: false,
-    metadata: {},
-    providerData: [],
-    providerId: 'password',
-    tenantId: null,
-    delete: async () => {},
-    getIdToken: async () => '',
-    getIdTokenResult: async () => ({} as any),
-    reload: async () => {},
-    toJSON: () => ({}),
-});
+interface RecentActivity { description: string; points: number; date: string; }
+const initialRecentActivity: RecentActivity[] = [];
 
 
 export default function StudentDashboardPage() {
-    const searchParams = useSearchParams();
-    const isMock = searchParams.get('mock') === 'true';
-
     const [studentData, setStudentData] = useState(initialStudentData);
     const [badges, setBadges] = useState(initialBadges);
     const [recentActivity, setRecentActivity] = useState(initialRecentActivity);
@@ -115,69 +97,58 @@ export default function StudentDashboardPage() {
     useEffect(() => {
         if (!isClient) return;
         
-        const savedAvatar = window.localStorage.getItem('studentAvatar') || 'https://placehold.co/100x100.png?text=ES';
+        const savedAvatar = window.localStorage.getItem('studentAvatar') || null;
 
-        if (isMock) {
-            const mockUser = createMockUser(savedAvatar);
-            setUser(mockUser);
-            setDisplayName(mockUser.displayName || 'Student');
-            setAvatarUrl(mockUser.photoURL);
-            // In mock mode, we'll populate with some sample data for demonstration
-            setStudentData({ points: 1250, classRank: 3, classPoints: 850, schoolRank: 5 });
-            setBadges([
-                { name: 'Math Master', imageUrl: 'https://placehold.co/80x80.png?text=M', hint: 'math logo' },
-                { name: 'Science Star', imageUrl: 'https://placehold.co/80x80.png?text=S', hint: 'atom icon' },
-                { name: 'Perfect Attendance', imageUrl: 'https://placehold.co/80x80.png?text=PA', hint: 'calendar icon' },
-                { name: 'Team Player', imageUrl: 'https://placehold.co/80x80.png?text=TP', hint: 'group icon' },
-                { name: 'Book Worm', imageUrl: 'https://placehold.co/80x80.png?text=BW', hint: 'book icon' },
-                { name: 'Artful Dodger', imageUrl: 'https://placehold.co/80x80.png?text=AD', hint: 'paint icon' },
-                { name: 'History Buff', imageUrl: 'https://placehold.co/80x80.png?text=HB', hint: 'scroll icon' },
-                { name: 'Music Maestro', imageUrl: 'https://placehold.co/80x80.png?text=MM', hint: 'music note icon' },
-                { name: 'Sportsmanship', imageUrl: 'https://placehold.co/80x80.png?text=SS', hint: 'trophy icon' },
-                { name: 'Volunteer Virtuoso', imageUrl: 'https://placehold.co/80x80.png?text=VV', hint: 'heart icon' },
-            ]);
-            setRecentActivity([
-                { description: 'Earned "Math Master" badge', points: 250, date: '2d ago' },
-                { description: 'Completed Library Visit QR', points: 50, date: '3d ago' },
-                { description: 'Team project submission', points: 150, date: '4d ago' },
-                { description: 'Answered question in class', points: 20, date: '5d ago' },
-            ]);
-        } else {
-            const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-                if (currentUser) {
-                    // Clear any mock data to ensure a clean slate for real users
-                    setBadges(initialBadges);
-                    setRecentActivity(initialRecentActivity);
-                    setStudentData(initialStudentData);
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                setUser(currentUser);
+                setDisplayName(currentUser.displayName || 'Student');
+                setAvatarUrl(currentUser.photoURL || savedAvatar);
 
-                    setUser(currentUser);
-                    setDisplayName(currentUser.displayName || 'Student');
-                    
-                    // Fetch real user data from Firestore
-                    const userDocRef = doc(db, 'users', currentUser.uid);
-                    const userDocSnap = await getDoc(userDocRef);
-                    if (userDocSnap.exists()) {
-                        const userData = userDocSnap.data();
+                // Setup listener for user document
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const unsubUser = onSnapshot(userDocRef, (doc) => {
+                    if (doc.exists()) {
+                        const userData = doc.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
-                        // In a real app, you would fetch user-specific badges and activity here.
-                        // Since they start with none, the empty arrays set above are correct.
+                        setDisplayName(userData.displayName || 'Student');
+                        setAvatarUrl(userData.photoURL || savedAvatar);
                     }
-                    
-                    setAvatarUrl(savedAvatar);
-                } else {
-                    router.push('/student-login');
-                }
-            });
-            return () => unsubscribe();
-        }
+                });
 
-    }, [auth, router, isClient, isMock]);
+                // Setup listener for recent activity
+                const scansRef = collection(db, "scans");
+                const q = query(scansRef, where("studentId", "==", currentUser.uid), orderBy("scanDate", "desc"), limit(4));
+                const unsubScans = onSnapshot(q, (snapshot) => {
+                    const activities = snapshot.docs.map(doc => {
+                        const data = doc.data();
+                        return {
+                            description: data.activityName,
+                            points: data.pointsAwarded,
+                            date: formatDistanceToNow((data.scanDate as Timestamp).toDate(), { addSuffix: true })
+                        }
+                    });
+                    setRecentActivity(activities);
+                });
+
+                return () => {
+                    unsubUser();
+                    unsubScans();
+                };
+
+            } else {
+                router.push('/student-login');
+            }
+        });
+
+        return () => unsubscribe();
+    }, [auth, router, isClient]);
 
     useEffect(() => {
         if (!isClient) return;
          try {
             const storedClasses = localStorage.getItem('joinedClasses');
-            const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : mockJoinedClasses;
+            const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
             setJoinedClasses(classes);
 
             const storedActiveClassCode = localStorage.getItem('activeClassCode');
@@ -190,10 +161,7 @@ export default function StudentDashboardPage() {
             }
         } catch (error) {
             console.error("Failed to parse data from localStorage", error);
-            setJoinedClasses(mockJoinedClasses);
-            if(mockJoinedClasses.length > 0) {
-                setActiveClass(mockJoinedClasses[0]);
-            }
+            setJoinedClasses([]);
         }
     }, [isClient]);
 
@@ -218,10 +186,6 @@ export default function StudentDashboardPage() {
     }
 
     const handleLogout = async () => {
-        if (isMock) {
-            router.push('/student-login');
-            return;
-        }
         if (user) {
              try {
                 await signOut(auth);
@@ -252,7 +216,7 @@ export default function StudentDashboardPage() {
     }
 
     const displayEmail = user?.email || 'student@example.com';
-    const displayAvatar = avatarUrl || user?.photoURL || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
+    const displayAvatar = avatarUrl || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     return (
@@ -261,7 +225,7 @@ export default function StudentDashboardPage() {
             <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-14 max-w-screen-2xl items-center justify-between gap-4">
                      <Button asChild variant="outline">
-                        <Link href={`/student-dashboard/scan${isMock ? '?mock=true' : ''}`}>
+                        <Link href={`/student-dashboard/scan`}>
                             <QrCode className="mr-2 h-4 w-4" />
                             Scan QR Code
                         </Link>
@@ -467,7 +431,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
-
-    

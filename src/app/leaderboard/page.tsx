@@ -4,23 +4,21 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Crown, Star } from "lucide-react";
+import { ArrowLeft, Crown, Loader2, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
-const initialLeaderboardData = [
-  { rank: 1, name: "Leo DiCaprio", points: 10500, avatar: "https://placehold.co/100x100.png", initial: "LD", hint: "student portrait" },
-  { rank: 2, name: "Frencha Dressler", points: 9800, avatar: "https://placehold.co/80x80.png", initial: "FD", hint: "student smiling" },
-  { rank: 3, name: "Hanna Fowler", points: 9750, avatar: "https://placehold.co/80x80.png", initial: "HF", hint: "person reading" },
-  { rank: 4, name: "David Lee", points: 8900, avatar: "https://placehold.co/40x40.png", initial: "DL", hint: "student glasses" },
-  { rank: 5, name: "Emily Suzuki", points: 8850, avatar: "https://placehold.co/40x40.png", initial: "ES", hint: "person nature" },
-  { rank: 6, name: "Frank Gomez", points: 8200, avatar: "https://placehold.co/40x40.png", initial: "FG", hint: "student sports" },
-  { rank: 7, name: "Grace Hopper", points: 7900, avatar: "https://placehold.co/40x40.png", initial: "GH", hint: "student art" },
-  { rank: 8, name: "Ivy Jones", points: 7600, avatar: "https://placehold.co/40x40.png", initial: "IJ", hint: "student nature" },
-  { rank: 9, name: "Kevin Mitnick", points: 7350, avatar: "https://placehold.co/40x40.png", initial: "KM", hint: "student glasses" },
-  { rank: 10, name: "Laura Nyro", points: 7100, avatar: "https://placehold.co/40x40.png", initial: "LN", hint: "student art" },
-];
+interface LeaderboardEntry {
+  rank: number;
+  id: string;
+  name: string;
+  points: number;
+  avatar: string | null;
+  initial: string;
+}
 
 const formatName = (name: string) => {
     const parts = name.split(' ');
@@ -33,7 +31,7 @@ const formatName = (name: string) => {
 }
 
 
-const PodiumPlace = ({ user, place }: { user: typeof initialLeaderboardData[0], place: number }) => {
+const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number }) => {
     const isFirst = place === 1;
     const isSecond = place === 2;
     const isThird = place === 3;
@@ -48,7 +46,7 @@ const PodiumPlace = ({ user, place }: { user: typeof initialLeaderboardData[0], 
                 <Avatar className={cn("border-4 border-white/50 shadow-lg",
                     isFirst ? "w-24 h-24" : "w-20 h-20"
                 )}>
-                    <AvatarImage src={user.avatar} data-ai-hint={user.hint} />
+                    {user.avatar && <AvatarImage src={user.avatar} data-ai-hint="student portrait" />}
                     <AvatarFallback>{user.initial}</AvatarFallback>
                 </Avatar>
                 {isFirst && <Crown className="absolute -top-4 -right-2 h-8 w-8 text-yellow-400 rotate-12" />}
@@ -72,23 +70,46 @@ const PodiumPlace = ({ user, place }: { user: typeof initialLeaderboardData[0], 
 }
 
 export default function LeaderboardPage() {
-    const [leaderboardData, setLeaderboardData] = useState(initialLeaderboardData);
+    const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-      try {
-          const studentAvatar = window.localStorage.getItem('studentAvatar');
-          if (studentAvatar) {
-              setLeaderboardData(prevData =>
-                  prevData.map(user =>
-                      user.rank === 5 ? { ...user, avatar: studentAvatar } : user
-                  )
-              );
-          }
-      } catch (error) {
-          console.error("Failed to load student avatar from localStorage", error);
-      }
+        async function fetchLeaderboard() {
+            setIsLoading(true);
+            try {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('role', '==', 'student'), orderBy('lifetimePoints', 'desc'), limit(10));
+                const querySnapshot = await getDocs(q);
+
+                const data = querySnapshot.docs.map((doc, index) => {
+                    const userData = doc.data();
+                    return {
+                        rank: index + 1,
+                        id: doc.id,
+                        name: userData.displayName || 'Anonymous',
+                        points: userData.lifetimePoints || 0,
+                        avatar: userData.photoURL || null,
+                        initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
+                    };
+                });
+                setLeaderboardData(data);
+            } catch (error) {
+                console.error("Error fetching leaderboard:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchLeaderboard();
     }, []);
 
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600">
+                <Loader2 className="h-10 w-10 animate-spin text-white" />
+            </div>
+        );
+    }
+    
     const [top3, rest] = [leaderboardData.slice(0, 3), leaderboardData.slice(3)];
 
   return (
@@ -118,14 +139,19 @@ export default function LeaderboardPage() {
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {rest.map((user) => (
                     <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
-                        <Image
-                            src={user.avatar}
-                            alt={user.name}
-                            fill
-                            className="object-cover transition-transform duration-300 group-hover:scale-110"
-                            data-ai-hint={user.hint}
-                            unoptimized // Add this to allow external URLs like data URIs
-                        />
+                        {user.avatar ? (
+                            <Image
+                                src={user.avatar}
+                                alt={user.name}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-110"
+                                unoptimized
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-secondary flex items-center justify-center">
+                                <span className="text-4xl font-bold text-secondary-foreground">{user.initial}</span>
+                            </div>
+                        )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                         <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
                         <div className="absolute bottom-0 left-0 right-0 p-3 text-white">

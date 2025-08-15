@@ -1,41 +1,60 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useState, useEffect } from 'react';
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
 import { Separator } from "@/components/ui/separator";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { Class } from '@/components/create-class-form';
 
-
-// Mock data - In a real app, you'd fetch this based on the classId
-const mockClass = {
-    id: "cls-1",
-    name: "10th Grade Biology",
-};
 
 export default function ClassDetailsPage() {
     const params = useParams();
     const classId = Array.isArray(params.classId) ? params.classId[0] : params.classId;
+    const [classDetails, setClassDetails] = useState<Class | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     
-    const [openAccordion, setOpenAccordion] = useState('');
-    const isMobile = useIsMobile();
 
-    const handleHover = (value: string) => {
-        if (!isMobile) {
-            setOpenAccordion(value);
+    useEffect(() => {
+        async function fetchClassDetails() {
+            if (!classId) return;
+            setIsLoading(true);
+            try {
+                const classDocRef = doc(db, 'classes', classId);
+                const classDocSnap = await getDoc(classDocRef);
+                if (classDocSnap.exists()) {
+                    setClassDetails({ id: classDocSnap.id, ...classDocSnap.data() } as Class);
+                } else {
+                    console.error("No such class document!");
+                }
+            } catch (error) {
+                console.error("Error fetching class details:", error);
+            } finally {
+                setIsLoading(false);
+            }
         }
+        fetchClassDetails();
+    }, [classId]);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        )
     }
 
-    // In a real app, you might fetch class details here using the classId
-    // For now, we'll just use the mock data name.
+    if (!classDetails) {
+        return <div>Class not found.</div>
+    }
 
     return (
         <div className="space-y-6">
@@ -45,7 +64,7 @@ export default function ClassDetailsPage() {
                         <ArrowLeft className="h-4 w-4" />
                     </Link>
                 </Button>
-                <h1 className="font-headline text-3xl font-bold">{mockClass.name}</h1>
+                <h1 className="font-headline text-3xl font-bold">{classDetails.name}</h1>
             </div>
             <Card>
                 <CardHeader>
