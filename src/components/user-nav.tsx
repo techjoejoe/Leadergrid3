@@ -22,7 +22,6 @@ import { ProfileEditor } from "./profile-editor";
 import { useState, useEffect } from "react";
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
-const DEFAULT_INITIALS = "AD";
 
 export function UserNav() {
   const auth = getAuth(app);
@@ -30,7 +29,7 @@ export function UserNav() {
   const { toast } = useToast();
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
-  const [initial, setInitial] = useState(DEFAULT_INITIALS);
+  const [initials, setInitials] = useState("AD");
   
   const [user, setUser] = useState<User | null>(null);
 
@@ -44,6 +43,11 @@ export function UserNav() {
                 setAvatar(savedAvatar);
             } else if (currentUser.photoURL) {
                  setAvatar(currentUser.photoURL);
+            }
+            if (currentUser.displayName) {
+              setInitials(currentUser.displayName.substring(0, 2).toUpperCase());
+            } else if (currentUser.email) {
+              setInitials(currentUser.email.substring(0, 2).toUpperCase());
             }
         }
     });
@@ -67,6 +71,8 @@ export function UserNav() {
     }
   }
 
+  const displayName = user?.displayName || "Admin";
+
   return (
     <>
       <DropdownMenu>
@@ -74,14 +80,14 @@ export function UserNav() {
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
               <AvatarImage src={avatar} alt="@admin" data-ai-hint="person portrait" />
-              <AvatarFallback>{initial}</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">Admin</p>
+              <p className="text-sm font-medium leading-none">{displayName}</p>
               <p className="text-xs leading-none text-muted-foreground">
                 {user?.email || "admin@leadergrid.com"}
               </p>
@@ -140,10 +146,10 @@ export function UserNav() {
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatar}
-            onNameChange={() => {}}
+            onNameChange={(newName) => setUser(u => u ? {...u, displayName: newName} : null)}
             currentAvatar={avatar}
-            currentInitial={initial}
-            currentDisplayName={"Admin"}
+            currentInitial={initials}
+            currentDisplayName={displayName}
             currentEmail={user.email || ""}
             storageKey={`adminAvatar_${user.uid}`}
         />
