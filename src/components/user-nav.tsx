@@ -32,34 +32,23 @@ export function UserNav() {
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
   const [initial, setInitial] = useState(DEFAULT_INITIALS);
   
-  // A dummy user object for the admin. In a real app, this would come from your auth state.
-  const [mockUser, setMockUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    try {
-      const savedAvatar = window.localStorage.getItem('adminAvatar');
-      if (savedAvatar) {
-        setAvatar(savedAvatar);
-      }
-
-      // Create a mock user object for the ProfileEditor
-      const user = auth.currentUser;
-      if (user) {
-        setMockUser(user);
-      } else {
-        // If no user is logged in, we create a mock object.
-        // This is primarily for demonstration purposes in this context.
-        setMockUser({
-            displayName: 'Admin',
-            email: 'admin@leadergrid.com',
-            photoURL: avatar,
-        } as User);
-      }
-
-    } catch (error) {
-      console.error("Failed to load admin avatar from localStorage", error);
-    }
-  }, [avatar, auth.currentUser]);
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+        setUser(currentUser);
+        if (currentUser) {
+            const photoKey = `adminAvatar_${currentUser.uid}`;
+            const savedAvatar = localStorage.getItem(photoKey);
+            if (savedAvatar) {
+                setAvatar(savedAvatar);
+            } else if (currentUser.photoURL) {
+                 setAvatar(currentUser.photoURL);
+            }
+        }
+    });
+    return () => unsubscribe();
+  }, [auth]);
 
   const handleLogout = async () => {
     try {
@@ -94,7 +83,7 @@ export function UserNav() {
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">Admin</p>
               <p className="text-xs leading-none text-muted-foreground">
-                admin@leadergrid.com
+                {user?.email || "admin@leadergrid.com"}
               </p>
             </div>
           </DropdownMenuLabel>
@@ -145,9 +134,9 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {mockUser && (
+      {user && (
         <ProfileEditor
-            user={mockUser}
+            user={user}
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatar}
@@ -155,8 +144,8 @@ export function UserNav() {
             currentAvatar={avatar}
             currentInitial={initial}
             currentDisplayName={"Admin"}
-            currentEmail={"admin@leadergrid.com"}
-            storageKey="adminAvatar"
+            currentEmail={user.email || ""}
+            storageKey={`adminAvatar_${user.uid}`}
         />
       )}
     </>

@@ -105,12 +105,16 @@ export function ProfileEditor({
         // For mock users, just update the state. For real users, update Firebase.
         if (user.uid !== 'mock-user-id') {
             await updateProfile(user, { displayName: values.displayName });
+            const userDocRef = doc(db, "users", user.uid);
+            await updateDoc(userDocRef, { displayName: values.displayName });
         }
         onNameChange(values.displayName);
       }
       // Only try to update email for real users, and only if it has changed.
       if (values.email !== currentEmail && user.uid !== 'mock-user-id') {
         await updateEmail(user, values.email);
+        const userDocRef = doc(db, "users", user.uid);
+        await updateDoc(userDocRef, { email: values.email });
       }
       toast({
         title: 'Success!',
@@ -264,15 +268,17 @@ export function ProfileEditor({
   const handleCropComplete = async () => {
     if (completedCrop && imgRef.current && user) {
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
+        const photoUrlIdentifier = `${storageKey}_${user.uid}`;
         try {
             // For mock users, we don't call firebase
             if (user.uid !== 'mock-user-id') {
-                await updateProfile(user, { photoURL: croppedImageUrl });
+                const userDocRef = doc(db, "users", user.uid);
+
+                await updateProfile(user, { photoURL: photoUrlIdentifier });
+                await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
                 
-                // Award points only once
                 if (!hasAwardedPhotoBonus) {
-                    const userRef = doc(db, "users", user.uid);
-                    await updateDoc(userRef, {
+                    await updateDoc(userDocRef, {
                         lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
                     });
                     setHasAwardedPhotoBonus(true);
@@ -283,8 +289,10 @@ export function ProfileEditor({
                     });
                 }
             }
-            window.localStorage.setItem(storageKey, croppedImageUrl);
+
+            window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
             onAvatarChange(croppedImageUrl);
+            
             if (!hasAwardedPhotoBonus) {
                  toast({
                     title: 'Profile Photo Updated',

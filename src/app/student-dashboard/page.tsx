@@ -93,17 +93,22 @@ export default function StudentDashboardPage() {
     useEffect(() => {
         setIsClient(true);
     }, []);
+    
+    const getAvatarFromStorage = (photoURL: string | null) => {
+        if (photoURL && photoURL.startsWith('studentAvatar_')) {
+            return localStorage.getItem(photoURL);
+        }
+        return photoURL;
+    }
 
     useEffect(() => {
         if (!isClient) return;
         
-        const savedAvatar = window.localStorage.getItem('studentAvatar') || null;
-
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 setDisplayName(currentUser.displayName || 'Student');
-                setAvatarUrl(currentUser.photoURL || savedAvatar);
+                setAvatarUrl(getAvatarFromStorage(currentUser.photoURL));
 
                 // Setup listener for user document
                 const userDocRef = doc(db, 'users', currentUser.uid);
@@ -112,27 +117,41 @@ export default function StudentDashboardPage() {
                         const userData = doc.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
                         setDisplayName(userData.displayName || 'Student');
-                        setAvatarUrl(userData.photoURL || savedAvatar);
+                        setAvatarUrl(getAvatarFromStorage(userData.photoURL));
                     }
                 });
 
                 // Setup listener for recent activity
-                const scansRef = collection(db, "scans");
-                const q = query(scansRef, where("studentId", "==", currentUser.uid), limit(25));
-                const unsubScans = onSnapshot(q, (snapshot) => {
-                    const activities = snapshot.docs.map(doc => {
-                        const data = doc.data();
-                        return {
-                            description: data.activityName,
-                            points: data.pointsAwarded,
-                            scanDate: (data.scanDate as Timestamp).toDate(),
-                            date: formatDistanceToNow((data.scanDate as Timestamp).toDate(), { addSuffix: true })
-                        }
-                    })
-                    .sort((a, b) => b.scanDate.getTime() - a.scanDate.getTime())
-                    .slice(0, 4);
-
-                    setRecentActivity(activities);
+                 const scansRef = collection(db, "scans");
+                 const q = query(scansRef, where("studentId", "==", currentUser.uid), orderBy("scanDate", "desc"), limit(25));
+                 const unsubScans = onSnapshot(q, (snapshot) => {
+                     const activities = snapshot.docs.map(doc => {
+                         const data = doc.data();
+                         return {
+                             description: data.activityName,
+                             points: data.pointsAwarded,
+                             date: formatDistanceToNow((data.scanDate as Timestamp).toDate(), { addSuffix: true })
+                         }
+                     }).slice(0, 4);
+                     setRecentActivity(activities);
+                 }, (error) => {
+                    // This is where we will handle the index error silently for the user
+                    console.warn("Firestore query failed, likely due to a missing index. Falling back to client-side sorting for recent activity.", error);
+                    const fallbackQuery = query(scansRef, where("studentId", "==", currentUser.uid));
+                    getDocs(fallbackQuery).then(snapshot => {
+                         const activities = snapshot.docs.map(doc => {
+                            const data = doc.data();
+                            return {
+                                description: data.activityName,
+                                points: data.pointsAwarded,
+                                scanDate: (data.scanDate as Timestamp).toDate(),
+                                date: formatDistanceToNow((data.scanDate as Timestamp).toDate(), { addSuffix: true })
+                            }
+                        })
+                        .sort((a, b) => b.scanDate.getTime() - a.scanDate.getTime())
+                        .slice(0, 4);
+                        setRecentActivity(activities);
+                    });
                 });
 
                 return () => {
@@ -193,7 +212,8 @@ export default function StudentDashboardPage() {
         if (user) {
              try {
                 await signOut(auth);
-                window.localStorage.removeItem('studentAvatar');
+                // Don't remove all of local storage, just the active user avatar if needed
+                // window.localStorage.removeItem('studentAvatar');
                 toast({
                     title: "Logged Out",
                     description: "You have been successfully logged out."
