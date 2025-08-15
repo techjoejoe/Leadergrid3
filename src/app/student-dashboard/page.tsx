@@ -316,11 +316,11 @@ export default function StudentDashboardPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-6">
                              <Card>
-                                 <CardContent className="grid grid-cols-3 items-center p-4">
-                                    <div className="col-span-1 flex justify-center">
-                                        <Avatar className="h-24 w-24 border-4 border-primary/20">
-                                             <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
-                                            <AvatarFallback>{displayInitial}</AvatarFallback>
+                                 <CardContent className="grid grid-cols-3 items-center p-6 gap-4">
+                                    <div className="col-span-1">
+                                        <Avatar className="h-24 w-24 border-4 border-primary/20 rounded-md">
+                                            <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                            <AvatarFallback className="rounded-md">{displayInitial}</AvatarFallback>
                                         </Avatar>
                                     </div>
                                     <Separator orientation="vertical" className="h-24 mx-auto" />
@@ -462,3 +462,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
