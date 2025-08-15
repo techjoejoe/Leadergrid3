@@ -12,9 +12,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
     ],
   },
-  devIndicators: {
-    allowedDevOrigins: ['https://*.cloudworkstations.dev'],
-  }
 };
 
 export default nextConfig;
