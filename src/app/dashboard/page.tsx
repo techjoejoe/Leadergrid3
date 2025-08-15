@@ -7,7 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Users, QrCode, Award, Building, ArrowRight } from "lucide-react";
+import { Users, QrCode, Award, Building, ArrowRight, User } from "lucide-react";
 
 const navItems = [
     {
@@ -15,6 +15,12 @@ const navItems = [
         label: "Classes",
         description: "Manage classes, rosters, and student points.",
         icon: Users
+    },
+    {
+        href: "/dashboard/students",
+        label: "Students",
+        description: "View all students and manage their details.",
+        icon: User
     },
     {
         href: "/dashboard/qrcodes",
@@ -45,11 +51,11 @@ export default function DashboardPage() {
                     Welcome to LeaderGrid. Select an option below to get started.
                 </p>
             </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {navItems.map((item, index) => (
                      <div key={item.href} className="animate-fade-in-up" style={{ animationDelay: `${0.2 + index * 0.1}s`}}>
                         <Link href={item.href}>
-                            <Card className="aspect-square flex flex-col justify-between hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+                            <Card className="flex flex-col justify-between hover:border-primary/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
                             <CardHeader>
                                     <div className="flex justify-between items-start">
                                         <CardTitle className="font-headline text-2xl">{item.label}</CardTitle>

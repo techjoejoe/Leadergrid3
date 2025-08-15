@@ -101,6 +101,12 @@ export function UserNav() {
                     <span>Classes</span>
                 </Link>
             </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/students">
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Students</span>
+              </Link>
+            </DropdownMenuItem>
              <DropdownMenuItem asChild>
                <Link href="/dashboard/qrcodes">
                     <QrCode className="mr-2 h-4 w-4" />
