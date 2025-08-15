@@ -100,14 +100,18 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
     const unsubscribe = onSnapshot(enrollmentsQuery, async (snapshot) => {
         const studentIds = snapshot.docs.map(doc => doc.data().studentId);
-        if (studentIds.length === 0) {
+        
+        // Ensure studentIds are unique before fetching
+        const uniqueStudentIds = [...new Set(studentIds)];
+
+        if (uniqueStudentIds.length === 0) {
             setEnrolledStudents([]);
             setIsStudentsLoading(false);
             return;
         }
 
         // Fetch student details for each enrolled student
-        const studentPromises = studentIds.map(async (studentId) => {
+        const studentPromises = uniqueStudentIds.map(async (studentId) => {
             const studentDocRef = doc(db, "users", studentId);
             const studentDocSnap = await getDoc(studentDocRef);
             if (studentDocSnap.exists()) {
@@ -549,3 +553,5 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
+    
