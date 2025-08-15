@@ -72,7 +72,6 @@ const initialStudentData: StudentData = {
 interface Badge { id: string, name: string; imageUrl: string; hint: string; }
 
 interface RecentActivity { description: string; points: number; date: string; }
-const initialRecentActivity: RecentActivity[] = [];
 
 interface LeaderboardEntry {
   id: string;
@@ -85,7 +84,7 @@ interface LeaderboardEntry {
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [badges, setBadges] = useState<Badge[]>([]);
-    const [recentActivity, setRecentActivity] = useState(initialRecentActivity);
+    const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [displayName, setDisplayName] = useState('Student');
@@ -451,7 +450,7 @@ export default function StudentDashboardPage() {
                                 <Crown className="text-yellow-400" />
                                 Live Leaderboard
                             </CardTitle>
-                            <CardDescription>Top 5 students across the school.</CardDescription>
+                            <CardDescription>Top Team Members across the company.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
