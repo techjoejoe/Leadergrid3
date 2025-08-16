@@ -72,7 +72,7 @@ export async function awardLeaderboardViewPoints(
       lifetimePoints: increment(LEADERBOARD_VIEW_POINTS),
     });
 
-    // If an active class is passed, update its points too
+    // If an active class is passed, update its points too, but only if the user is enrolled.
     if (activeClassId) {
       const rosterRef = doc(
         db,
@@ -81,9 +81,12 @@ export async function awardLeaderboardViewPoints(
         'roster',
         userId
       );
-      batch.update(rosterRef, {
-        classPoints: increment(LEADERBOARD_VIEW_POINTS),
-      });
+      const rosterSnap = await getDoc(rosterRef);
+      if (rosterSnap.exists()) {
+        batch.update(rosterRef, {
+          classPoints: increment(LEADERBOARD_VIEW_POINTS),
+        });
+      }
     }
 
     // Add a record to point history
