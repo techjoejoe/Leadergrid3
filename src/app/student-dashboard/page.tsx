@@ -49,7 +49,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, Timestamp, getDocs } from 'firebase/firestore';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
@@ -266,19 +266,21 @@ export default function StudentDashboardPage() {
 
     useEffect(() => {
         if (!isClient) return;
-         try {
-            const storedClasses = localStorage.getItem('joinedClasses');
-            const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
-            setJoinedClasses(classes);
+        const storedClasses = localStorage.getItem('joinedClasses');
+        if (storedClasses) {
+            try {
+                const classes: ClassInfo[] = JSON.parse(storedClasses);
+                setJoinedClasses(classes);
 
-            const storedActiveClassCode = localStorage.getItem('activeClassCode');
-            if (storedActiveClassCode) {
-                const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
-                setActiveClass(foundActiveClass || null);
+                const storedActiveClassCode = localStorage.getItem('activeClassCode');
+                if (storedActiveClassCode) {
+                    const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
+                    setActiveClass(foundActiveClass || null);
+                }
+            } catch (error) {
+                console.error("Failed to parse classes from localStorage", error);
+                setJoinedClasses([]);
             }
-        } catch (error) {
-            console.error("Failed to parse data from localStorage", error);
-            setJoinedClasses([]);
         }
     }, [isClient]);
 
