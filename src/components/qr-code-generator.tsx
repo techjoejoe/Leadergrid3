@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Loader2, QrCode, CalendarIcon, Trash2 } from 'lucide-react';
+import { Download, Loader2, QrCode, CalendarIcon, Trash2, Clipboard } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
@@ -186,6 +186,41 @@ export function QrCodeGenerator() {
     downloadLink.click();
     document.body.removeChild(downloadLink);
   }
+
+  const handleCopyQRCode = async (code: GeneratedQrCode) => {
+    const svgEl = document.getElementById(`dialog-qr-code-${code.id}`);
+    if (!svgEl) {
+        toast({ title: 'Error', description: 'Could not find QR code to copy.', variant: 'destructive' });
+        return;
+    }
+
+    try {
+        const serializer = new XMLSerializer();
+        const svgString = serializer.serializeToString(svgEl);
+        const dataUrl = `data:image/svg+xml;base64,${btoa(svgString)}`;
+
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not get canvas context');
+            ctx.drawImage(img, 0, 0, 256, 256);
+            canvas.toBlob(async (blob) => {
+                if (blob) {
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                    toast({ title: 'Success', description: 'QR code image copied to clipboard.' });
+                }
+            }, 'image/png');
+        };
+        img.src = dataUrl;
+    } catch (error) {
+        console.error("Failed to copy QR code:", error);
+        toast({ title: 'Error', description: 'Failed to copy QR code to clipboard.', variant: 'destructive' });
+    }
+  }
+
 
   const handleDeleteCode = async (codeToDelete: GeneratedQrCode) => {
     try {
@@ -382,6 +417,7 @@ export function QrCodeGenerator() {
                                                 <div className="flex flex-col items-center justify-center p-4">
                                                     <div className="p-4 bg-white rounded-lg">
                                                         <QRCodeSVG
+                                                            id={`dialog-qr-code-${code.id}`}
                                                             value={code.value}
                                                             size={256}
                                                             includeMargin={true}
@@ -389,6 +425,10 @@ export function QrCodeGenerator() {
                                                     </div>
                                                     <p className="mt-4 text-sm text-muted-foreground">{code.description}</p>
                                                     <p className="mt-2 text-lg font-bold text-primary">{code.points} Points</p>
+                                                    <Button variant="outline" className="mt-4" onClick={() => handleCopyQRCode(code)}>
+                                                        <Clipboard className="mr-2 h-4 w-4" />
+                                                        Copy to Clipboard
+                                                    </Button>
                                                 </div>
                                             </DialogContent>
                                         </Dialog>
@@ -449,3 +489,4 @@ export function QrCodeGenerator() {
     </div>
   );
 }
+
