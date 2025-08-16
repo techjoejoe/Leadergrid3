@@ -60,6 +60,9 @@ export default function Home() {
             <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-primary/20 opacity-20 blur-[100px]"></div>
           </div>
           <div className="container text-center animate-fade-in-up">
+            <div className="flex justify-center mb-8">
+                <Logo />
+            </div>
             <h1 className="text-4xl font-extrabold tracking-tight font-headline sm:text-5xl md:text-6xl lg:text-7xl">
               Gamify Learning. Inspire Growth.
             </h1>
