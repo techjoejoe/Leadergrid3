@@ -200,7 +200,8 @@ export default function StudentDashboardPage() {
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
     const [isClient, setIsClient] = useState(false);
-    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [companyLeaderboard, setCompanyLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
     const { toast } = useToast();
     const auth = getAuth(app);
     const router = useRouter();
@@ -225,12 +226,9 @@ export default function StudentDashboardPage() {
                     setJoinedClasses(classes);
 
                     const storedActiveClassCode = localStorage.getItem('activeClassCode');
-                    if (storedActiveClassCode) {
+                    if (storedActiveClassCode && storedActiveClassCode !== 'all') {
                         const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
-                        stableSetActiveClass(foundActiveClass || (classes.length > 0 ? classes[0] : null));
-                    } else if (classes.length > 0) {
-                        stableSetActiveClass(classes[0]);
-                        localStorage.setItem('activeClassCode', classes[0].id);
+                        stableSetActiveClass(foundActiveClass || null);
                     } else {
                         stableSetActiveClass(null);
                     }
@@ -271,7 +269,7 @@ export default function StudentDashboardPage() {
                  const historyRef = collection(db, "point_history");
                  const q = query(historyRef, where("studentId", "==", currentUser.uid), limit(50));
                  const unsubHistory = onSnapshot(q, (snapshot) => {
-                     const history = snapshot.docs.map(doc => {
+                     const history: PointHistoryRecord[] = snapshot.docs.map(doc => {
                          const data = doc.data();
                          return {
                              id: doc.id,
@@ -285,9 +283,11 @@ export default function StudentDashboardPage() {
                      // Sort on the client
                      history.sort((a,b) => b.timestamp.toMillis() - a.timestamp.toMillis());
                      setPointHistory(history);
+                 }, (error) => {
+                    console.error("Firestore Error fetching point history: ", error);
                  });
 
-                // Fetch top 50 students for leaderboard
+                // Fetch top 50 students for company leaderboard
                 const usersRef = collection(db, 'users');
                 const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(50));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
@@ -302,7 +302,7 @@ export default function StudentDashboardPage() {
                             rank: index + 1,
                         };
                     });
-                    setLeaderboard(data);
+                    setCompanyLeaderboard(data);
                 });
 
 
@@ -323,32 +323,56 @@ export default function StudentDashboardPage() {
 
     // This effect runs when the activeClass changes to update the class-specific rank/points.
     useEffect(() => {
-        if (activeClass && user) {
-            const classRosterRef = doc(db, 'classes', activeClass.id, 'roster', user.uid);
-
-            const unsub = onSnapshot(classRosterRef, (doc) => {
-                 if (doc.exists()) {
-                    const classData = doc.data();
-                    setStudentData(prev => ({ ...prev, classPoints: classData.classPoints || 0 }));
-                    
-                    // To get rank, we need to fetch all students in the class roster
-                    const rosterQuery = query(collection(db, 'classes', activeClass.id, 'roster'), orderBy('classPoints', 'desc'));
-                    getDocs(rosterQuery).then(snapshot => {
-                        const rank = snapshot.docs.findIndex(d => d.id === user.uid) + 1;
-                        setStudentData(prev => ({...prev, classRank: rank > 0 ? rank : 0 }));
-                    });
-                } else {
-                    // Reset class points/rank if they are not in the active class roster
-                    setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
-                }
-            });
-            
-            return () => unsub();
-        } else {
-            // No active class, so reset class-specific stats
-             setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
+        if (user) {
+            if (activeClass) {
+                const classRosterRef = doc(db, 'classes', activeClass.id, 'roster', user.uid);
+                const unsub = onSnapshot(classRosterRef, (doc) => {
+                     if (doc.exists()) {
+                        const classData = doc.data();
+                        setStudentData(prev => ({ ...prev, classPoints: classData.classPoints || 0 }));
+                        
+                        const rosterQuery = query(collection(db, 'classes', activeClass.id, 'roster'), orderBy('classPoints', 'desc'));
+                        getDocs(rosterQuery).then(snapshot => {
+                            const rank = snapshot.docs.findIndex(d => d.id === user.uid) + 1;
+                            setStudentData(prev => ({...prev, classRank: rank > 0 ? rank : 0 }));
+                        });
+                    } else {
+                        setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
+                    }
+                });
+                return () => unsub();
+            } else {
+                 setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
+            }
         }
     }, [activeClass, user]);
+
+    // Effect to update the displayed leaderboard data
+    useEffect(() => {
+        if (!activeClass) {
+            // Show company leaderboard
+            setLeaderboardData(companyLeaderboard);
+        } else {
+            // Show class leaderboard
+            const classRosterQuery = query(collection(db, 'classes', activeClass.id, 'roster'), orderBy('classPoints', 'desc'), limit(50));
+            const unsubscribe = onSnapshot(classRosterQuery, (snapshot) => {
+                const classLeaderboard = snapshot.docs.map((doc, index) => {
+                    const studentData = doc.data();
+                    return {
+                        id: doc.id,
+                        name: studentData.displayName || 'Anonymous',
+                        points: studentData.classPoints || 0,
+                        avatar: getAvatarFromStorage(studentData.photoURL),
+                        initial: (studentData.displayName || '??').substring(0, 2).toUpperCase(),
+                        rank: index + 1,
+                    };
+                });
+                setLeaderboardData(classLeaderboard);
+            });
+            return () => unsubscribe();
+        }
+    }, [activeClass, companyLeaderboard]);
+
 
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses.filter(c => c.id !== newClass.id), newClass];
@@ -362,11 +386,16 @@ export default function StudentDashboardPage() {
         })
     }
     
-    const handleActiveClassChange = (classId: string) => {
-        const newActiveClass = joinedClasses.find(c => c.id === classId);
-        if (newActiveClass) {
-            setActiveClass(newActiveClass);
-            localStorage.setItem('activeClassCode', newActiveClass.id);
+    const handleActiveClassChange = (classId: string | null) => {
+        if (classId === null) {
+            setActiveClass(null);
+            localStorage.setItem('activeClassCode', 'all');
+        } else {
+            const newActiveClass = joinedClasses.find(c => c.id === classId);
+            if (newActiveClass) {
+                setActiveClass(newActiveClass);
+                localStorage.setItem('activeClassCode', newActiveClass.id);
+            }
         }
     }
 
@@ -403,8 +432,8 @@ export default function StudentDashboardPage() {
     const displayAvatar = avatarUrl || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
-    const top3 = leaderboard.slice(0, 3);
-    const rest = leaderboard.slice(3);
+    const top3 = leaderboardData.slice(0, 3);
+    const rest = leaderboardData.slice(3);
 
     return (
         <>
@@ -565,9 +594,11 @@ export default function StudentDashboardPage() {
                             <div>
                                 <CardTitle className="font-headline flex items-center gap-2">
                                     <CrownIcon className="text-yellow-400" />
-                                    Live Leaderboard
+                                    {activeClass ? `${activeClass.name} Leaderboard` : 'Live Leaderboard'}
                                 </CardTitle>
-                                <CardDescription>Top Team Members across the company.</CardDescription>
+                                <CardDescription>
+                                    {activeClass ? `Top members in ${activeClass.name}.` : 'Top members across the company.'}
+                                </CardDescription>
                             </div>
                              <Button asChild variant="outline" className="group">
                                 <Link href="/leaderboard">

@@ -6,7 +6,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { PlusCircle, Loader2, ChevronsUpDown, Check } from "lucide-react"
+import { PlusCircle, Loader2, ChevronsUpDown, Check, Building } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandSeparator } from "@/components/ui/command"
 import type { ClassInfo } from "./join-class-dialog"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
@@ -36,7 +36,7 @@ interface StudentClassManagerProps {
     joinedClasses: ClassInfo[];
     activeClass: ClassInfo | null;
     onJoinClass: (classInfo: ClassInfo) => void;
-    onActiveClassChange: (classId: string) => void;
+    onActiveClassChange: (classId: string | null) => void;
 }
 
 export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, onActiveClassChange }: StudentClassManagerProps) {
@@ -160,7 +160,7 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
                     >
                     {activeClass
                         ? activeClass.name
-                        : "Select a class..."}
+                        : "All Company"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
@@ -168,6 +168,25 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
                     <Command>
                     <CommandInput placeholder="Search classes..." />
                     <CommandEmpty>No classes found.</CommandEmpty>
+                    <CommandGroup>
+                        <CommandItem
+                            value="All Company"
+                            onSelect={() => {
+                                onActiveClassChange(null);
+                                setPopoverOpen(false);
+                            }}
+                        >
+                            <Check
+                                className={cn(
+                                    "mr-2 h-4 w-4",
+                                    !activeClass ? "opacity-100" : "opacity-0"
+                                )}
+                            />
+                            <Building className="mr-2 h-4 w-4" />
+                            All Company
+                        </CommandItem>
+                    </CommandGroup>
+                    <CommandSeparator />
                     <CommandGroup>
                         {joinedClasses.map((cls) => (
                         <CommandItem
