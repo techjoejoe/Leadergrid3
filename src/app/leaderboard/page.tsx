@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown, Loader2, Star, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
+import React, { useEffect, useState } from "react";
+import { db, app } from "@/lib/firebase";
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { awardLeaderboardViewPoints } from "@/lib/engagement-service";
+import { useToast } from "@/hooks/use-toast";
 
 interface LeaderboardEntry {
   rank: number;
@@ -72,6 +75,8 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
 export default function LeaderboardPage() {
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const auth = getAuth(app);
+    const { toast } = useToast();
 
     useEffect(() => {
         async function fetchLeaderboard() {
@@ -104,6 +109,19 @@ export default function LeaderboardPage() {
         }
         fetchLeaderboard();
     }, []);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser) {
+                const result = await awardLeaderboardViewPoints(currentUser.uid, currentUser.displayName || 'Student');
+                if (result) {
+                    toast(result);
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [auth, toast]);
 
     if (isLoading) {
         return (
@@ -189,3 +207,4 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
