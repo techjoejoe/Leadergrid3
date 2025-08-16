@@ -358,12 +358,6 @@ export default function StudentDashboardPage() {
                             onJoinClass={handleJoinClass}
                             onActiveClassChange={handleActiveClassChange}
                         />
-                         <Button asChild variant="outline" className="group">
-                            <Link href="/leaderboard">
-                                <View className="mr-2 h-4 w-4" />
-                                <span className="hidden sm:inline">Leaderboard</span>
-                            </Link>
-                        </Button>
                     </div>
                     <div className="flex items-center gap-4">
                         <DropdownMenu>
