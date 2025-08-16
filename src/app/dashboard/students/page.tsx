@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -12,8 +13,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Student {
     id: string;
-    displayName: string;
-    email: string;
+    displayName: string | null;
+    email: string | null;
     photoURL?: string;
 }
 
@@ -84,11 +85,11 @@ export default function StudentsPage() {
                                                 {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
                                                 <AvatarFallback>{student.displayName?.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
                                             </Avatar>
-                                            {student.displayName}
+                                            {student.displayName || 'Unnamed User'}
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        {student.email}
+                                        {student.email || 'No email'}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {/* Future actions can go here */}

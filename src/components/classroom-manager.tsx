@@ -31,10 +31,10 @@ import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDo
 
 interface Student {
     id: string;
-    displayName: string;
+    displayName?: string | null;
     email: string;
     lifetimePoints: number;
-    photoURL?: string;
+    photoURL?: string | null;
 }
 
 interface RosterEntry extends Student {
@@ -191,7 +191,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
         toast({
             title: "Student Added",
-            description: `${student.displayName} has been added to the class with ${initialClassPoints} starting points.`
+            description: `${student.displayName || 'A student'} has been added to the class with ${initialClassPoints} starting points.`
         });
     } catch (error) {
         console.error("Error adding student to class:", error);
@@ -218,7 +218,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
         toast({
             title: 'Student Removed',
-            description: `${student.displayName} has been removed from the class.`,
+            description: `${student.displayName || 'A student'} has been removed from the class.`,
             variant: 'destructive',
         })
     } catch (error) {
@@ -247,7 +247,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
         toast({
             title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
-            description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.displayName} for: ${values.reason}.`,
+            description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.displayName || 'a student'} for: ${values.reason}.`,
         });
 
     } catch(error) {
@@ -348,7 +348,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                            <AvatarFallback>{student.displayName?.substring(0,2).toUpperCase() || '??'}</AvatarFallback>
                                        </Avatar>
                                        <div>
-                                           <p className="font-medium">{student.displayName}</p>
+                                           <p className="font-medium">{student.displayName || 'Unnamed User'}</p>
                                            <p className="text-sm text-muted-foreground">{student.email}</p>
                                        </div>
                                    </div>
@@ -386,9 +386,9 @@ export function ClassroomManager({ classId }: { classId: string }) {
                             <div className="flex items-center gap-4">
                             <Avatar>
                                 {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
-                                <AvatarFallback>{student.displayName.substring(0,2).toUpperCase()}</AvatarFallback>
+                                <AvatarFallback>{(student.displayName || '??').substring(0,2).toUpperCase()}</AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{student.displayName}</span>
+                            <span className="font-medium">{student.displayName || 'Unnamed User'}</span>
                             </div>
                         </TableCell>
                         <TableCell className="text-center font-bold text-lg">{student.classPoints?.toLocaleString() ?? 0}</TableCell>
@@ -447,9 +447,9 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                         <div className="flex items-center gap-3">
                                             <Avatar>
                                                 {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
-                                                <AvatarFallback>{student.displayName.substring(0,2).toUpperCase()}</AvatarFallback>
+                                                <AvatarFallback>{(student.displayName || '??').substring(0,2).toUpperCase()}</AvatarFallback>
                                             </Avatar>
-                                            <span className="font-medium">{student.displayName}</span>
+                                            <span className="font-medium">{student.displayName || 'Unnamed User'}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right font-bold text-lg">{student.classPoints?.toLocaleString() ?? 0}</TableCell>
@@ -627,6 +627,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
 
 
 
