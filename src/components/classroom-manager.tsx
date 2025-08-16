@@ -227,13 +227,18 @@ export function ClassroomManager({ classId }: { classId: string }) {
     setIsLoading(true);
     try {
         const pointsToAdjust = adjustmentType === 'add' ? values.points : -values.points;
-
-        // ONLY update user's class-specific points. Do NOT touch lifetime points.
-        const rosterRef = doc(db, 'classes', classId, 'roster', selectedStudent.id);
         
-        await updateDoc(rosterRef, {
-            classPoints: increment(pointsToAdjust)
-        });
+        const batch = writeBatch(db);
+        
+        // 1. Update class-specific points.
+        const rosterRef = doc(db, 'classes', classId, 'roster', selectedStudent.id);
+        batch.update(rosterRef, { classPoints: increment(pointsToAdjust) });
+
+        // 2. Update lifetime points.
+        const userRef = doc(db, 'users', selectedStudent.id);
+        batch.update(userRef, { lifetimePoints: increment(pointsToAdjust) });
+
+        await batch.commit();
 
         toast({
             title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
@@ -617,5 +622,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
 
 
