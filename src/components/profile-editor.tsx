@@ -41,7 +41,7 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 interface ProfileEditorProps {
-  user: User | null; // Allow user to be null
+  user: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAvatarChange: (newAvatar: string) => void;
@@ -83,19 +83,19 @@ export function ProfileEditor({
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      displayName: currentDisplayName || '',
-      email: currentEmail || '',
+      displayName: '',
+      email: '',
     },
   });
 
   useEffect(() => {
-    if (open) {
+    if (open && user) {
       form.reset({
         displayName: currentDisplayName,
         email: currentEmail,
       });
     }
-  }, [open, currentDisplayName, currentEmail, form]);
+  }, [open, user, currentDisplayName, currentEmail, form]);
 
   useEffect(() => {
     if (imgSrc) {
