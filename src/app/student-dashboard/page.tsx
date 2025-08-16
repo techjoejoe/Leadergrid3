@@ -245,7 +245,7 @@ export default function StudentDashboardPage() {
                 const unsubUser = onSnapshot(userDocRef, (doc) => {
                     if (doc.exists()) {
                         const userData = doc.data();
-                        setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0, schoolRank: userData.schoolRank || 0 }));
+                        setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
                         setDisplayName(userData.displayName || 'Student');
                         setAvatarUrl(getAvatarFromStorage(userData.photoURL));
                     }
@@ -280,6 +280,7 @@ export default function StudentDashboardPage() {
                              timestamp: data.timestamp
                          }
                      });
+                     // Sort on the client to avoid needing a composite index
                      history.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
                      setPointHistory(history.slice(0, 50));
                  }, (error) => {
@@ -376,6 +377,14 @@ export default function StudentDashboardPage() {
             return () => unsubscribe();
         }
     }, [activeClass, companyLeaderboard]);
+    
+    // Effect to update the school rank when company leaderboard changes
+    useEffect(() => {
+        if (user && companyLeaderboard.length > 0) {
+            const userRank = companyLeaderboard.find(entry => entry.id === user.uid)?.rank;
+            setStudentData(prev => ({ ...prev, schoolRank: userRank || 0 }));
+        }
+    }, [user, companyLeaderboard]);
 
 
     const handleJoinClass = (newClass: ClassInfo) => {
@@ -706,5 +715,6 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
 
 
