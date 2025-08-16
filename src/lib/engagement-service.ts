@@ -1,3 +1,4 @@
+
 'use client';
 
 import { db } from './firebase';
@@ -10,6 +11,9 @@ import {
   increment,
   arrayUnion,
   setDoc,
+  query,
+  where,
+  getDocs,
 } from 'firebase/firestore';
 import { startOfWeek, isSameDay } from 'date-fns';
 
@@ -17,13 +21,16 @@ const LEADERBOARD_VIEW_POINTS = 5;
 
 /**
  * Awards points to a user for viewing the leaderboard, with daily and weekly limits.
+ * Also adds points to the active class if one is provided.
  * @param userId The ID of the user to award points to.
  * @param displayName The display name of the user.
+ * @param activeClassId The ID of the currently active class, if any.
  * @returns A promise that resolves to a toast-like object if points were awarded, otherwise null.
  */
 export async function awardLeaderboardViewPoints(
   userId: string,
-  displayName: string
+  displayName: string,
+  activeClassId: string | null
 ): Promise<{ title: string; description: string } | null> {
   const now = new Date();
   const engagementRef = doc(
@@ -61,7 +68,23 @@ export async function awardLeaderboardViewPoints(
 
     // Update user's lifetime points
     const userRef = doc(db, 'users', userId);
-    batch.update(userRef, { lifetimePoints: increment(LEADERBOARD_VIEW_POINTS) });
+    batch.update(userRef, {
+      lifetimePoints: increment(LEADERBOARD_VIEW_POINTS),
+    });
+
+    // If an active class is passed, update its points too
+    if (activeClassId) {
+      const rosterRef = doc(
+        db,
+        'classes',
+        activeClassId,
+        'roster',
+        userId
+      );
+      batch.update(rosterRef, {
+        classPoints: increment(LEADERBOARD_VIEW_POINTS),
+      });
+    }
 
     // Add a record to point history
     const historyRef = doc(collection(db, 'point_history'));
@@ -71,6 +94,7 @@ export async function awardLeaderboardViewPoints(
       points: LEADERBOARD_VIEW_POINTS,
       reason: 'Viewed Leaderboard',
       type: 'engagement',
+      classId: activeClassId,
       timestamp: Timestamp.fromDate(now),
     });
 

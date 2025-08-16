@@ -52,7 +52,7 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
                     {user.avatar && <AvatarImage src={user.avatar} data-ai-hint="student portrait" />}
                     <AvatarFallback>{user.initial}</AvatarFallback>
                 </Avatar>
-                {isFirst && <Crown className="absolute -top-4 -right-2 h-8 w-8 text-yellow-400 rotate-12" />}
+                {isFirst && <Crown className="absolute -top-5 -right-3 h-8 w-8 text-yellow-400 rotate-12 z-10" />}
             </div>
             <h3 className="mt-2 text-lg font-bold text-white">{formatName(user.name)}</h3>
             <div className="relative mt-2 flex items-center justify-center h-20 bg-white/20 backdrop-blur-sm rounded-t-lg shadow-inner-strong"
@@ -77,8 +77,10 @@ export default function LeaderboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const auth = getAuth(app);
     const { toast } = useToast();
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
+        setIsClient(true);
         async function fetchLeaderboard() {
             setIsLoading(true);
             try {
@@ -111,9 +113,13 @@ export default function LeaderboardPage() {
     }, []);
 
     useEffect(() => {
+        if (!isClient) return;
+
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                const result = await awardLeaderboardViewPoints(currentUser.uid, currentUser.displayName || 'Student');
+                 const activeClassCode = localStorage.getItem('activeClassCode');
+                 const activeClassId = (activeClassCode && activeClassCode !== 'all') ? activeClassCode : null;
+                const result = await awardLeaderboardViewPoints(currentUser.uid, currentUser.displayName || 'Student', activeClassId);
                 if (result) {
                     toast(result);
                 }
@@ -121,7 +127,7 @@ export default function LeaderboardPage() {
         });
 
         return () => unsubscribe();
-    }, [auth, toast]);
+    }, [auth, toast, isClient]);
 
     if (isLoading) {
         return (
@@ -207,4 +213,3 @@ export default function LeaderboardPage() {
     </div>
   );
 }
-
