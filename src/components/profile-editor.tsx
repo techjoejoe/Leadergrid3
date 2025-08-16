@@ -17,6 +17,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -107,11 +108,7 @@ export function ProfileEditor({
         }
         onNameChange(values.displayName);
       }
-      if (values.email !== currentEmail && user.uid !== 'mock-user-id') {
-        await updateEmail(user, values.email);
-        const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, { email: values.email });
-      }
+      
       toast({
         title: 'Success!',
         description: 'Your profile has been updated.',
@@ -120,7 +117,7 @@ export function ProfileEditor({
     } catch (error: any) {
        toast({
         title: 'Error updating profile',
-        description: 'This is a sensitive operation. You may need to log out and log back in to change your email.',
+        description: 'There was an error updating your profile.',
         variant: 'destructive',
       });
     } finally {
@@ -319,21 +316,15 @@ export function ProfileEditor({
         throw new Error("Crop dimensions are not valid");
     }
 
-    canvas.width = crop.width;
-    canvas.height = crop.height;
+    canvas.width = crop.width * scaleX;
+    canvas.height = crop.height * scaleY;
+
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
         throw new Error('No 2d context');
     }
-
-    const pixelRatio = window.devicePixelRatio;
-    canvas.width = crop.width * pixelRatio * scaleX;
-    canvas.height = crop.height * pixelRatio * scaleY;
-
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    ctx.imageSmoothingQuality = 'high';
-
+    
     ctx.drawImage(
         image,
         crop.x * scaleX,
@@ -414,8 +405,11 @@ export function ProfileEditor({
                     <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                        <Input type="email" placeholder="Your Email" {...field} />
+                        <Input type="email" placeholder="Your Email" {...field} disabled />
                         </FormControl>
+                        <FormDescription>
+                          Your email address cannot be changed from this screen.
+                        </FormDescription>
                         <FormMessage />
                     </FormItem>
                     )}
