@@ -43,6 +43,8 @@ export function UserNav() {
                 setAvatar(savedAvatar);
             } else if (currentUser.photoURL) {
                  setAvatar(currentUser.photoURL);
+            } else {
+                setAvatar(DEFAULT_AVATAR);
             }
             if (currentUser.displayName) {
               setInitials(currentUser.displayName.substring(0, 2).toUpperCase());
@@ -52,7 +54,7 @@ export function UserNav() {
         }
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -157,7 +159,7 @@ export function UserNav() {
             currentInitial={initials}
             currentDisplayName={displayName}
             currentEmail={user.email || ""}
-            storageKey={`adminAvatar_${user.uid}`}
+            storageKey={`adminAvatar`}
         />
       )}
     </>

@@ -117,7 +117,7 @@ export function ProfileEditor({
     } catch (error: any) {
        toast({
         title: 'Error updating profile',
-        description: 'There was an error updating your profile.',
+        description: 'This operation is sensitive and requires recent authentication. Log in again before retrying this request.',
         variant: 'destructive',
       });
     } finally {
