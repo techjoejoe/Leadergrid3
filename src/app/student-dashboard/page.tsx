@@ -354,8 +354,13 @@ export default function StudentDashboardPage() {
             // Show company leaderboard
             setLeaderboardData(companyLeaderboard);
         } else {
-            // Show class leaderboard
-            const classRosterQuery = query(collection(db, 'classes', activeClass.id, 'roster'), orderBy('classPoints', 'desc'), limit(50));
+            // Show class leaderboard, only including students with points > 0
+            const classRosterQuery = query(
+                collection(db, 'classes', activeClass.id, 'roster'), 
+                where('classPoints', '>', 0), 
+                orderBy('classPoints', 'desc'), 
+                limit(50)
+            );
             const unsubscribe = onSnapshot(classRosterQuery, (snapshot) => {
                 const classLeaderboard = snapshot.docs.map((doc, index) => {
                     const studentData = doc.data();
