@@ -83,8 +83,8 @@ export function ProfileEditor({
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      displayName: '',
-      email: '',
+      displayName: currentDisplayName,
+      email: currentEmail,
     },
   });
 
