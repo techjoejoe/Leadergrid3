@@ -98,6 +98,17 @@ const getAvatarFromStorage = (photoURL: string | null) => {
     return photoURL;
 }
 
+const formatName = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length > 1) {
+        const firstName = parts[0];
+        const lastName = parts[parts.length - 1];
+        return `${firstName} ${lastName.charAt(0)}.`;
+    }
+    return name;
+}
+
+
 const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => {
     const isFirst = rank === 1;
     const isSecond = rank === 2;
@@ -159,7 +170,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     ✨
                 </span>
             ))}
-            {isFirst && <span className="absolute -top-8 text-7xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
+            {isFirst && <span className="absolute -top-5 text-7xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("border-4 z-10", 
                 isFirst && `h-40 w-40 ${coinStyles.first}`,
                 isSecond && `h-28 w-28 ${coinStyles.second}`,
@@ -276,7 +287,7 @@ export default function StudentDashboardPage() {
                      setPointHistory(history);
                  });
 
-                // Fetch top 10 students for leaderboard
+                // Fetch top 50 students for leaderboard
                 const usersRef = collection(db, 'users');
                 const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(50));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
@@ -566,12 +577,33 @@ export default function StudentDashboardPage() {
                             </Button>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div className="space-y-4">
                                 {/* Podium */}
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:col-span-2">
                                     {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
                                     {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
                                     {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
+                                </div>
+                                {/* Rest of Leaderboard */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4">
+                                    {rest.map((user) => (
+                                        <div key={user.rank} className="flex items-center justify-between p-3 bg-secondary/10 rounded-md">
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold text-lg text-muted-foreground w-6 text-center">{user.rank}</span>
+                                                <Avatar className="h-10 w-10">
+                                                    {user.avatar && <AvatarImage src={user.avatar} />}
+                                                    <AvatarFallback>{user.initial}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-semibold">{formatName(user.name)}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-sm font-semibold text-yellow-400">
+                                                <Star className="h-4 w-4" />
+                                                <span>{user.points.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </CardContent>
