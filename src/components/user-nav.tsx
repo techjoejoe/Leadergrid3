@@ -36,7 +36,8 @@ export function UserNav() {
   useEffect(() => {
     const getAvatarFromStorage = (photoURL: string | null) => {
         if (photoURL && photoURL.startsWith('adminAvatar_')) {
-            return localStorage.getItem(photoURL);
+            const storedAvatar = localStorage.getItem(photoURL);
+            return storedAvatar;
         }
         return photoURL;
     }
@@ -76,8 +77,6 @@ export function UserNav() {
   
   const handleNameChange = (newName: string) => {
       if(user) {
-          const updatedUser = {...user, displayName: newName };
-          setUser(updatedUser);
           const name = newName || user.email || '';
           setInitials(name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
       }
