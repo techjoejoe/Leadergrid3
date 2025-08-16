@@ -195,4 +195,3 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
     </div>
   );
 }
-
