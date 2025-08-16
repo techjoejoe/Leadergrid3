@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -52,6 +53,31 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      setError("Please enter your email address to reset your password.");
+      return;
+    }
+    setIsResettingPassword(true);
+    setError(null);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Check your inbox for a link to reset your password.",
+      });
+    } catch (error: any) {
+      setError("Could not send reset email. Make sure the email is correct.");
+      toast({
+        title: "Error",
+        description: "Could not send reset email. Make sure the email is registered.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  }
 
 
   return (
@@ -80,9 +106,15 @@ export default function LoginPage() {
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
-                  <Link href="#" className="ml-auto inline-block text-sm underline">
-                    Forgot your password?
-                  </Link>
+                  <Button 
+                    type="button"
+                    variant="link" 
+                    onClick={handlePasswordReset} 
+                    disabled={isResettingPassword}
+                    className="ml-auto inline-block text-sm underline p-0 h-auto"
+                  >
+                    {isResettingPassword ? "Sending..." : "Forgot your password?"}
+                  </Button>
                 </div>
                 <Input 
                   id="password" 
