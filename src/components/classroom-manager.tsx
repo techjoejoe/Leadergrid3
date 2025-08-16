@@ -226,22 +226,14 @@ export function ClassroomManager({ classId }: { classId: string }) {
     if (!selectedStudent) return;
     setIsLoading(true);
     try {
-        const batch = writeBatch(db);
         const pointsToAdjust = adjustmentType === 'add' ? values.points : -values.points;
 
-        // 1. Update user's global lifetime points
-        const userRef = doc(db, 'users', selectedStudent.id);
-        batch.update(userRef, {
-            lifetimePoints: increment(pointsToAdjust)
-        });
-
-        // 2. Update user's class-specific points
+        // ONLY update user's class-specific points. Do NOT touch lifetime points.
         const rosterRef = doc(db, 'classes', classId, 'roster', selectedStudent.id);
-        batch.update(rosterRef, {
+        
+        await updateDoc(rosterRef, {
             classPoints: increment(pointsToAdjust)
         });
-
-        await batch.commit();
 
         toast({
             title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
@@ -250,7 +242,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
     } catch(error) {
         console.error("Error updating points:", error);
-        toast({ title: 'Error', description: 'Could not update student points.', variant: 'destructive'});
+        toast({ title: 'Error', description: 'Could not update student points. They may not be enrolled in this class.', variant: 'destructive'});
     } finally {
         setIsLoading(false);
         setIsPointsDialogOpen(false);
@@ -578,7 +570,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
               {adjustmentType === 'add' ? 'Add' : 'Subtract'} Points for {selectedStudent?.displayName}
             </DialogTitle>
             <DialogDescription>
-              Enter the number of points and a reason for the adjustment. This will affect both class and lifetime points.
+              Enter the number of points and a reason for the adjustment. This will affect ONLY class points.
             </DialogDescription>
           </DialogHeader>
           <Form {...pointsForm}>
@@ -625,4 +617,5 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
 

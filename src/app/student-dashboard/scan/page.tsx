@@ -84,6 +84,20 @@ export default function ScanPage() {
 
                 // Handle Class Check-in QR Codes
                 if (data && data.type === 'class-check-in') {
+                    const rosterRef = doc(db, "classes", data.classId, "roster", studentInfo.id);
+                    const rosterSnap = await getDoc(rosterRef);
+
+                    // Ensure user is actually enrolled in the class before proceeding
+                    if (!rosterSnap.exists()) {
+                         toast({
+                            title: 'Not Enrolled',
+                            description: `You are not enrolled in "${data.className}". Please join the class first.`,
+                            variant: 'destructive',
+                        });
+                        router.push('/student-dashboard');
+                        return;
+                    }
+
                     const onTimeDeadline = parseISO(data.onTimeUntil);
                     const isOnTime = isBefore(now, onTimeDeadline);
                     const pointsAwarded = isOnTime ? (data.points || 0) : 0;
@@ -119,19 +133,7 @@ export default function ScanPage() {
                         batch.update(userRef, { lifetimePoints: increment(pointsAwarded) });
                         
                         // 4. Increment class-specific points
-                        const rosterRef = doc(db, "classes", data.classId, "roster", studentInfo.id);
-                        const rosterSnap = await getDoc(rosterRef);
-                        if (rosterSnap.exists()) {
-                            batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
-                        } else {
-                            // This handles the edge case where a student scanned a check-in code
-                            // for a class they haven't formally "joined" in the UI yet.
-                            // We can enroll them automatically.
-                            const studentDoc = await getDoc(userRef);
-                            if (studentDoc.exists()){
-                                batch.set(rosterRef, { ...studentDoc.data(), classPoints: pointsAwarded });
-                            }
-                        }
+                        batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
                     }
 
                     await batch.commit();
@@ -277,4 +279,5 @@ export default function ScanPage() {
         </div>
     );
 }
+
 
