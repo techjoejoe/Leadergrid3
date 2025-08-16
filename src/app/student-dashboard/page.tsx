@@ -132,6 +132,12 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
         return () => clearTimeout(timeoutId);
     }, []);
 
+    const coinStyles = {
+        first: "border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]",
+        second: "border-slate-300 shadow-[0_0_15px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]",
+        third: "border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]"
+    }
+
     return (
          <div className={cn(
             "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg",
@@ -150,8 +156,12 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     }}
                 />
             ))}
-            {isFirst && <span className="absolute -top-10 text-8xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
-             <Avatar className={cn("h-20 w-20 border-4 border-white/50 z-10", isFirst && "h-32 w-32")}>
+            {isFirst && <span className="absolute -top-12 text-[5rem] drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
+             <Avatar className={cn("border-4 z-10", 
+                isFirst && `h-32 w-32 ${coinStyles.first}`,
+                isSecond && `h-24 w-24 ${coinStyles.second}`,
+                isThird && `h-24 w-24 ${coinStyles.third}`,
+             )}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
             </Avatar>
@@ -181,17 +191,12 @@ export default function StudentDashboardPage() {
     const auth = getAuth(app);
     const router = useRouter();
 
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
-
     const stableSetActiveClass = useCallback((cls: ClassInfo | null) => {
         setActiveClass(cls);
     }, []);
-    
 
     useEffect(() => {
-        if (!isClient) return;
+        setIsClient(true);
 
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
@@ -199,7 +204,7 @@ export default function StudentDashboardPage() {
                 setDisplayName(currentUser.displayName || 'Student');
                 setAvatarUrl(getAvatarFromStorage(currentUser.photoURL));
 
-                // Get classes from local storage once
+                // Get classes and active class from local storage once on mount
                 try {
                     const storedClasses = localStorage.getItem('joinedClasses');
                     const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
@@ -297,7 +302,7 @@ export default function StudentDashboardPage() {
         });
 
         return () => unsubscribe();
-    }, [auth, router, isClient, stableSetActiveClass]);
+    }, [auth, router, stableSetActiveClass]);
 
     // This effect runs when the activeClass changes to update the class-specific rank/points.
     useEffect(() => {
