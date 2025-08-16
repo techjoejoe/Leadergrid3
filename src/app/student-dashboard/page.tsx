@@ -146,21 +146,23 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
             isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 md:mt-16"
         )}>
             {sparkles.map(s => (
-                <div 
+                <span
                     key={s.id}
-                    className="absolute w-2 h-2 bg-white rounded-full animate-sparkle"
+                    className="absolute text-2xl animate-sparkle"
                     style={{
                         top: s.y,
                         left: s.x,
                         animationDelay: s.delay,
                     }}
-                />
+                >
+                    ✨
+                </span>
             ))}
-            {isFirst && <span className="absolute -top-12 text-[5rem] drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
+            {isFirst && <span className="absolute -top-8 text-7xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("border-4 z-10", 
-                isFirst && `h-32 w-32 ${coinStyles.first}`,
-                isSecond && `h-24 w-24 ${coinStyles.second}`,
-                isThird && `h-24 w-24 ${coinStyles.third}`,
+                isFirst && `h-40 w-40 ${coinStyles.first}`,
+                isSecond && `h-28 w-28 ${coinStyles.second}`,
+                isThird && `h-28 w-28 ${coinStyles.third}`,
              )}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>

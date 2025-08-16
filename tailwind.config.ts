@@ -100,18 +100,9 @@ export default {
             }
         },
         'sparkle': {
-            '0%': {
-                transform: 'scale(0) rotate(0deg)',
-                opacity: '0.5'
-            },
-            '50%': {
-                transform: 'scale(1.5) rotate(180deg)',
-                opacity: '1'
-            },
-            '100%': {
-                transform: 'scale(0) rotate(360deg)',
-                opacity: '0'
-            }
+            '0%': { transform: 'scale(0) rotate(0deg)', opacity: '0.5' },
+            '50%': { transform: 'scale(1.5) rotate(180deg)', opacity: '1' },
+            '100%': { transform: 'scale(0) rotate(360deg)', opacity: '0' }
         },
         'float': {
             '0%, 100%': { transform: 'translateY(0)' },
