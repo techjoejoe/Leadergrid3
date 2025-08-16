@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandSeparator } from "@/components/ui/command"
 import type { ClassInfo } from "./join-class-dialog"
 import { cn } from "@/lib/utils"
-import { db } from "@/lib/firebase"
+import { db, app } from "@/lib/firebase"
 import { collection, getDocs, query, where, addDoc, Timestamp, writeBatch, doc, getDoc } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
@@ -42,7 +42,7 @@ interface StudentClassManagerProps {
 export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, onActiveClassChange }: StudentClassManagerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false)
-  const auth = getAuth();
+  const auth = getAuth(app);
   const { toast } = useToast();
 
   const joinForm = useForm<FormValues>({
@@ -214,3 +214,5 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
     </div>
   );
 }
+
+    

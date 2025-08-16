@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -79,6 +80,11 @@ export function ProfileEditor({
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const imgRef = useRef<HTMLImageElement>(null);
   const [isCropping, setIsCropping] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -331,7 +337,7 @@ export function ProfileEditor({
             });
         }
         
-        if (typeof window !== 'undefined') {
+        if (isClient) {
           window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
         }
         onAvatarChange(croppedImageUrl);
@@ -531,3 +537,5 @@ export function ProfileEditor({
     </Dialog>
   );
 }
+
+    

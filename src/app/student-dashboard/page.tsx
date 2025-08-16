@@ -100,11 +100,14 @@ const getAvatarFromStorage = (photoURL: string | null) => {
 }
 
 const formatName = (name: string) => {
+    if (!name) return 'Anonymous';
     const parts = name.split(' ');
     if (parts.length > 1) {
         const firstName = parts[0];
         const lastName = parts[parts.length - 1];
-        return `${firstName} ${lastName.charAt(0)}.`;
+        if (lastName) {
+            return `${firstName} ${lastName.charAt(0)}.`;
+        }
     }
     return name;
 }
@@ -218,28 +221,9 @@ export default function StudentDashboardPage() {
             if (currentUser) {
                 setUser(currentUser);
                 setDisplayName(currentUser.displayName || 'Student');
-                setAvatarUrl(getAvatarFromStorage(currentUser.photoURL));
-
-                // Get classes and active class from local storage once on mount
-                try {
-                    const storedClasses = localStorage.getItem('joinedClasses');
-                    const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
-                    setJoinedClasses(classes);
-
-                    const storedActiveClassCode = localStorage.getItem('activeClassCode');
-                    if (storedActiveClassCode && storedActiveClassCode !== 'all') {
-                        const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
-                        stableSetActiveClass(foundActiveClass || null);
-                    } else {
-                        stableSetActiveClass(null);
-                    }
-                } catch (error) {
-                    console.error("Failed to parse classes from localStorage", error);
-                    localStorage.removeItem('joinedClasses');
-                    localStorage.removeItem('activeClassCode');
-                    setJoinedClasses([]);
-                    stableSetActiveClass(null);
-                }
+                
+                // Moved avatar and class loading into a separate client-side effect
+                // to avoid server/client mismatch.
 
                 // Setup listener for user document
                 const userDocRef = doc(db, 'users', currentUser.uid);
@@ -320,6 +304,33 @@ export default function StudentDashboardPage() {
 
         return () => unsubscribe();
     }, [auth, router, stableSetActiveClass]);
+
+    // New effect to handle client-side only state
+    useEffect(() => {
+        if (isClient && user) {
+             setAvatarUrl(getAvatarFromStorage(user.photoURL));
+             // Get classes and active class from local storage once on mount
+            try {
+                const storedClasses = localStorage.getItem('joinedClasses');
+                const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
+                setJoinedClasses(classes);
+
+                const storedActiveClassCode = localStorage.getItem('activeClassCode');
+                if (storedActiveClassCode && storedActiveClassCode !== 'all') {
+                    const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
+                    stableSetActiveClass(foundActiveClass || null);
+                } else {
+                    stableSetActiveClass(null);
+                }
+            } catch (error) {
+                console.error("Failed to parse classes from localStorage", error);
+                localStorage.removeItem('joinedClasses');
+                localStorage.removeItem('activeClassCode');
+                setJoinedClasses([]);
+                stableSetActiveClass(null);
+            }
+        }
+    }, [isClient, user, stableSetActiveClass]);
 
     // This effect runs when the activeClass changes to update the class-specific rank/points.
     useEffect(() => {
@@ -536,16 +547,16 @@ export default function StudentDashboardPage() {
                                     <div className="space-y-4">
                                         <Card className="bg-yellow-400/10 border-yellow-500/30">
                                             <CardContent className="p-3 text-center">
-                                                <p className="text-xs text-yellow-200/80">Class Rank</p>
-                                                <p className="text-2xl font-bold text-white">{studentData.classRank > 0 ? `#${studentData.classRank}` : '--'}</p>
-                                                <p className="text-xs font-semibold text-yellow-300">{studentData.classPoints.toLocaleString()} pts</p>
+                                                <div className="text-xs text-yellow-200/80">Class Rank</div>
+                                                <div className="text-2xl font-bold text-white">{studentData.classRank > 0 ? `#${studentData.classRank}` : '--'}</div>
+                                                <div className="text-xs font-semibold text-yellow-300">{studentData.classPoints.toLocaleString()} pts</div>
                                             </CardContent>
                                         </Card>
                                         <Card className="bg-purple-400/10 border-purple-500/30">
                                              <CardContent className="p-3 text-center">
-                                                <p className="text-xs text-purple-200/80">School Rank</p>
-                                                <p className="text-2xl font-bold text-white">{studentData.schoolRank > 0 ? `#${studentData.schoolRank}` : '--'}</p>
-                                                <p className="text-xs font-semibold text-purple-300">{studentData.points.toLocaleString()} pts</p>
+                                                <div className="text-xs text-purple-200/80">School Rank</div>
+                                                <div className="text-2xl font-bold text-white">{studentData.schoolRank > 0 ? `#${studentData.schoolRank}` : '--'}</div>
+                                                <div className="text-xs font-semibold text-purple-300">{studentData.points.toLocaleString()} pts</div>
                                             </CardContent>
                                         </Card>
                                     </div>
@@ -727,7 +738,4 @@ export default function StudentDashboardPage() {
     );
 }
 
-
-
-
-
+    
