@@ -71,6 +71,7 @@ export function ProfileEditor({
   const { toast } = useToast();
   const auth = getAuth(app);
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imgSrc, setImgSrc] = useState('');
@@ -151,7 +152,7 @@ export function ProfileEditor({
   }
 
   const handleAvatarClick = () => {
-    if (!user) return;
+    if (!user || isProcessingPhoto) return;
     fileInputRef.current?.click();
   };
   
@@ -212,6 +213,7 @@ export function ProfileEditor({
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setCrop(undefined); 
+      setIsProcessingPhoto(true);
       
       try {
         let imageDataUrl: string;
@@ -238,6 +240,8 @@ export function ProfileEditor({
               description: error.message || "Could not process the selected file.",
               variant: "destructive",
           });
+      } finally {
+        setIsProcessingPhoto(false);
       }
     }
   };
@@ -321,8 +325,10 @@ export function ProfileEditor({
         throw new Error("Crop dimensions are not valid");
     }
 
-    canvas.width = crop.width;
-    canvas.height = crop.height;
+    const targetWidth = crop.width * scaleX;
+    const targetHeight = crop.height * scaleY;
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     const ctx = canvas.getContext('2d');
 
@@ -332,19 +338,17 @@ export function ProfileEditor({
     
     const cropX = crop.x * scaleX;
     const cropY = crop.y * scaleY;
-    const cropWidth = crop.width * scaleX;
-    const cropHeight = crop.height * scaleY;
 
     ctx.drawImage(
       image,
       cropX,
       cropY,
-      cropWidth,
-      cropHeight,
+      targetWidth,
+      targetHeight,
       0,
       0,
-      crop.width,
-      crop.height
+      targetWidth,
+      targetHeight
     );
 
     return canvas.toDataURL('image/jpeg');
@@ -377,19 +381,37 @@ export function ProfileEditor({
             <div className="grid gap-6 py-4">
             <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                <AvatarImage src={currentAvatar} />
-                <AvatarFallback>{currentInitial}</AvatarFallback>
+                  {isProcessingPhoto ? (
+                      <div className="flex items-center justify-center h-full w-full bg-muted rounded-full">
+                          <Loader2 className="h-8 w-8 animate-spin" />
+                      </div>
+                  ) : (
+                    <>
+                      <AvatarImage src={currentAvatar} />
+                      <AvatarFallback>{currentInitial}</AvatarFallback>
+                    </>
+                  )}
                 </Avatar>
-                <Button variant="outline" onClick={handleAvatarClick}>
-                <UploadCloud className="mr-2" />
-                Upload Photo
+                <Button variant="outline" onClick={handleAvatarClick} disabled={isProcessingPhoto}>
+                  {isProcessingPhoto ? (
+                    <>
+                      <Loader2 className="mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="mr-2" />
+                      Upload Photo
+                    </>
+                  )}
                 </Button>
                 <input
-                type="file"
-                ref={fileInputRef}
-                onChange={onSelectFile}
-                className="hidden"
-                accept="image/*"
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={onSelectFile}
+                  className="hidden"
+                  accept="image/*"
+                  disabled={isProcessingPhoto}
                 />
             </div>
 
@@ -424,7 +446,7 @@ export function ProfileEditor({
                     </FormItem>
                     )}
                 />
-                 <Button type="submit" disabled={isLoading} className="w-full">
+                 <Button type="submit" disabled={isLoading || isProcessingPhoto} className="w-full">
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                 </Button>
@@ -466,7 +488,7 @@ export function ProfileEditor({
                     )}
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsCropping(false)}>Cancel</Button>
-                    <Button onClick={handleCropComplete}>
+                    <Button onClick={handleCropComplete} disabled={!completedCrop}>
                         <Check className="mr-2 h-4 w-4" />
                         Save Crop
                     </Button>
