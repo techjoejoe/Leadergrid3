@@ -87,9 +87,11 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile 
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">{displayName}</p>
-              <p className="text-xs leading-none text-muted-foreground">
-                {user?.email || "admin@leadergrid.com"}
-              </p>
+              {user?.email &&
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user.email}
+                </p>
+              }
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
