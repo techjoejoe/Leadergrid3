@@ -79,6 +79,7 @@ interface PointHistoryRecord {
     points: number; 
     date: string; 
     type: 'scan' | 'manual' | 'engagement';
+    timestamp: Timestamp;
 }
 
 interface LeaderboardEntry {
@@ -257,7 +258,7 @@ export default function StudentDashboardPage() {
 
                 // Setup listener for point history
                  const historyRef = collection(db, "point_history");
-                 const q = query(historyRef, where("studentId", "==", currentUser.uid), orderBy("timestamp", "desc"), limit(50));
+                 const q = query(historyRef, where("studentId", "==", currentUser.uid), limit(50));
                  const unsubHistory = onSnapshot(q, (snapshot) => {
                      const history = snapshot.docs.map(doc => {
                          const data = doc.data();
@@ -267,8 +268,11 @@ export default function StudentDashboardPage() {
                              points: data.points,
                              date: formatDistanceToNow((data.timestamp as Timestamp).toDate(), { addSuffix: true }),
                              type: data.type,
+                             timestamp: data.timestamp
                          }
                      });
+                     // Sort on the client
+                     history.sort((a,b) => b.timestamp.toMillis() - a.timestamp.toMillis());
                      setPointHistory(history);
                  });
 
