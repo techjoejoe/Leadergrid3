@@ -240,8 +240,7 @@ export function ProfileEditor({
               description: error.message || "Could not process the selected file.",
               variant: "destructive",
           });
-      } finally {
-        setIsProcessingPhoto(false);
+          setIsProcessingPhoto(false);
       }
     }
   };
@@ -262,7 +261,8 @@ export function ProfileEditor({
       height
     );
     setCrop(newCrop);
-    setCompletedCrop(newCrop);
+    setCompletedCrop(newCrop); // Set initial crop as completed
+    setIsProcessingPhoto(false);
   }
 
   const handleCropComplete = async () => {
@@ -487,9 +487,9 @@ export function ProfileEditor({
                         </div>
                     )}
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsCropping(false)}>Cancel</Button>
-                    <Button onClick={handleCropComplete} disabled={!completedCrop}>
-                        <Check className="mr-2 h-4 w-4" />
+                    <Button variant="outline" onClick={() => {setIsCropping(false); setImgSrc('');}}>Cancel</Button>
+                    <Button onClick={handleCropComplete} disabled={isProcessingPhoto || !completedCrop}>
+                         {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
                         Save Crop
                     </Button>
                 </DialogFooter>
