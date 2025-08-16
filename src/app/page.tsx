@@ -63,7 +63,7 @@ export default function Home() {
                 <Logo width={600} height={128} />
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight font-headline sm:text-5xl md:text-6xl lg:text-7xl">
-              Gamify Learning. Inspire Growth.
+              Gamify Everything. Inspire Results.
             </h1>
             <p className="max-w-3xl mx-auto mt-6 text-lg text-muted-foreground sm:text-xl">
               LeaderGrid is a powerful platform that transforms your school's engagement through gamification. Motivate students, track progress, and build a vibrant learning community.
