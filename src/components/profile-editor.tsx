@@ -319,13 +319,20 @@ export function ProfileEditor({
         throw new Error("Crop dimensions are not valid");
     }
 
-    canvas.width = crop.width * scaleX;
-    canvas.height = crop.height * scaleY;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
     const ctx = canvas.getContext('2d');
 
     if (!ctx) {
         throw new Error('No 2d context');
     }
+
+    const pixelRatio = window.devicePixelRatio;
+    canvas.width = crop.width * pixelRatio * scaleX;
+    canvas.height = crop.height * pixelRatio * scaleY;
+
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    ctx.imageSmoothingQuality = 'high';
 
     ctx.drawImage(
         image,
