@@ -75,11 +75,11 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
 
   useEffect(() => {
-    // Fetch all students in the system for the "Add Student" dialog
+    // Fetch all users in the system for the "Add Student" dialog
     async function fetchAllStudents() {
         try {
             const usersCollection = collection(db, 'users');
-            const q = query(usersCollection, where('role', '==', 'student'));
+            const q = query(usersCollection); // No role filter
             const querySnapshot = await getDocs(q);
             const fetchedStudents = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -309,20 +309,20 @@ export function ClassroomManager({ classId }: { classId: string }) {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                    <CardTitle>Student Roster</CardTitle>
-                    <CardDescription>Manage points for students in this class.</CardDescription>
+                    <CardTitle>Class Roster</CardTitle>
+                    <CardDescription>Manage points for anyone enrolled in this class.</CardDescription>
                 </div>
                 <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
                     <DialogTrigger asChild>
                         <Button>
                             <UserPlus className="mr-2 h-4 w-4" />
-                            Add Student
+                            Add User
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                         <DialogHeader>
-                            <DialogTitle>Add Student to Class</DialogTitle>
-                            <DialogDescription>Search for a student to enroll them in this class.</DialogDescription>
+                            <DialogTitle>Add User to Class</DialogTitle>
+                            <DialogDescription>Search for a user to enroll them in this class.</DialogDescription>
                         </DialogHeader>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -352,7 +352,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                    </Button>
                                </div>
                            )) : (
-                               <p className="text-center text-muted-foreground p-4">No students found matching your search.</p>
+                               <p className="text-center text-muted-foreground p-4">No users found matching your search.</p>
                            )}
                         </div>
                     </DialogContent>
@@ -367,7 +367,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead>Student</TableHead>
+                        <TableHead>User</TableHead>
                         <TableHead className="w-[150px] text-center">Total Points</TableHead>
                         <TableHead className="w-[250px] text-right">Actions</TableHead>
                     </TableRow>
@@ -403,7 +403,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                      {enrolledStudents.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
-                                No students enrolled in this class yet.
+                                No users enrolled in this class yet.
                             </TableCell>
                         </TableRow>
                      )}
@@ -484,7 +484,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     </Button>
                 </div>
                 <CardDescription>
-                   {checkedInCount} of {enrolledStudents.length} students have checked in today across all sessions.
+                   {checkedInCount} of {enrolledStudents.length} users have checked in today across all sessions.
                 </CardDescription>
             </CardHeader>
             <CardContent>

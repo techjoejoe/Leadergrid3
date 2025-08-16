@@ -25,7 +25,8 @@ export default function StudentsPage() {
     useEffect(() => {
         async function fetchStudents() {
             try {
-                const q = query(collection(db, "users"), where("role", "==", "student"), orderBy("displayName", "asc"));
+                // Fetch all users, regardless of role
+                const q = query(collection(db, "users"), orderBy("displayName", "asc"));
                 const querySnapshot = await getDocs(q);
                 const fetchedStudents = querySnapshot.docs.map(doc => {
                     const data = doc.data();
@@ -55,14 +56,14 @@ export default function StudentsPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="font-headline text-3xl flex items-center gap-2"><Users /> Student Roster</CardTitle>
-                <CardDescription>A list of all students registered in the system.</CardDescription>
+                <CardTitle className="font-headline text-3xl flex items-center gap-2"><Users /> User Roster</CardTitle>
+                <CardDescription>A list of all users (students and admins) in the system.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Student</TableHead>
+                            <TableHead>User</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -97,7 +98,7 @@ export default function StudentsPage() {
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={3} className="h-24 text-center">
-                                    No students found.
+                                    No users found.
                                 </TableCell>
                             </TableRow>
                         )}

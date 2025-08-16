@@ -35,7 +35,7 @@ export default function BuzzerPage() {
             setIsLoading(true);
             try {
                 const usersCollection = collection(db, 'users');
-                const q = query(usersCollection, where('role', '==', 'student'));
+                const q = query(usersCollection); // No role filter, get all users
                 const querySnapshot = await getDocs(q);
                 const fetchedStudents = querySnapshot.docs.map(doc => ({
                     id: doc.id,
@@ -44,7 +44,7 @@ export default function BuzzerPage() {
                 setStudents(fetchedStudents);
             } catch (error) {
                  console.error("Error fetching students:", error);
-                 toast({ title: 'Error', description: 'Could not load students.', variant: 'destructive' });
+                 toast({ title: 'Error', description: 'Could not load users.', variant: 'destructive' });
             } finally {
                 setIsLoading(false);
             }
@@ -81,7 +81,7 @@ export default function BuzzerPage() {
                     <CardTitle className="font-headline text-3xl flex items-center gap-2">
                         <Zap /> Live Buzzer
                     </CardTitle>
-                    <CardDescription>Click a student's name to simulate them buzzing in. The first to buzz wins!</CardDescription>
+                    <CardDescription>Click a user's name to simulate them buzzing in. The first to buzz wins!</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading ? (

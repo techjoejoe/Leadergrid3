@@ -78,7 +78,8 @@ export default function LeaderboardPage() {
             setIsLoading(true);
             try {
                 const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('role', '==', 'student'), limit(50));
+                // Remove role filter to include all users
+                const q = query(usersRef, limit(50));
                 const querySnapshot = await getDocs(q);
 
                 const data = querySnapshot.docs.map((doc) => {
@@ -118,7 +119,7 @@ export default function LeaderboardPage() {
                  <div className="text-center">
                     <User className="h-16 w-16 mx-auto text-white/50 mb-4" />
                     <h1 className="text-4xl font-headline font-bold mb-2">Leaderboard is Empty</h1>
-                    <p className="text-white/80 mb-6">No students have earned points yet. Check back later!</p>
+                    <p className="text-white/80 mb-6">No users have earned points yet. Check back later!</p>
                      <Button variant="outline" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
                         <Link href="/student-dashboard">
                             <ArrowLeft className="mr-2 h-4 w-4" />

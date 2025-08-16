@@ -177,7 +177,7 @@ export default function StudentDashboardPage() {
 
                 // Fetch top 5 students for leaderboard
                 const usersRef = collection(db, 'users');
-                const leaderboardQuery = query(usersRef, where('role', '==', 'student'));
+                const leaderboardQuery = query(usersRef); // No role filter
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
                      const data = snapshot.docs.map((doc) => {
                         const userData = doc.data();
@@ -516,5 +516,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
