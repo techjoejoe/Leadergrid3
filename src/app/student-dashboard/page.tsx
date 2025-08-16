@@ -280,7 +280,6 @@ export default function StudentDashboardPage() {
                              timestamp: data.timestamp
                          }
                      });
-                     // Sort on the client to avoid needing a composite index
                      history.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
                      setPointHistory(history.slice(0, 50));
                  }, (error) => {
@@ -323,28 +322,39 @@ export default function StudentDashboardPage() {
 
     // This effect runs when the activeClass changes to update the class-specific rank/points.
     useEffect(() => {
-        if (user) {
-            if (activeClass) {
-                const classRosterRef = doc(db, 'classes', activeClass.id, 'roster', user.uid);
-                const unsub = onSnapshot(classRosterRef, (doc) => {
-                     if (doc.exists()) {
-                        const classData = doc.data();
-                        setStudentData(prev => ({ ...prev, classPoints: classData.classPoints || 0 }));
-                        
-                        const rosterQuery = query(collection(db, 'classes', activeClass.id, 'roster'), orderBy('classPoints', 'desc'));
-                        getDocs(rosterQuery).then(snapshot => {
-                            const rank = snapshot.docs.findIndex(d => d.id === user.uid) + 1;
-                            setStudentData(prev => ({...prev, classRank: rank > 0 ? rank : 0 }));
-                        });
-                    } else {
-                        setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
-                    }
-                });
-                return () => unsub();
-            } else {
-                 setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
-            }
+        if (!user) return;
+    
+        let unsubPoints: () => void = () => {};
+        let unsubRank: () => void = () => {};
+    
+        if (activeClass) {
+            // Listener for the student's own points in the class
+            const classRosterRef = doc(db, 'classes', activeClass.id, 'roster', user.uid);
+            unsubPoints = onSnapshot(classRosterRef, (doc) => {
+                if (doc.exists()) {
+                    const classData = doc.data();
+                    setStudentData(prev => ({ ...prev, classPoints: classData.classPoints || 0 }));
+                } else {
+                    setStudentData(prev => ({ ...prev, classPoints: 0, classRank: 0 }));
+                }
+            });
+    
+            // Listener for the whole class roster to calculate rank
+            const rosterQuery = query(collection(db, 'classes', activeClass.id, 'roster'), orderBy('classPoints', 'desc'));
+            unsubRank = onSnapshot(rosterQuery, (snapshot) => {
+                const rank = snapshot.docs.findIndex(d => d.id === user.uid) + 1;
+                setStudentData(prev => ({ ...prev, classRank: rank > 0 ? rank : 0 }));
+            });
+    
+        } else {
+            // If no class is active, reset class-specific data
+            setStudentData(prev => ({ ...prev, classPoints: 0, classRank: 0 }));
         }
+    
+        return () => {
+            unsubPoints();
+            unsubRank();
+        };
     }, [activeClass, user]);
 
     // Effect to update the displayed leaderboard data
@@ -715,6 +725,7 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
 
 
 
