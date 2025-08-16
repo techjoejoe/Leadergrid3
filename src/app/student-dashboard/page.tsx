@@ -13,7 +13,7 @@ import {
     Loader2,
     QrCode,
     View,
-    Crown,
+    Crown as CrownIcon,
     Separator,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -151,7 +151,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     }}
                 />
             ))}
-            {isFirst && <Crown className="absolute -top-5 h-10 w-10 text-yellow-300 drop-shadow-lg" />}
+            {isFirst && <span className="absolute -top-5 text-4xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("h-20 w-20 border-4 border-white/50 z-10", isFirst && "h-32 w-32")}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
@@ -311,23 +311,22 @@ export default function StudentDashboardPage() {
             try {
                 const classes: ClassInfo[] = JSON.parse(storedClasses);
                 setJoinedClasses(classes);
-
-                const storedActiveClassCode = localStorage.getItem('activeClassCode');
-                if (storedActiveClassCode) {
-                    const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
-                    setActiveClass(foundActiveClass || null);
-                } else if (classes.length > 0) {
-                    setActiveClass(classes[0]);
-                    localStorage.setItem('activeClassCode', classes[0].id);
-                }
             } catch (error) {
                 console.error("Failed to parse classes from localStorage", error);
                 localStorage.removeItem('joinedClasses');
-                localStorage.removeItem('activeClassCode');
-                setJoinedClasses([]);
             }
         }
-    }, [isClient]);
+        
+        const storedActiveClassCode = localStorage.getItem('activeClassCode');
+        if (storedActiveClassCode) {
+            const foundActiveClass = joinedClasses.find(c => c.id === storedActiveClassCode);
+            setActiveClass(foundActiveClass || (joinedClasses.length > 0 ? joinedClasses[0] : null));
+        } else if (joinedClasses.length > 0) {
+            setActiveClass(joinedClasses[0]);
+            localStorage.setItem('activeClassCode', joinedClasses[0].id);
+        }
+
+    }, [isClient, joinedClasses]);
 
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses.filter(c => c.id !== newClass.id), newClass];
@@ -543,7 +542,7 @@ export default function StudentDashboardPage() {
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
                                 <CardTitle className="font-headline flex items-center gap-2">
-                                    <Crown className="text-yellow-400" />
+                                    <CrownIcon className="text-yellow-400" />
                                     Live Leaderboard
                                 </CardTitle>
                                 <CardDescription>Top Team Members across the company.</CardDescription>
@@ -616,4 +615,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
