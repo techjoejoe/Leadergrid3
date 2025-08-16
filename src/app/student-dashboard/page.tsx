@@ -13,7 +13,7 @@ import {
     Loader2,
     QrCode,
     View,
-    Crown as CrownIcon,
+    Crown,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -268,7 +268,7 @@ export default function StudentDashboardPage() {
 
                 // Setup listener for point history
                  const historyRef = collection(db, "point_history");
-                 const q = query(historyRef, where("studentId", "==", currentUser.uid));
+                 const q = query(historyRef, where("studentId", "==", currentUser.uid), orderBy("timestamp", "desc"), limit(50));
                  const unsubHistory = onSnapshot(q, (snapshot) => {
                      const history: PointHistoryRecord[] = snapshot.docs.map(doc => {
                          const data = doc.data();
@@ -281,9 +281,7 @@ export default function StudentDashboardPage() {
                              timestamp: data.timestamp
                          }
                      });
-                     // Sort on the client
-                     history.sort((a,b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-                     setPointHistory(history.slice(0, 50));
+                     setPointHistory(history);
                  }, (error) => {
                     console.error("Firestore Error fetching point history: ", error);
                  });
@@ -597,19 +595,18 @@ export default function StudentDashboardPage() {
                     
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
+                            <div className='flex-1'>
                                 <CardTitle className="font-headline flex items-center gap-2">
-                                    <CrownIcon className="text-yellow-400" />
-                                    {activeClass ? `${activeClass.name} Leaderboard` : 'Live Leaderboard'}
+                                    <Crown className="text-yellow-400" />
+                                    {activeClass ? (
+                                        <div className='flex items-center gap-3'>
+                                            {activeClass.name}
+                                            <UiBadge variant="secondary">{activeClass.code}</UiBadge>
+                                        </div>
+                                    ) : 'Live Leaderboard'}
                                 </CardTitle>
                                 <CardDescription>
-                                    {activeClass ? (
-                                        <>
-                                            Join Code: <UiBadge variant="secondary">{activeClass.code}</UiBadge>
-                                        </>
-                                    ) : (
-                                        'Top members across the company.'
-                                    )}
+                                    {activeClass ? 'Top members in this class.' : 'Top members across the company.'}
                                 </CardDescription>
                             </div>
                              <Button asChild variant="outline" className="group">
