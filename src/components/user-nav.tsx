@@ -25,7 +25,7 @@ const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
 
 const getAvatarFromStorage = (photoURL: string | null) => {
     if (photoURL && (photoURL.startsWith('adminAvatar_') || photoURL.startsWith('studentAvatar_'))) {
-        const storedAvatar = localStorage.getItem(photoURL);
+        const storedAvatar = typeof window !== 'undefined' ? localStorage.getItem(photoURL) : null;
         return storedAvatar;
     }
     return photoURL;
@@ -38,10 +38,16 @@ export function UserNav() {
   const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
   const [initials, setInitials] = useState("AD");
-  
   const [user, setUser] = useState<User | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+    
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
@@ -56,7 +62,7 @@ export function UserNav() {
         }
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, isClient]);
 
   const handleLogout = async () => {
     try {
@@ -83,6 +89,14 @@ export function UserNav() {
   }
 
   const displayName = user?.displayName || "Admin";
+
+  if (!isClient) {
+    return (
+        <Avatar className="h-8 w-8">
+            <AvatarFallback>AD</AvatarFallback>
+        </Avatar>
+    );
+  }
 
   return (
     <>
