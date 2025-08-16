@@ -55,6 +55,7 @@ import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface StudentData {
     points: number; 
@@ -80,6 +81,7 @@ interface LeaderboardEntry {
   points: number;
   avatar: string | null;
   initial: string;
+  rank: number;
 }
 
 const getAvatarFromStorage = (photoURL: string | null) => {
@@ -87,6 +89,27 @@ const getAvatarFromStorage = (photoURL: string | null) => {
         return localStorage.getItem(photoURL);
     }
     return photoURL;
+}
+
+const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => {
+    const isFirst = rank === 1;
+
+    return (
+         <div className={cn(
+            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105",
+            isFirst ? "bg-yellow-500/80 row-span-2" : "bg-yellow-500/50",
+            rank === 2 && "md:mt-8",
+            rank === 3 && "md:mt-16"
+        )}>
+            {isFirst && <Crown className="absolute -top-5 h-10 w-10 text-yellow-300 drop-shadow-lg" />}
+             <Avatar className={cn("h-20 w-20 border-4 border-white/50", isFirst && "h-24 w-24")}>
+                {user.avatar && <AvatarImage src={user.avatar} />}
+                <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
+            </Avatar>
+            <h3 className="mt-2 font-bold text-lg">{user.name}</h3>
+            <p className="text-sm font-semibold text-yellow-200">{user.points.toLocaleString()} pts</p>
+        </div>
+    )
 }
 
 export default function StudentDashboardPage() {
@@ -177,11 +200,11 @@ export default function StudentDashboardPage() {
                     });
                 });
 
-                // Fetch top 5 students for leaderboard
+                // Fetch top 10 students for leaderboard
                 const usersRef = collection(db, 'users');
-                const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(5));
+                const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(10));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
-                     const data = snapshot.docs.map((doc) => {
+                     const data = snapshot.docs.map((doc, index) => {
                         const userData = doc.data();
                         return {
                             id: doc.id,
@@ -189,6 +212,7 @@ export default function StudentDashboardPage() {
                             points: userData.lifetimePoints || 0,
                             avatar: getAvatarFromStorage(userData.photoURL),
                             initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
+                            rank: index + 1,
                         };
                     });
                     setLeaderboard(data);
@@ -313,6 +337,9 @@ export default function StudentDashboardPage() {
     const displayEmail = user?.email || 'student@example.com';
     const displayAvatar = avatarUrl || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
+
+    const top3 = leaderboard.slice(0, 3);
+    const rest = leaderboard.slice(3);
 
     return (
         <>
@@ -483,18 +510,34 @@ export default function StudentDashboardPage() {
                             <CardDescription>Top Team Members across the company.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-4">
-                                {leaderboard.map((student, index) => (
-                                    <div key={student.id} className="flex items-center gap-4">
-                                        <div className="font-bold text-lg w-6 text-center">{index + 1}</div>
-                                        <Avatar className="h-10 w-10">
-                                            <AvatarImage src={student.avatar || undefined} />
-                                            <AvatarFallback>{student.initial}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex-1 font-medium">{student.name}</div>
-                                        <UiBadge variant="secondary" className="font-bold">{student.points.toLocaleString()} pts</UiBadge>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Podium */}
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:col-span-2">
+                                    {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
+                                    {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
+                                    {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
+                                </div>
+                                {/* Rest of the list */}
+                                {rest.length > 0 && (
+                                     <div className="md:col-span-2 space-y-2 mt-4">
+                                        {rest.map((student) => (
+                                            <div key={student.id} className="flex items-center gap-4 p-2 rounded-md bg-secondary/10">
+                                                <div className="font-bold text-lg w-6 text-center text-muted-foreground">{student.rank}</div>
+                                                <Avatar className="h-10 w-10">
+                                                    <AvatarImage src={student.avatar || undefined} />
+                                                    <AvatarFallback>{student.initial}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 font-medium">{student.name}</div>
+                                                <UiBadge variant="secondary" className="font-bold">{student.points.toLocaleString()} pts</UiBadge>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                )}
+                                {leaderboard.length === 0 && (
+                                     <div className="md:col-span-2 text-center text-muted-foreground py-8">
+                                        <p>The leaderboard is currently empty.</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
