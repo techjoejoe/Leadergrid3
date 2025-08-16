@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Loader2, QrCode, CalendarIcon, Trash2, Clipboard } from 'lucide-react';
+import { Download, Loader2, QrCode, CalendarIcon, Trash2, Clipboard, Users } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
@@ -39,7 +39,9 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, orderBy } from 'firebase/firestore';
+import type { Class } from './create-class-form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 
 const formSchema = z.object({
@@ -49,6 +51,7 @@ const formSchema = z.object({
   expirationDate: z.date({
     required_error: "An expiration date is required.",
   }),
+  classId: z.string().optional(), // Can be 'general' or a specific class ID
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,19 +63,23 @@ interface GeneratedQrCode {
     description: string;
     points: number;
     expirationDate: string; // Store as ISO string
+    className?: string;
 }
 
 export function QrCodeGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [generatedCodes, setGeneratedCodes] = useState<GeneratedQrCode[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    async function fetchCodes() {
+    async function fetchData() {
+        setIsFetching(true);
         try {
+            // Fetch active QR codes
             const now = Timestamp.now();
-            const q = query(collection(db, "qrcodes"), where("expirationDate", ">", now));
+            const q = query(collection(db, "qrcodes"), where("expirationDate", ">", now), orderBy("expirationDate", "desc"));
             const querySnapshot = await getDocs(q);
             const fetchedCodes: GeneratedQrCode[] = querySnapshot.docs.map(doc => {
               const data = doc.data();
@@ -82,22 +89,29 @@ export function QrCodeGenerator() {
                 name: data.name,
                 description: data.description,
                 points: data.points,
-                expirationDate: (data.expirationDate as Timestamp).toDate().toISOString()
+                expirationDate: (data.expirationDate as Timestamp).toDate().toISOString(),
+                className: data.className
               }
             });
             setGeneratedCodes(fetchedCodes);
+
+            // Fetch classes
+            const classesSnapshot = await getDocs(collection(db, "classes"));
+            const fetchedClasses = classesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Class));
+            setClasses(fetchedClasses);
+
         } catch (error) {
-            console.error("Failed to fetch QR codes from Firestore", error);
+            console.error("Failed to fetch data from Firestore", error);
             toast({
                 title: "Error",
-                description: "Could not fetch QR codes.",
+                description: "Could not fetch required data.",
                 variant: "destructive"
             });
         } finally {
             setIsFetching(false);
         }
     }
-    fetchCodes();
+    fetchData();
   }, [toast]);
 
   const form = useForm<FormValues>({
@@ -107,6 +121,7 @@ export function QrCodeGenerator() {
       description: '',
       points: 10,
       expirationDate: addDays(new Date(), 30),
+      classId: 'general',
     },
   });
 
@@ -114,16 +129,20 @@ export function QrCodeGenerator() {
     setIsLoading(true);
     
     const expirationDate = new Date(values.expirationDate);
-    expirationDate.setHours(17, 0, 0, 0); // 5:00:00 PM CST-ish
+    expirationDate.setHours(17, 0, 0, 0); // 5:00:00 PM
+    
+    const selectedClass = classes.find(c => c.id === values.classId);
     
     const qrId = `qr-${Date.now()}`;
     const qrCodeValue = JSON.stringify({
         id: qrId,
-        type: 'Activity', // Add type for general activities
+        type: 'Activity',
         name: values.name,
         description: values.description,
         points: values.points,
         expires: expirationDate.toISOString(),
+        classId: selectedClass?.id || null,
+        className: selectedClass?.name || null,
     });
 
     const newCodeForDb = {
@@ -132,16 +151,15 @@ export function QrCodeGenerator() {
         description: values.description,
         points: values.points,
         expirationDate: Timestamp.fromDate(expirationDate),
+        classId: selectedClass?.id || null,
+        className: selectedClass?.name || null,
     };
 
     try {
         const docRef = await addDoc(collection(db, 'qrcodes'), newCodeForDb);
         const newCodeForState: GeneratedQrCode = {
             id: docRef.id,
-            value: qrCodeValue,
-            name: values.name,
-            description: values.description,
-            points: values.points,
+            ...newCodeForDb,
             expirationDate: expirationDate.toISOString(),
         }
         setGeneratedCodes(prev => [newCodeForState, ...prev]);
@@ -149,14 +167,14 @@ export function QrCodeGenerator() {
             title: "QR Code Generated!",
             description: "The new QR code has been added to the list.",
         })
-        form.reset({ name: '', description: '', points: 10, expirationDate: addDays(new Date(), 30) });
+        form.reset({ name: '', description: '', points: 10, expirationDate: addDays(new Date(), 30), classId: 'general' });
 
     } catch (error) {
         console.error("Error creating QR code:", error);
          toast({
             title: "Error",
             description: "Failed to save the QR code.",
-            variant: "destructive",
+            variant: "destructive"
         })
     } finally {
         setIsLoading(false);
@@ -288,6 +306,29 @@ export function QrCodeGenerator() {
                     )}
                 />
                 <FormField
+                  control={form.control}
+                  name="classId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Class</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a class or general" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="general">General (No Class)</SelectItem>
+                          {classes.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
                     control={form.control}
                     name="points"
                     render={({ field }) => (
@@ -365,8 +406,8 @@ export function QrCodeGenerator() {
       <div className="lg:col-span-2">
         <Card className='h-full'>
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">Generated Codes</CardTitle>
-                <CardDescription>The list of all QR codes you've created.</CardDescription>
+                <CardTitle className="font-headline text-2xl">Active Codes</CardTitle>
+                <CardDescription>The list of all unexpired QR codes you've created.</CardDescription>
             </CardHeader>
             <CardContent>
                 {isFetching ? (
@@ -380,15 +421,15 @@ export function QrCodeGenerator() {
                         <p className='font-semibold text-center'>Your generated QR codes will appear here.</p>
                     </div>
                 ) : (
-                    <ScrollArea className="h-[450px]">
+                    <ScrollArea className="h-[550px]">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[80px]">Preview</TableHead>
                                     <TableHead>Name</TableHead>
+                                    <TableHead>Class</TableHead>
                                     <TableHead>Points</TableHead>
                                     <TableHead>Expires</TableHead>
-                                    <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -438,17 +479,16 @@ export function QrCodeGenerator() {
                                             <div className='text-sm text-muted-foreground'>{code.description}</div>
                                         </TableCell>
                                     <TableCell>
+                                        {code.className ? (
+                                            <Badge variant="outline">{code.className}</Badge>
+                                        ) : (
+                                            <Badge>General</Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
                                             <Badge variant="secondary">{code.points} pts</Badge>
                                     </TableCell>
                                     <TableCell>{isValidDate ? format(date, "Pp") : "Invalid Date"}</TableCell>
-                                    <TableCell>
-                                            <Badge
-                                                variant={getStatus(code.expirationDate) === "Active" ? "default" : "destructive"}
-                                                className={getStatus(code.expirationDate) === 'Active' ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}
-                                            >
-                                                {getStatus(code.expirationDate)}
-                                            </Badge>
-                                    </TableCell>
                                     <TableCell className="text-right space-x-1">
                                     <Button variant="outline" size="icon" onClick={() => downloadQRCode(code)}>
                                             <Download className="h-4 w-4" />
@@ -489,4 +529,3 @@ export function QrCodeGenerator() {
     </div>
   );
 }
-

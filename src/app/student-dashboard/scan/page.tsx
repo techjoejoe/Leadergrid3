@@ -178,6 +178,21 @@ export default function ScanPage() {
                         router.push('/student-dashboard');
                         return;
                     }
+
+                    // If the QR code is for a specific class, check enrollment first
+                    if (data.classId) {
+                        const rosterRef = doc(db, "classes", data.classId, "roster", user.uid);
+                        const rosterSnap = await getDoc(rosterRef);
+                        if (!rosterSnap.exists()) {
+                            toast({
+                                title: "Not Enrolled",
+                                description: `You must be in the "${data.className}" class to use this QR code.`,
+                                variant: "destructive"
+                            });
+                            router.push('/student-dashboard');
+                            return;
+                        }
+                    }
                     
                     const pointsAwarded = data.points || 0;
 
@@ -202,10 +217,8 @@ export default function ScanPage() {
                         // 3. Increment class points if a classId is present
                         if(data.classId) {
                            const rosterRef = doc(db, "classes", data.classId, "roster", studentInfo.id);
-                           const rosterSnap = await getDoc(rosterRef);
-                           if(rosterSnap.exists()){
-                             batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
-                           }
+                           // No need for a second getDoc, we already confirmed existence
+                           batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
                         }
 
                         // 4. Create point history record
@@ -303,6 +316,3 @@ export default function ScanPage() {
         </div>
     );
 }
-
-
-
