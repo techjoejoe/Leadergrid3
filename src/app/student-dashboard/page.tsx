@@ -519,16 +519,16 @@ export default function StudentDashboardPage() {
                                 </div>
                                 {/* Rest of the list */}
                                 {rest.length > 0 && (
-                                     <div className="md:col-span-2 space-y-2 mt-4">
+                                     <div className="md:col-span-2 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {rest.map((student) => (
-                                            <div key={student.id} className="flex items-center gap-4 p-2 rounded-md bg-secondary/10">
-                                                <div className="font-bold text-lg w-6 text-center text-muted-foreground">{student.rank}</div>
-                                                <Avatar className="h-10 w-10">
+                                            <div key={student.id} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/10 border border-border">
+                                                <div className="font-bold text-xl w-8 text-center text-muted-foreground">{student.rank}</div>
+                                                <Avatar className="h-12 w-12">
                                                     <AvatarImage src={student.avatar || undefined} />
                                                     <AvatarFallback>{student.initial}</AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex-1 font-medium">{student.name}</div>
-                                                <UiBadge variant="secondary" className="font-bold">{student.points.toLocaleString()} pts</UiBadge>
+                                                <UiBadge variant="secondary" className="font-bold text-base">{student.points.toLocaleString()} pts</UiBadge>
                                             </div>
                                         ))}
                                     </div>
