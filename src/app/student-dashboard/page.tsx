@@ -401,11 +401,11 @@ export default function StudentDashboardPage() {
                                                 <p className="text-xs font-semibold text-yellow-300">{studentData.classPoints.toLocaleString()} pts</p>
                                             </CardContent>
                                         </Card>
-                                        <Card className="bg-yellow-400/10 border-yellow-500/30">
+                                        <Card className="bg-purple-400/10 border-purple-500/30">
                                              <CardContent className="p-3 text-center">
-                                                <p className="text-xs text-yellow-200/80">Total Points</p>
+                                                <p className="text-xs text-purple-200/80">School Rank</p>
                                                 <p className="text-2xl font-bold text-white">{studentData.schoolRank > 0 ? `#${studentData.schoolRank}` : '--'}</p>
-                                                <p className="text-xs font-semibold text-yellow-300">{studentData.points.toLocaleString()} pts</p>
+                                                <p className="text-xs font-semibold text-purple-300">{studentData.points.toLocaleString()} pts</p>
                                             </CardContent>
                                         </Card>
                                     </div>
@@ -545,4 +545,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
 
