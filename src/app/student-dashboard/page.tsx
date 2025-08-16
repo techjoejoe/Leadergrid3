@@ -274,10 +274,7 @@ export default function StudentDashboardPage() {
             const storedActiveClassCode = localStorage.getItem('activeClassCode');
             if (storedActiveClassCode) {
                 const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
-                setActiveClass(foundActiveClass || classes[0] || null);
-            } else if (classes.length > 0) {
-                setActiveClass(classes[0]);
-                localStorage.setItem('activeClassCode', classes[0].id);
+                setActiveClass(foundActiveClass || null);
             }
         } catch (error) {
             console.error("Failed to parse data from localStorage", error);
