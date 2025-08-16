@@ -14,7 +14,6 @@ import {
     QrCode,
     View,
     Crown as CrownIcon,
-    Separator,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -196,6 +195,27 @@ export default function StudentDashboardPage() {
                 setDisplayName(currentUser.displayName || 'Student');
                 setAvatarUrl(getAvatarFromStorage(currentUser.photoURL));
 
+                // Get classes from local storage
+                try {
+                    const storedClasses = localStorage.getItem('joinedClasses');
+                    const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
+                    setJoinedClasses(classes);
+
+                    const storedActiveClassCode = localStorage.getItem('activeClassCode');
+                    if (storedActiveClassCode) {
+                        const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
+                        setActiveClass(foundActiveClass || (classes.length > 0 ? classes[0] : null));
+                    } else if (classes.length > 0) {
+                        setActiveClass(classes[0]);
+                        localStorage.setItem('activeClassCode', classes[0].id);
+                    }
+
+                } catch (error) {
+                    console.error("Failed to parse classes from localStorage", error);
+                    localStorage.removeItem('joinedClasses');
+                }
+
+
                 // Setup listener for user document
                 const userDocRef = doc(db, 'users', currentUser.uid);
                 const unsubUser = onSnapshot(userDocRef, (doc) => {
@@ -301,32 +321,6 @@ export default function StudentDashboardPage() {
              setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
         }
     }, [activeClass, user]);
-
-
-    useEffect(() => {
-        if (!isClient) return;
-
-        const storedClasses = localStorage.getItem('joinedClasses');
-        if (storedClasses) {
-            try {
-                const classes: ClassInfo[] = JSON.parse(storedClasses);
-                setJoinedClasses(classes);
-            } catch (error) {
-                console.error("Failed to parse classes from localStorage", error);
-                localStorage.removeItem('joinedClasses');
-            }
-        }
-        
-        const storedActiveClassCode = localStorage.getItem('activeClassCode');
-        if (storedActiveClassCode) {
-            const foundActiveClass = joinedClasses.find(c => c.id === storedActiveClassCode);
-            setActiveClass(foundActiveClass || (joinedClasses.length > 0 ? joinedClasses[0] : null));
-        } else if (joinedClasses.length > 0) {
-            setActiveClass(joinedClasses[0]);
-            localStorage.setItem('activeClassCode', joinedClasses[0].id);
-        }
-
-    }, [isClient, joinedClasses]);
 
     const handleJoinClass = (newClass: ClassInfo) => {
         const updatedClasses = [...joinedClasses.filter(c => c.id !== newClass.id), newClass];
