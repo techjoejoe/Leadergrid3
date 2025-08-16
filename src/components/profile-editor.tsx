@@ -96,6 +96,12 @@ export function ProfileEditor({
     }
   }, [open, currentDisplayName, currentEmail, form]);
 
+  useEffect(() => {
+    if (imgSrc) {
+      setIsCropping(true);
+    }
+  }, [imgSrc]);
+
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
     setIsLoading(true);
@@ -225,7 +231,6 @@ export function ProfileEditor({
         }
         
         setImgSrc(imageDataUrl);
-        setIsCropping(true);
 
       } catch (error: any) {
           toast({
@@ -316,8 +321,8 @@ export function ProfileEditor({
         throw new Error("Crop dimensions are not valid");
     }
 
-    canvas.width = crop.width * scaleX;
-    canvas.height = crop.height * scaleY;
+    canvas.width = crop.width;
+    canvas.height = crop.height;
 
     const ctx = canvas.getContext('2d');
 
@@ -338,8 +343,8 @@ export function ProfileEditor({
       cropHeight,
       0,
       0,
-      cropWidth,
-      cropHeight
+      crop.width,
+      crop.height
     );
 
     return canvas.toDataURL('image/jpeg');
