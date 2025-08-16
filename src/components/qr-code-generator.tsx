@@ -30,6 +30,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp } from 'firebase/firestore';
@@ -357,14 +364,34 @@ export function QrCodeGenerator() {
                                     return (
                                     <TableRow key={code.id}>
                                     <TableCell>
-                                            <div className="p-1 bg-white rounded-md w-14 h-14">
-                                                <QRCodeSVG
-                                                    id={`qr-code-svg-${code.id}`} 
-                                                    value={code.value} 
-                                                    size={52}
-                                                    includeMargin={false}
-                                                />
-                                            </div>
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <div className="p-1 bg-white rounded-md w-14 h-14 cursor-pointer">
+                                                    <QRCodeSVG
+                                                        id={`qr-code-svg-${code.id}`} 
+                                                        value={code.value} 
+                                                        size={52}
+                                                        includeMargin={false}
+                                                    />
+                                                </div>
+                                            </DialogTrigger>
+                                            <DialogContent className="max-w-md">
+                                                <DialogHeader>
+                                                    <DialogTitle>{code.name}</DialogTitle>
+                                                </DialogHeader>
+                                                <div className="flex flex-col items-center justify-center p-4">
+                                                    <div className="p-4 bg-white rounded-lg">
+                                                        <QRCodeSVG
+                                                            value={code.value}
+                                                            size={256}
+                                                            includeMargin={true}
+                                                        />
+                                                    </div>
+                                                    <p className="mt-4 text-sm text-muted-foreground">{code.description}</p>
+                                                    <p className="mt-2 text-lg font-bold text-primary">{code.points} Points</p>
+                                                </div>
+                                            </DialogContent>
+                                        </Dialog>
                                     </TableCell>
                                     <TableCell>
                                             <div className='font-medium'>{code.name}</div>
