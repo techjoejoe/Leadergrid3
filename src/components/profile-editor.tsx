@@ -31,7 +31,7 @@ import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css';
 import { getAuth, sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
-import { doc, updateDoc, increment, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc, setDoc } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -292,9 +292,23 @@ export function ProfileEditor({
         if (user.uid !== 'mock-user-id') {
             const userDocRef = doc(db, "users", user.uid);
             
-            const userDoc = await getDoc(userDocRef);
-            const hadPhoto = userDoc.exists() && !!userDoc.data().photoURL;
+            // Get or Create user document
+            const userDocSnap = await getDoc(userDocRef);
+            let hadPhoto = false;
 
+            if (!userDocSnap.exists()) {
+                // If doc doesn't exist, create it.
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    displayName: user.displayName,
+                    email: user.email,
+                    role: storageKey === 'adminAvatar' ? 'admin' : 'student'
+                });
+            } else {
+                hadPhoto = !!userDocSnap.data().photoURL;
+            }
+
+            // Now, we can safely update
             await updateProfile(user, { photoURL: photoUrlIdentifier });
             await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
             
@@ -342,7 +356,6 @@ export function ProfileEditor({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
-    // Ensure crop dimensions are defined
     if (typeof crop.width === 'undefined' || typeof crop.height === 'undefined' || typeof crop.x === 'undefined' || typeof crop.y === 'undefined') {
         throw new Error("Crop dimensions are not valid");
     }
@@ -354,17 +367,22 @@ export function ProfileEditor({
     if (!ctx) {
       throw new Error("No 2d context");
     }
+    
+    const cropX = crop.x * scaleX;
+    const cropY = crop.y * scaleY;
+    const cropWidth = crop.width * scaleX;
+    const cropHeight = crop.height * scaleY;
 
     ctx.drawImage(
       image,
-      crop.x * scaleX,
-      crop.y * scaleY,
-      crop.width * scaleX,
-      crop.height * scaleY,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
       0,
       0,
-      crop.width * scaleX,
-      crop.height * scaleY
+      cropWidth,
+      cropHeight
     );
     
     return canvas.toDataURL("image/jpeg");
@@ -515,5 +533,3 @@ export function ProfileEditor({
     </Dialog>
   );
 }
-
-    
