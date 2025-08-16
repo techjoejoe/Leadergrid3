@@ -82,6 +82,13 @@ interface LeaderboardEntry {
   initial: string;
 }
 
+const getAvatarFromStorage = (photoURL: string | null) => {
+    if (photoURL && (photoURL.startsWith('studentAvatar_') || photoURL.startsWith('adminAvatar_'))) {
+        return localStorage.getItem(photoURL);
+    }
+    return photoURL;
+}
+
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [badges, setBadges] = useState<Badge[]>([]);
@@ -102,12 +109,6 @@ export default function StudentDashboardPage() {
         setIsClient(true);
     }, []);
     
-    const getAvatarFromStorage = (photoURL: string | null) => {
-        if (photoURL && photoURL.startsWith('studentAvatar_')) {
-            return localStorage.getItem(photoURL);
-        }
-        return photoURL;
-    }
 
     useEffect(() => {
         if (!isClient) return;
@@ -545,5 +546,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-

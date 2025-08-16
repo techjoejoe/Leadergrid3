@@ -23,6 +23,14 @@ import { useState, useEffect } from "react";
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
 
+const getAvatarFromStorage = (photoURL: string | null) => {
+    if (photoURL && (photoURL.startsWith('adminAvatar_') || photoURL.startsWith('studentAvatar_'))) {
+        const storedAvatar = localStorage.getItem(photoURL);
+        return storedAvatar;
+    }
+    return photoURL;
+}
+
 export function UserNav() {
   const auth = getAuth(app);
   const router = useRouter();
@@ -34,14 +42,6 @@ export function UserNav() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const getAvatarFromStorage = (photoURL: string | null) => {
-        if (photoURL && photoURL.startsWith('adminAvatar_')) {
-            const storedAvatar = localStorage.getItem(photoURL);
-            return storedAvatar;
-        }
-        return photoURL;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
