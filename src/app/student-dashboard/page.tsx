@@ -170,7 +170,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     ✨
                 </span>
             ))}
-            {isFirst && <span className="absolute -top-5 text-7xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
+            {isFirst && <span className="absolute top-0 text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("border-4 z-10", 
                 isFirst && `h-40 w-40 ${coinStyles.first}`,
                 isSecond && `h-28 w-28 ${coinStyles.second}`,
@@ -666,3 +666,4 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
