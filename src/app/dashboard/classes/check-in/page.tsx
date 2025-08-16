@@ -6,28 +6,23 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle, Award, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Award, Clock, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import Confetti from 'react-confetti';
 import { Progress } from '@/components/ui/progress';
 import { addMinutes, format, isBefore, parseISO } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, getDocs, doc, getDoc } from 'firebase/firestore';
 
-// Mock data - In a real app, you'd fetch this from Firestore
-const mockStudents = [
-  { id: 'stu_1', name: 'Alex Thompson' },
-  { id: 'stu_2', name: 'Brianna Miller' },
-  { id: 'stu_3', name: 'Charlie Patel' },
-  { id: 'stu_4', name: 'David Lee' },
-  { id: 'stu_5', name: 'Emily Suzuki' },
-];
+interface Student {
+    id: string;
+    displayName: string;
+    email: string;
+}
 
-const mockClassDetails = {
-    "cls-1": { name: "10th Grade Biology" },
-    "cls-2": { name: "Intro to Creative Writing" },
-    "cls-3": { name: "Advanced Placement Calculus" },
+interface ClassDetails {
+    name: string;
 }
 
 interface CheckInRecord {
@@ -45,24 +40,52 @@ const BONUS_POINTS = 100;
 export default function CheckInPage({ params }: { params: { classId: string } }) {
     const searchParams = useSearchParams();
     const { toast } = useToast();
-    const classId = params.classId;
+    const { classId } = params;
 
     const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
     const [qrValue, setQrValue] = useState('');
     const [bonusAwarded, setBonusAwarded] = useState(false);
+    const [students, setStudents] = useState<Student[]>([]);
+    const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     
     const onTimeUntilParam = searchParams.get('onTimeUntil');
     const sessionNameParam = searchParams.get('sessionName') || 'Class Check-in';
 
-    // Memoize deadline so it doesn't change on re-renders
     const onTimeDeadline = useMemo(() => {
         return onTimeUntilParam ? parseISO(onTimeUntilParam) : addMinutes(new Date(), 5);
     }, [onTimeUntilParam]);
 
-    const className = mockClassDetails[classId as keyof typeof mockClassDetails]?.name || "Selected Class";
-    const totalStudents = mockStudents.length;
+    useEffect(() => {
+        async function fetchData() {
+            setIsLoading(true);
+            try {
+                const classDocRef = doc(db, 'classes', classId);
+                const classDocSnap = await getDoc(classDocRef);
+                if (classDocSnap.exists()) {
+                    setClassDetails(classDocSnap.data() as ClassDetails);
+                }
 
-    // QR Value generation, now includes deadline, class name, and description.
+                const rosterCollection = collection(db, `classes/${classId}/roster`);
+                const rosterSnapshot = await getDocs(rosterCollection);
+                const fetchedStudents = rosterSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+                setStudents(fetchedStudents);
+
+            } catch (error) {
+                console.error("Error fetching class/student data:", error);
+                toast({ title: 'Error', description: 'Could not load required data.', variant: 'destructive' });
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        if (classId) {
+            fetchData();
+        }
+    }, [classId, toast]);
+
+    const className = classDetails?.name || "Selected Class";
+    const totalStudents = students.length;
+
     useEffect(() => {
         setQrValue(JSON.stringify({
             type: 'class-check-in',
@@ -75,8 +98,8 @@ export default function CheckInPage({ params }: { params: { classId: string } })
         }));
     }, [classId, className, sessionNameParam, onTimeDeadline]);
 
-    // Listen for real-time check-ins from Firestore
      useEffect(() => {
+        if (!classId || !sessionNameParam) return;
         const q = query(collection(db, "checkIns"), where("classId", "==", classId), where("sessionName", "==", sessionNameParam));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -86,7 +109,6 @@ export default function CheckInPage({ params }: { params: { classId: string } })
                     const newRecord = change.doc.data() as CheckInRecord;
                     newRecords.push(newRecord);
 
-                    // Show toast for new check-ins
                     toast({
                         description: `${newRecord.studentName} just checked in for "${newRecord.sessionName}" ${newRecord.isOnTime ? 'on time' : 'late'}!`
                     });
@@ -108,11 +130,10 @@ export default function CheckInPage({ params }: { params: { classId: string } })
         }, { onTimeCount: 0, lateCount: 0 });
     }, [checkInLog]);
 
-    const checkedInPercentage = (checkInLog.length / totalStudents) * 100;
-    const allCheckedIn = checkInLog.length === totalStudents;
+    const checkedInPercentage = totalStudents > 0 ? (checkInLog.length / totalStudents) * 100 : 0;
+    const allCheckedIn = totalStudents > 0 && checkInLog.length === totalStudents;
     const allOnTime = allCheckedIn && lateCount === 0;
 
-     // Effect to award bonus
     useEffect(() => {
         if (allOnTime && !bonusAwarded) {
             setBonusAwarded(true);
@@ -122,9 +143,16 @@ export default function CheckInPage({ params }: { params: { classId: string } })
                 className: 'bg-yellow-500 text-white',
                 duration: 10000,
             });
-            // In a real app, you would now write these bonus points to each student in Firestore
         }
     }, [allOnTime, bonusAwarded, toast]);
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-slate-900">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+        )
+    }
 
 
     return (
@@ -174,7 +202,7 @@ export default function CheckInPage({ params }: { params: { classId: string } })
                     
                     {!allCheckedIn && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 max-h-[400px] overflow-y-auto pr-2">
-                            {mockStudents.map(student => {
+                            {students.map(student => {
                                 const record = checkInLog.find(log => log.studentId === student.id);
                                 const isCheckedIn = !!record;
                                 const isOnTime = record?.isOnTime ?? false;
@@ -182,7 +210,7 @@ export default function CheckInPage({ params }: { params: { classId: string } })
                                 return (
                                     <div key={student.id} className={`flex items-center gap-3 p-2 rounded-md transition-all duration-300 ${isCheckedIn ? (isOnTime ? 'bg-green-500/20 text-white' : 'bg-yellow-500/20 text-white') : 'bg-slate-700/50 text-slate-400'}`}>
                                         <CheckCircle className={`h-5 w-5 transition-all duration-300 ${isCheckedIn ? (isOnTime ? 'text-green-400' : 'text-yellow-500') : 'text-slate-600'}`} />
-                                        <span className="font-medium">{student.name}</span>
+                                        <span className="font-medium">{student.displayName}</span>
                                     </div>
                                 )
                             })}

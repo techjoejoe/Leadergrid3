@@ -8,11 +8,8 @@ import { ArrowLeft, Crown, Loader2, Star, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
-import { db, app } from "@/lib/firebase";
-import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { awardLeaderboardViewPoints } from "@/lib/engagement-service";
-import { useToast } from "@/hooks/use-toast";
+import { db } from "@/lib/firebase";
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 interface LeaderboardEntry {
   rank: number;
@@ -24,11 +21,14 @@ interface LeaderboardEntry {
 }
 
 const formatName = (name: string) => {
+    if (!name) return 'Anonymous';
     const parts = name.split(' ');
     if (parts.length > 1) {
         const firstName = parts[0];
         const lastName = parts[parts.length - 1];
-        return `${firstName} ${lastName.charAt(0)}.`;
+        if (lastName) {
+            return `${firstName} ${lastName.charAt(0)}.`;
+        }
     }
     return name;
 }
@@ -75,32 +75,27 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
 export default function LeaderboardPage() {
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const auth = getAuth(app);
-    const { toast } = useToast();
-    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        setIsClient(true);
         async function fetchLeaderboard() {
             setIsLoading(true);
             try {
                 const usersRef = collection(db, 'users');
-                // Remove role filter to include all users
-                const q = query(usersRef, limit(50));
+                const q = query(usersRef, orderBy("lifetimePoints", "desc"), limit(50));
                 const querySnapshot = await getDocs(q);
 
-                const data = querySnapshot.docs.map((doc) => {
+                const data = querySnapshot.docs.map((doc, index) => {
                     const userData = doc.data();
+                    const name = userData.displayName || 'Anonymous';
                     return {
                         id: doc.id,
-                        name: userData.displayName || 'Anonymous',
+                        name: name,
                         points: userData.lifetimePoints || 0,
                         avatar: userData.photoURL || null,
-                        initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
+                        initial: (name).substring(0, 2).toUpperCase(),
+                        rank: index + 1
                     };
-                })
-                .sort((a,b) => b.points - a.points)
-                .map((user, index) => ({...user, rank: index + 1}));
+                });
 
                 setLeaderboardData(data);
             } catch (error) {
@@ -111,23 +106,6 @@ export default function LeaderboardPage() {
         }
         fetchLeaderboard();
     }, []);
-
-    useEffect(() => {
-        if (!isClient) return;
-
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                 const activeClassCode = localStorage.getItem('activeClassCode');
-                 const activeClassId = (activeClassCode && activeClassCode !== 'all') ? activeClassCode : null;
-                const result = await awardLeaderboardViewPoints(currentUser.uid, currentUser.displayName || 'Student', activeClassId);
-                if (result) {
-                    toast(result);
-                }
-            }
-        });
-
-        return () => unsubscribe();
-    }, [auth, toast, isClient]);
 
     if (isLoading) {
         return (
