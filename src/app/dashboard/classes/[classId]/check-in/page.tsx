@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, Award, Clock, Loader2 } from 'lucide-react';
@@ -36,9 +36,8 @@ interface CheckInRecord {
 const CHECK_IN_POINTS = 25;
 const BONUS_POINTS = 100;
 
-export default function CheckInPage() {
+export default function CheckInPage({ params }: { params: { classId: string } }) {
     const searchParams = useSearchParams();
-    const params = useParams();
     const { toast } = useToast();
     const classId = params.classId as string;
 
