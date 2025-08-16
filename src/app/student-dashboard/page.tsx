@@ -585,22 +585,30 @@ export default function StudentDashboardPage() {
                                     {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
                                 </div>
                                 {/* Rest of Leaderboard */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
                                     {rest.map((user) => (
-                                        <div key={user.rank} className="flex items-center justify-between p-3 bg-secondary/10 rounded-md">
-                                            <div className="flex items-center gap-3">
-                                                <span className="font-bold text-lg text-muted-foreground w-6 text-center">{user.rank}</span>
-                                                <Avatar className="h-10 w-10">
-                                                    {user.avatar && <AvatarImage src={user.avatar} />}
-                                                    <AvatarFallback>{user.initial}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="font-semibold">{formatName(user.name)}</p>
+                                        <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
+                                            {user.avatar ? (
+                                                <Image
+                                                    src={user.avatar}
+                                                    alt={user.name}
+                                                    fill
+                                                    className="object-cover transition-transform duration-300 group-hover:scale-110"
+                                                    unoptimized
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-secondary flex items-center justify-center">
+                                                    <span className="text-4xl font-bold text-secondary-foreground">{user.initial}</span>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-sm font-semibold text-yellow-400">
-                                                <Star className="h-4 w-4" />
-                                                <span>{user.points.toLocaleString()}</span>
+                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                                            <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
+                                            <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                                                <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
+                                                <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
+                                                    <Star className="h-3 w-3" />
+                                                    <span>{user.points.toLocaleString()} pts</span>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
