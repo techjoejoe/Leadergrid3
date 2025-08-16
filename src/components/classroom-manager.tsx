@@ -243,6 +243,18 @@ export function ClassroomManager({ classId }: { classId: string }) {
         const userRef = doc(db, 'users', selectedStudent.id);
         batch.update(userRef, { lifetimePoints: increment(pointsToAdjust) });
 
+        // 3. Create a point history record
+        const historyRef = doc(collection(db, 'point_history'));
+        batch.set(historyRef, {
+            studentId: selectedStudent.id,
+            studentName: selectedStudent.displayName || 'Anonymous',
+            points: pointsToAdjust,
+            reason: values.reason,
+            type: 'manual',
+            classId: classId,
+            timestamp: Timestamp.now()
+        });
+
         await batch.commit();
 
         toast({
@@ -627,6 +639,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
 
 
 

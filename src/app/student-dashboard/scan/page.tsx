@@ -134,6 +134,18 @@ export default function ScanPage() {
                         
                         // 4. Increment class-specific points
                         batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
+
+                        // 5. Create point history record
+                        const historyRef = doc(collection(db, 'point_history'));
+                        batch.set(historyRef, {
+                            studentId: studentInfo.id,
+                            studentName: studentInfo.name,
+                            points: pointsAwarded,
+                            reason: data.name,
+                            type: 'scan',
+                            classId: data.classId,
+                            timestamp: scanTimestamp
+                        });
                     }
 
                     await batch.commit();
@@ -195,6 +207,18 @@ export default function ScanPage() {
                              batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
                            }
                         }
+
+                        // 4. Create point history record
+                        const historyRef = doc(collection(db, 'point_history'));
+                        batch.set(historyRef, {
+                            studentId: studentInfo.id,
+                            studentName: studentInfo.name,
+                            points: pointsAwarded,
+                            reason: data.name,
+                            type: 'scan',
+                            classId: data.classId || null,
+                            timestamp: scanTimestamp
+                        });
                     }
 
                     await batch.commit();
@@ -279,5 +303,6 @@ export default function ScanPage() {
         </div>
     );
 }
+
 
 

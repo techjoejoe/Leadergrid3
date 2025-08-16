@@ -56,6 +56,7 @@ import { ProfileEditor } from '@/components/profile-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface StudentData {
     points: number; 
@@ -73,7 +74,12 @@ const initialStudentData: StudentData = {
 
 interface Badge { id: string, name: string; imageUrl: string; hint: string; }
 
-interface RecentActivity { description: string; points: number; date: string; }
+interface PointHistoryRecord { 
+    reason: string;
+    points: number; 
+    date: string; 
+    type: 'scan' | 'manual';
+}
 
 interface LeaderboardEntry {
   id: string;
@@ -115,7 +121,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
     const [badges, setBadges] = useState<Badge[]>([]);
-    const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+    const [pointHistory, setPointHistory] = useState<PointHistoryRecord[]>([]);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [displayName, setDisplayName] = useState('Student');
@@ -168,37 +174,21 @@ export default function StudentDashboardPage() {
                      setBadges(fetchedBadges);
                 });
 
-                // Setup listener for recent activity
-                 const scansRef = collection(db, "scans");
-                 const q = query(scansRef, where("studentId", "==", currentUser.uid), orderBy("scanDate", "desc"), limit(25));
-                 const unsubScans = onSnapshot(q, (snapshot) => {
-                     const activities = snapshot.docs.map(doc => {
+                // Setup listener for point history
+                 const historyRef = collection(db, "point_history");
+                 const q = query(historyRef, where("studentId", "==", currentUser.uid), orderBy("timestamp", "desc"), limit(50));
+                 const unsubHistory = onSnapshot(q, (snapshot) => {
+                     const history = snapshot.docs.map(doc => {
                          const data = doc.data();
                          return {
-                             description: data.activityName,
-                             points: data.pointsAwarded,
-                             date: formatDistanceToNow((data.scanDate as Timestamp).toDate(), { addSuffix: true })
+                             reason: data.reason,
+                             points: data.points,
+                             date: formatDistanceToNow((data.timestamp as Timestamp).toDate(), { addSuffix: true }),
+                             type: data.type,
                          }
-                     }).slice(0, 4);
-                     setRecentActivity(activities);
-                 }, (error) => {
-                    console.warn("Firestore query failed, likely due to a missing index. Falling back to client-side sorting for recent activity.", error);
-                    const fallbackQuery = query(scansRef, where("studentId", "==", currentUser.uid));
-                    getDocs(fallbackQuery).then(snapshot => {
-                         const activities = snapshot.docs.map(doc => {
-                            const data = doc.data();
-                            return {
-                                description: data.activityName,
-                                points: data.pointsAwarded,
-                                scanDate: (data.scanDate as Timestamp).toDate(),
-                                date: formatDistanceToNow((data.scanDate as Timestamp).toDate(), { addSuffix: true })
-                            }
-                        })
-                        .sort((a, b) => b.scanDate.getTime() - a.scanDate.getTime())
-                        .slice(0, 4);
-                        setRecentActivity(activities);
-                    });
-                });
+                     });
+                     setPointHistory(history);
+                 });
 
                 // Fetch top 10 students for leaderboard
                 const usersRef = collection(db, 'users');
@@ -222,7 +212,7 @@ export default function StudentDashboardPage() {
                 return () => {
                     unsubUser();
                     unsubBadges();
-                    unsubScans();
+                    unsubHistory();
                     unsubLeaderboard();
                 };
 
@@ -285,7 +275,7 @@ export default function StudentDashboardPage() {
     }, [isClient]);
 
     const handleJoinClass = (newClass: ClassInfo) => {
-        const updatedClasses = [...joinedClasses, newClass];
+        const updatedClasses = [...joinedClasses.filter(c => c.id !== newClass.id), newClass];
         setJoinedClasses(updatedClasses);
         localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
         handleActiveClassChange(newClass.id);
@@ -495,12 +485,20 @@ export default function StudentDashboardPage() {
                     </div>
                     
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline flex items-center gap-2">
-                                <Crown className="text-yellow-400" />
-                                Live Leaderboard
-                            </CardTitle>
-                            <CardDescription>Top Team Members across the company.</CardDescription>
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="font-headline flex items-center gap-2">
+                                    <Crown className="text-yellow-400" />
+                                    Live Leaderboard
+                                </CardTitle>
+                                <CardDescription>Top Team Members across the company.</CardDescription>
+                            </div>
+                             <Button asChild variant="outline" className="group">
+                                <Link href="/leaderboard">
+                                    View Full Leaderboard
+                                    <View className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -510,27 +508,6 @@ export default function StudentDashboardPage() {
                                     {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
                                     {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
                                 </div>
-                                {/* Rest of the list */}
-                                {rest.length > 0 && (
-                                     <div className="md:col-span-2 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {rest.map((student) => (
-                                            <div key={student.id} className="flex items-center gap-4 p-3 rounded-lg bg-secondary/10 border border-border">
-                                                <div className="font-bold text-xl w-8 text-center text-muted-foreground">{student.rank}</div>
-                                                <Avatar className="h-12 w-12">
-                                                    <AvatarImage src={student.avatar || undefined} />
-                                                    <AvatarFallback>{student.initial}</AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 font-medium">{student.name}</div>
-                                                <UiBadge variant="secondary" className="font-bold text-base">{student.points.toLocaleString()} pts</UiBadge>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                                {leaderboard.length === 0 && (
-                                     <div className="md:col-span-2 text-center text-muted-foreground py-8">
-                                        <p>The leaderboard is currently empty.</p>
-                                    </div>
-                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -538,19 +515,21 @@ export default function StudentDashboardPage() {
                     <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg">
                         <CardHeader>
                             <CardTitle className="font-headline flex items-center">
-                                <Activity className="mr-2" /> Recent Activity
+                                <Activity className="mr-2" /> Point History
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {recentActivity.length > 0 ? (
+                            {pointHistory.length > 0 ? (
                                 <div className="space-y-4">
-                                    {recentActivity.map((activity, index) => (
+                                    {pointHistory.map((item, index) => (
                                         <div key={index}>
                                             <div className="flex items-center justify-between">
-                                                <p className="font-medium">{activity.description}</p>
+                                                <p className="font-medium">{item.reason}</p>
                                                 <div className="flex items-center gap-4">
-                                                    <UiBadge variant="secondary">+{activity.points} pts</UiBadge>
-                                                    <span className="text-sm text-muted-foreground hidden sm:block">{activity.date}</span>
+                                                    <UiBadge variant={item.points > 0 ? 'secondary' : 'destructive'} className={cn(item.points > 0 ? "text-green-400" : "text-red-400")}>
+                                                        {item.points > 0 ? '+' : ''}{item.points} pts
+                                                    </UiBadge>
+                                                    <span className="text-sm text-muted-foreground hidden sm:block">{item.date}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -558,7 +537,7 @@ export default function StudentDashboardPage() {
                                 </div>
                             ) : (
                                 <div className="text-center text-muted-foreground py-8">
-                                    <p>Your recent activity will appear here once you start earning points and badges.</p>
+                                    <p>Your point history will appear here once you start earning points.</p>
                                 </div>
                             )}
                         </CardContent>
