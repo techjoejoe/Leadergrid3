@@ -305,7 +305,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
   
   const availableStudents = allStudents.filter(s => 
     !enrolledStudents.some(es => es.id === s.id) &&
-    (s.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || s.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    ((s.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) || (s.email || '').toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
 
@@ -345,7 +345,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                    <div className="flex items-center gap-3">
                                        <Avatar>
                                            {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
-                                           <AvatarFallback>{student.displayName.substring(0,2).toUpperCase()}</AvatarFallback>
+                                           <AvatarFallback>{student.displayName?.substring(0,2).toUpperCase() || '??'}</AvatarFallback>
                                        </Avatar>
                                        <div>
                                            <p className="font-medium">{student.displayName}</p>
@@ -627,6 +627,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
 
 
 
