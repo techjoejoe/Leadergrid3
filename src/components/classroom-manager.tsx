@@ -94,54 +94,60 @@ export function ClassroomManager({ classId }: { classId: string }) {
     fetchAllStudents();
   }, [toast]);
 
-  useEffect(() => {
+ useEffect(() => {
     setIsStudentsLoading(true);
     const enrollmentsQuery = query(collection(db, "class_enrollments"), where("classId", "==", classId));
-
-    const unsubscribe = onSnapshot(enrollmentsQuery, async (snapshot) => {
-        const studentIds = snapshot.docs.map(doc => doc.data().studentId);
+    
+    // Listen for changes in enrollments first
+    const unsubscribeEnrollments = onSnapshot(enrollmentsQuery, (snapshot) => {
+        const studentIds = [...new Set(snapshot.docs.map(doc => doc.data().studentId as string))];
         
-        // Ensure studentIds are unique before fetching
-        const uniqueStudentIds = [...new Set(studentIds)];
-
-        if (uniqueStudentIds.length === 0) {
+        if (studentIds.length === 0) {
             setEnrolledStudents([]);
             setIsStudentsLoading(false);
             return;
         }
 
-        // Fetch student details for each enrolled student
-        const studentPromises = uniqueStudentIds.map(async (studentId) => {
+        // For each student, create a real-time listener
+        const unsubscribers = studentIds.map(studentId => {
             const studentDocRef = doc(db, "users", studentId);
-            const studentDocSnap = await getDoc(studentDocRef);
-            if (studentDocSnap.exists()) {
-                return { id: studentDocSnap.id, ...studentDocSnap.data() } as Student;
-            }
-            return null;
+            return onSnapshot(studentDocRef, (studentDoc) => {
+                if (studentDoc.exists()) {
+                    const studentData = { id: studentDoc.id, ...studentDoc.data() } as Student;
+                    
+                    setEnrolledStudents(currentStudents => {
+                        const existingStudent = currentStudents.find(s => s.id === studentId);
+                        if (existingStudent) {
+                            // Update existing student
+                            return currentStudents.map(s => s.id === studentId ? studentData : s);
+                        } else {
+                            // Add new student
+                            return [...currentStudents, studentData];
+                        }
+                    });
+                } else {
+                     // Handle case where student doc might be deleted
+                    setEnrolledStudents(currentStudents => currentStudents.filter(s => s.id !== studentId));
+                }
+            });
         });
 
-        const fetchedStudentsData = (await Promise.all(studentPromises)).filter(Boolean) as Student[];
+        // Remove listeners for students who are no longer enrolled
+        setEnrolledStudents(currentStudents => currentStudents.filter(s => studentIds.includes(s.id)));
 
-        setEnrolledStudents(currentStudents => {
-            const newStudents = fetchedStudentsData.filter(fs => !currentStudents.some(cs => cs.id === fs.id));
-            const updatedStudents = currentStudents
-                .filter(cs => fetchedStudentsData.some(fs => fs.id === cs.id))
-                .map(cs => {
-                    const updatedData = fetchedStudentsData.find(fs => fs.id === cs.id);
-                    return updatedData ? { ...cs, ...updatedData } : cs;
-                });
-            return [...updatedStudents, ...newStudents];
-        });
-        
         setIsStudentsLoading(false);
 
+        // Return a cleanup function that unsubscribes from all student listeners
+        return () => {
+            unsubscribers.forEach(unsub => unsub());
+        };
     }, (error) => {
         console.error("Error fetching enrolled students:", error);
         toast({ title: 'Error', description: 'Could not load enrolled students.', variant: 'destructive' });
         setIsStudentsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeEnrollments();
 }, [classId, toast]);
 
   useEffect(() => {
@@ -566,5 +572,3 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
-
-    
