@@ -91,7 +91,7 @@ export default function ScanPage() {
                     if (!rosterSnap.exists()) {
                          toast({
                             title: 'Not Enrolled',
-                            description: `You are not enrolled in "${data.className}". Please join the class first.`,
+                            description: "You are not a member of this class, see trainer",
                             variant: 'destructive',
                         });
                         router.push('/student-dashboard');
@@ -186,7 +186,7 @@ export default function ScanPage() {
                         if (!rosterSnap.exists()) {
                             toast({
                                 title: "Not Enrolled",
-                                description: `You must be in the "${data.className}" class to use this QR code.`,
+                                description: "You are not a member of this class, see trainer",
                                 variant: "destructive"
                             });
                             router.push('/student-dashboard');
