@@ -191,7 +191,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
 
 export default function StudentDashboardPage() {
     const [studentData, setStudentData] = useState(initialStudentData);
-    const [badges, setBadges] = useState<Badge[]>([]);
+    const [userBadges, setUserBadges] = useState<Badge[]>([]);
     const [pointHistory, setPointHistory] = useState<PointHistoryRecord[]>([]);
     const [user, setUser] = useState<User | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -251,26 +251,25 @@ export default function StudentDashboardPage() {
                     }
                 });
                 
-                // Fetch badges
-                const unsubBadges = onSnapshot(collection(db, "badges"), (snapshot) => {
+                // Fetch user's badges
+                const unsubUserBadges = onSnapshot(query(collection(db, "user_badges"), where("userId", "==", currentUser.uid)), (snapshot) => {
                      const fetchedBadges = snapshot.docs.map(doc => {
                          const data = doc.data();
                          return {
                            id: doc.id,
-                           name: data.name,
-                           imageUrl: data.imageUrl,
-                           hint: data.name.toLowerCase().split(' ').slice(0,2).join(' ')
+                           name: data.badgeName,
+                           imageUrl: data.badgeImageUrl,
+                           hint: data.badgeName.toLowerCase().split(' ').slice(0,2).join(' ')
                          } as Badge;
                      });
-                     // For now, we assume user has all badges. A real app would have a user_badges collection.
-                     setBadges(fetchedBadges);
+                     setUserBadges(fetchedBadges);
                 });
 
                 // Setup listener for point history
                  const historyRef = collection(db, "point_history");
                  const q = query(historyRef, where("studentId", "==", currentUser.uid));
                  const unsubHistory = onSnapshot(q, (snapshot) => {
-                     const history: PointHistoryRecord[] = snapshot.docs.map(doc => {
+                     let history: PointHistoryRecord[] = snapshot.docs.map(doc => {
                          const data = doc.data();
                          return {
                              id: doc.id,
@@ -281,9 +280,8 @@ export default function StudentDashboardPage() {
                              timestamp: data.timestamp
                          }
                      });
-                     // Sort on the client side to avoid needing a composite index
                      history.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-                     setPointHistory(history.slice(0, 50)); // Limit to most recent 50
+                     setPointHistory(history.slice(0, 50));
                  }, (error) => {
                     console.error("Firestore Error fetching point history: ", error);
                  });
@@ -309,7 +307,7 @@ export default function StudentDashboardPage() {
 
                 return () => {
                     unsubUser();
-                    unsubBadges();
+                    unsubUserBadges();
                     unsubHistory();
                     unsubLeaderboard();
                 };
@@ -549,14 +547,14 @@ export default function StudentDashboardPage() {
                                         </DialogTrigger>
                                         <DialogContent className="max-w-2xl">
                                             <DialogHeader>
-                                                <DialogTitle>All My Badges ({badges.length})</DialogTitle>
+                                                <DialogTitle>All My Badges ({userBadges.length})</DialogTitle>
                                                 <DialogDescription>
                                                    Here is your complete collection of earned badges. Keep up the great work!
                                                 </DialogDescription>
                                             </DialogHeader>
                                             <ScrollArea className="max-h-[60vh]">
                                                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 text-center p-4">
-                                                    {badges.map((badge, index) => (
+                                                    {userBadges.map((badge, index) => (
                                                         <div key={index} className="flex flex-col items-center gap-2">
                                                             <Avatar className="h-20 w-20 border-2 border-primary/50">
                                                                 <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
@@ -571,10 +569,10 @@ export default function StudentDashboardPage() {
                                     </Dialog>
                                 </CardHeader>
                                 <CardContent className="flex-1">
-                                    {badges.length > 0 ? (
+                                    {userBadges.length > 0 ? (
                                         <ScrollArea className="h-full max-h-[220px] pr-4">
                                              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-4">
-                                                {badges.map((badge, index) => (
+                                                {userBadges.map((badge, index) => (
                                                     <div key={index} className="flex flex-col items-center gap-2 text-center">
                                                         <Avatar className="h-20 w-20 border-2 border-primary/50">
                                                             <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
@@ -708,4 +706,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
 
