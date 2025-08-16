@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState } from "react"
@@ -36,6 +37,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export interface ClassInfo {
+    id: string;
     name: string;
     code: string;
 }
@@ -76,6 +78,7 @@ export function JoinClassDialog({ onClassJoined, joinedClasses }: JoinClassDialo
             const classDoc = querySnapshot.docs[0];
             const classData = classDoc.data();
             const classInfo: ClassInfo = {
+                id: classDoc.id,
                 name: classData.name,
                 code: classData.joinCode
             };

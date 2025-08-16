@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ClassInfo } from '@/components/join-class-dialog';
+import { writeBatch, collection, query, where, getDocs, doc } from 'firebase/firestore';
 
 export default function StudentSettingsPage() {
     const router = useRouter();
@@ -53,24 +55,46 @@ export default function StudentSettingsPage() {
     }, [auth, router]);
 
 
-    const handleLeaveClass = (classToLeave: ClassInfo) => {
-        const updatedClasses = joinedClasses.filter(c => c.code !== classToLeave.code);
+    const handleLeaveClass = async (classToLeave: ClassInfo) => {
+        if (!user) return;
+
+        const updatedClasses = joinedClasses.filter(c => c.id !== classToLeave.id);
         setJoinedClasses(updatedClasses);
         localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
 
         const activeClassCode = localStorage.getItem('activeClassCode');
-        if (activeClassCode === classToLeave.code) {
+        if (activeClassCode === classToLeave.id) {
              if (updatedClasses.length > 0) {
-                localStorage.setItem('activeClassCode', updatedClasses[0].code);
+                localStorage.setItem('activeClassCode', updatedClasses[0].id);
             } else {
                 localStorage.removeItem('activeClassCode');
             }
         }
 
-        toast({
-            title: 'You have left the class.',
-            description: `You are no longer a member of ${classToLeave.name}.`
-        });
+        try {
+            const batch = writeBatch(db);
+
+            // Remove from class roster
+            const rosterRef = doc(db, 'classes', classToLeave.id, 'roster', user.uid);
+            batch.delete(rosterRef);
+
+            // Remove from enrollments collection
+            const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('classId', '==', classToLeave.id), where('studentId', '==', user.uid));
+            const querySnapshot = await getDocs(enrollmentsQuery);
+            querySnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+
+            toast({
+                title: 'You have left the class.',
+                description: `You are no longer a member of ${classToLeave.name}.`
+            });
+        } catch (error) {
+            console.error("Error leaving class from backend:", error);
+            toast({ title: 'Error', description: 'Could not update your class membership.', variant: 'destructive'});
+        }
     }
 
     if (!user) {
@@ -101,7 +125,7 @@ export default function StudentSettingsPage() {
                     {joinedClasses.length > 0 ? (
                          <CardContent className="space-y-2">
                            {joinedClasses.map((cls) => (
-                               <div key={cls.code} className="flex items-center justify-between p-2 rounded-md bg-background">
+                               <div key={cls.id} className="flex items-center justify-between p-2 rounded-md bg-background">
                                     <span className="font-semibold">{cls.name}</span>
                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>

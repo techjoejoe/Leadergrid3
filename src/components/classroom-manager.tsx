@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -21,12 +22,12 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, MinusCircle, Loader2, Download, Check, Play, UserPlus, Trash2, Search } from 'lucide-react';
+import { PlusCircle, MinusCircle, Loader2, Download, Check, Play, UserPlus, Trash2, Search, Award } from 'lucide-react';
 import { format, addMinutes, isToday } from 'date-fns';
 import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDocs, updateDoc, increment, addDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDocs, updateDoc, increment, addDoc, deleteDoc, getDoc, setDoc, orderBy } from 'firebase/firestore';
 
 interface Student {
     id: string;
@@ -35,6 +36,11 @@ interface Student {
     lifetimePoints: number;
     photoURL?: string;
 }
+
+interface RosterEntry extends Student {
+    classPoints: number;
+}
+
 
 const pointsFormSchema = z.object({
   points: z.coerce.number().int().min(1, "Points must be a positive number."),
@@ -59,7 +65,7 @@ interface CheckInRecord {
 }
 
 export function ClassroomManager({ classId }: { classId: string }) {
-  const [enrolledStudents, setEnrolledStudents] = useState<Student[]>([]);
+  const [enrolledStudents, setEnrolledStudents] = useState<RosterEntry[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
@@ -96,58 +102,19 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
  useEffect(() => {
     setIsStudentsLoading(true);
-    const enrollmentsQuery = query(collection(db, "class_enrollments"), where("classId", "==", classId));
+    const rosterQuery = query(collection(db, "classes", classId, "roster"), orderBy('classPoints', 'desc'));
     
-    // Listen for changes in enrollments first
-    const unsubscribeEnrollments = onSnapshot(enrollmentsQuery, (snapshot) => {
-        const studentIds = [...new Set(snapshot.docs.map(doc => doc.data().studentId as string))];
-        
-        if (studentIds.length === 0) {
-            setEnrolledStudents([]);
-            setIsStudentsLoading(false);
-            return;
-        }
-
-        // For each student, create a real-time listener
-        const unsubscribers = studentIds.map(studentId => {
-            const studentDocRef = doc(db, "users", studentId);
-            return onSnapshot(studentDocRef, (studentDoc) => {
-                if (studentDoc.exists()) {
-                    const studentData = { id: studentDoc.id, ...studentDoc.data() } as Student;
-                    
-                    setEnrolledStudents(currentStudents => {
-                        const existingStudent = currentStudents.find(s => s.id === studentId);
-                        if (existingStudent) {
-                            // Update existing student
-                            return currentStudents.map(s => s.id === studentId ? studentData : s);
-                        } else {
-                            // Add new student
-                            return [...currentStudents, studentData];
-                        }
-                    });
-                } else {
-                     // Handle case where student doc might be deleted
-                    setEnrolledStudents(currentStudents => currentStudents.filter(s => s.id !== studentId));
-                }
-            });
-        });
-
-        // Remove listeners for students who are no longer enrolled
-        setEnrolledStudents(currentStudents => currentStudents.filter(s => studentIds.includes(s.id)));
-
+    const unsubscribeRoster = onSnapshot(rosterQuery, (snapshot) => {
+        const studentRoster = snapshot.docs.map(doc => ({ ...doc.data() } as RosterEntry));
+        setEnrolledStudents(studentRoster);
         setIsStudentsLoading(false);
-
-        // Return a cleanup function that unsubscribes from all student listeners
-        return () => {
-            unsubscribers.forEach(unsub => unsub());
-        };
     }, (error) => {
-        console.error("Error fetching enrolled students:", error);
-        toast({ title: 'Error', description: 'Could not load enrolled students.', variant: 'destructive' });
+        console.error("Error fetching class roster:", error);
+        toast({ title: 'Error', description: 'Could not load class roster.', variant: 'destructive' });
         setIsStudentsLoading(false);
     });
 
-    return () => unsubscribeEnrollments();
+    return () => unsubscribeRoster();
 }, [classId, toast]);
 
   useEffect(() => {
@@ -194,12 +161,29 @@ export function ClassroomManager({ classId }: { classId: string }) {
   
   const handleAddStudent = async (student: Student) => {
     try {
-        const enrollment = {
+        const batch = writeBatch(db);
+
+        // 1. Add to enrollments collection for general query
+        const enrollmentRef = doc(collection(db, "class_enrollments"));
+        batch.set(enrollmentRef, {
             classId: classId,
             studentId: student.id,
             enrolledAt: Timestamp.now()
-        };
-        await addDoc(collection(db, "class_enrollments"), enrollment);
+        });
+        
+        // 2. Add to class-specific roster subcollection with 0 points
+        const rosterDocRef = doc(db, "classes", classId, "roster", student.id);
+        const rosterDocSnap = await getDoc(rosterDocRef);
+
+        if (!rosterDocSnap.exists()) {
+             batch.set(rosterDocRef, {
+                ...student,
+                classPoints: 0
+            });
+        }
+        
+        await batch.commit();
+
         toast({
             title: "Student Added",
             description: `${student.displayName} has been added to the class.`
@@ -212,12 +196,19 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
   const handleRemoveStudent = async (student: Student) => {
     try {
-        const q = query(collection(db, 'class_enrollments'), where('classId', '==', classId), where('studentId', '==', student.id));
-        const querySnapshot = await getDocs(q);
         const batch = writeBatch(db);
+
+        // 1. Remove from enrollments
+        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('classId', '==', classId), where('studentId', '==', student.id));
+        const querySnapshot = await getDocs(enrollmentsQuery);
         querySnapshot.docs.forEach(doc => {
             batch.delete(doc.ref);
         });
+
+        // 2. Remove from class roster
+        const rosterDocRef = doc(db, "classes", classId, "roster", student.id);
+        batch.delete(rosterDocRef);
+
         await batch.commit();
 
         toast({
@@ -235,15 +226,28 @@ export function ClassroomManager({ classId }: { classId: string }) {
     if (!selectedStudent) return;
     setIsLoading(true);
     try {
-        const studentRef = doc(db, 'users', selectedStudent.id);
-        const pointsToAdd = adjustmentType === 'add' ? values.points : -values.points;
-        await updateDoc(studentRef, {
-            lifetimePoints: increment(pointsToAdd)
+        const batch = writeBatch(db);
+        const pointsToAdjust = adjustmentType === 'add' ? values.points : -values.points;
+
+        // 1. Update user's global lifetime points
+        const userRef = doc(db, 'users', selectedStudent.id);
+        batch.update(userRef, {
+            lifetimePoints: increment(pointsToAdjust)
         });
+
+        // 2. Update user's class-specific points
+        const rosterRef = doc(db, 'classes', classId, 'roster', selectedStudent.id);
+        batch.update(rosterRef, {
+            classPoints: increment(pointsToAdjust)
+        });
+
+        await batch.commit();
+
         toast({
             title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
             description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.displayName} for: ${values.reason}.`,
         });
+
     } catch(error) {
         console.error("Error updating points:", error);
         toast({ title: 'Error', description: 'Could not update student points.', variant: 'destructive'});
@@ -305,7 +309,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2">
+      <div className="lg:col-span-2 space-y-6">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
@@ -368,8 +372,9 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     <TableHeader>
                     <TableRow>
                         <TableHead>User</TableHead>
+                        <TableHead className="w-[150px] text-center">Class Points</TableHead>
                         <TableHead className="w-[150px] text-center">Total Points</TableHead>
-                        <TableHead className="w-[250px] text-right">Actions</TableHead>
+                        <TableHead className="w-[200px] text-right">Actions</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -384,7 +389,8 @@ export function ClassroomManager({ classId }: { classId: string }) {
                             <span className="font-medium">{student.displayName}</span>
                             </div>
                         </TableCell>
-                        <TableCell className="text-center font-bold text-lg">{student.lifetimePoints.toLocaleString()}</TableCell>
+                        <TableCell className="text-center font-bold text-lg">{student.classPoints?.toLocaleString() ?? 0}</TableCell>
+                        <TableCell className="text-center font-semibold text-muted-foreground">{student.lifetimePoints.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                                 <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'add')}>
@@ -402,7 +408,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     ))}
                      {enrolledStudents.length === 0 && (
                         <TableRow>
-                            <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                            <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
                                 No users enrolled in this class yet.
                             </TableCell>
                         </TableRow>
@@ -410,6 +416,53 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     </TableBody>
                 </Table>
             )}
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 font-headline"><Award className="text-primary"/> Class Leaderboard</CardTitle>
+                <CardDescription>Ranking based on points earned within this class.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isStudentsLoading ? (
+                     <div className="flex justify-center items-center h-48">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[50px]">Rank</TableHead>
+                                <TableHead>User</TableHead>
+                                <TableHead className="text-right">Class Points</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {enrolledStudents.map((student, index) => (
+                                <TableRow key={student.id}>
+                                    <TableCell className="font-bold text-lg">{index + 1}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar>
+                                                {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
+                                                <AvatarFallback>{student.displayName.substring(0,2).toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium">{student.displayName}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-bold text-lg">{student.classPoints?.toLocaleString() ?? 0}</TableCell>
+                                </TableRow>
+                            ))}
+                            {enrolledStudents.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                        No one has earned points in this class yet.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                )}
             </CardContent>
         </Card>
       </div>
@@ -525,7 +578,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
               {adjustmentType === 'add' ? 'Add' : 'Subtract'} Points for {selectedStudent?.displayName}
             </DialogTitle>
             <DialogDescription>
-              Enter the number of points and a reason for the adjustment.
+              Enter the number of points and a reason for the adjustment. This will affect both class and lifetime points.
             </DialogDescription>
           </DialogHeader>
           <Form {...pointsForm}>
@@ -572,3 +625,4 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+

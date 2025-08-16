@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { useState } from "react"
@@ -21,7 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import type { ClassInfo } from "./join-class-dialog"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where, addDoc, Timestamp } from "firebase/firestore"
+import { collection, getDocs, query, where, addDoc, Timestamp, writeBatch, doc, getDoc } from "firebase/firestore"
 import { getAuth } from "firebase/auth"
 import { useToast } from "@/hooks/use-toast"
 
@@ -35,7 +36,7 @@ interface StudentClassManagerProps {
     joinedClasses: ClassInfo[];
     activeClass: ClassInfo | null;
     onJoinClass: (classInfo: ClassInfo) => void;
-    onActiveClassChange: (classCode: string) => void;
+    onActiveClassChange: (classId: string) => void;
 }
 
 export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, onActiveClassChange }: StudentClassManagerProps) {
@@ -78,14 +79,32 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
             const classDoc = querySnapshot.docs[0];
             const classData = classDoc.data();
             
-            // Add enrollment to the new collection
-            await addDoc(collection(db, "class_enrollments"), {
+            const batch = writeBatch(db);
+
+            // Add enrollment to the general collection
+            const enrollmentRef = doc(collection(db, "class_enrollments"));
+            batch.set(enrollmentRef, {
                 classId: classDoc.id,
                 studentId: user.uid,
                 enrolledAt: Timestamp.now()
             });
 
+            // Add student to the class-specific roster
+            const userDocRef = doc(db, 'users', user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if(userDocSnap.exists()) {
+                const rosterRef = doc(db, 'classes', classDoc.id, 'roster', user.uid);
+                batch.set(rosterRef, {
+                    ...userDocSnap.data(),
+                    id: user.uid,
+                    classPoints: 0 // Start with 0 points in the new class
+                });
+            }
+
+            await batch.commit();
+
             const classInfo: ClassInfo = {
+                id: classDoc.id,
                 name: classData.name,
                 code: classData.joinCode
             };
@@ -152,17 +171,17 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
                     <CommandGroup>
                         {joinedClasses.map((cls) => (
                         <CommandItem
-                            key={cls.code}
+                            key={cls.id}
                             value={cls.name}
                             onSelect={() => {
-                                onActiveClassChange(cls.code)
+                                onActiveClassChange(cls.id)
                                 setPopoverOpen(false)
                             }}
                         >
                             <Check
                             className={cn(
                                 "mr-2 h-4 w-4",
-                                activeClass?.code === cls.code ? "opacity-100" : "opacity-0"
+                                activeClass?.id === cls.id ? "opacity-100" : "opacity-0"
                             )}
                             />
                             {cls.name}
@@ -176,3 +195,4 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
     </div>
   );
 }
+

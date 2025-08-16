@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -177,7 +178,7 @@ export default function StudentDashboardPage() {
 
                 // Fetch top 5 students for leaderboard
                 const usersRef = collection(db, 'users');
-                const leaderboardQuery = query(usersRef); // No role filter
+                const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(5));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
                      const data = snapshot.docs.map((doc) => {
                         const userData = doc.data();
@@ -188,9 +189,7 @@ export default function StudentDashboardPage() {
                             avatar: getAvatarFromStorage(userData.photoURL),
                             initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
                         };
-                    })
-                    .sort((a, b) => b.points - a.points)
-                    .slice(0, 5);
+                    });
                     setLeaderboard(data);
                 });
 
@@ -210,6 +209,36 @@ export default function StudentDashboardPage() {
         return () => unsubscribe();
     }, [auth, router, isClient]);
 
+    // This effect runs when the activeClass changes to update the class-specific rank/points.
+    useEffect(() => {
+        if (activeClass && user) {
+            const classRosterRef = doc(db, 'classes', activeClass.id, 'roster', user.uid);
+
+            const unsub = onSnapshot(classRosterRef, (doc) => {
+                 if (doc.exists()) {
+                    const classData = doc.data();
+                    setStudentData(prev => ({ ...prev, classPoints: classData.classPoints || 0 }));
+                    
+                    // To get rank, we need to fetch all students in the class roster
+                    const rosterQuery = query(collection(db, 'classes', activeClass.id, 'roster'), orderBy('classPoints', 'desc'));
+                    getDocs(rosterQuery).then(snapshot => {
+                        const rank = snapshot.docs.findIndex(d => d.id === user.uid) + 1;
+                        setStudentData(prev => ({...prev, classRank: rank > 0 ? rank : 0 }));
+                    });
+                } else {
+                    // Reset class points/rank if they are not in the active class roster
+                    setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
+                }
+            });
+            
+            return () => unsub();
+        } else {
+            // No active class, so reset class-specific stats
+             setStudentData(prev => ({...prev, classPoints: 0, classRank: 0}));
+        }
+    }, [activeClass, user]);
+
+
     useEffect(() => {
         if (!isClient) return;
          try {
@@ -219,11 +248,11 @@ export default function StudentDashboardPage() {
 
             const storedActiveClassCode = localStorage.getItem('activeClassCode');
             if (storedActiveClassCode) {
-                const foundActiveClass = classes.find(c => c.code === storedActiveClassCode);
+                const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
                 setActiveClass(foundActiveClass || classes[0] || null);
             } else if (classes.length > 0) {
                 setActiveClass(classes[0]);
-                localStorage.setItem('activeClassCode', classes[0].code);
+                localStorage.setItem('activeClassCode', classes[0].id);
             }
         } catch (error) {
             console.error("Failed to parse data from localStorage", error);
@@ -235,7 +264,7 @@ export default function StudentDashboardPage() {
         const updatedClasses = [...joinedClasses, newClass];
         setJoinedClasses(updatedClasses);
         localStorage.setItem('joinedClasses', JSON.stringify(updatedClasses));
-        handleActiveClassChange(newClass.code);
+        handleActiveClassChange(newClass.id);
 
         toast({
             title: "Success!",
@@ -243,11 +272,11 @@ export default function StudentDashboardPage() {
         })
     }
     
-    const handleActiveClassChange = (classCode: string) => {
-        const newActiveClass = joinedClasses.find(c => c.code === classCode);
+    const handleActiveClassChange = (classId: string) => {
+        const newActiveClass = joinedClasses.find(c => c.id === classId);
         if (newActiveClass) {
             setActiveClass(newActiveClass);
-            localStorage.setItem('activeClassCode', newActiveClass.code);
+            localStorage.setItem('activeClassCode', newActiveClass.id);
         }
     }
 
@@ -368,14 +397,14 @@ export default function StudentDashboardPage() {
                                         <Card className="bg-yellow-400/10 border-yellow-500/30">
                                             <CardContent className="p-3 text-center">
                                                 <p className="text-xs text-yellow-200/80">Class Rank</p>
-                                                <p className="text-2xl font-bold text-white">#{studentData.classRank}</p>
+                                                <p className="text-2xl font-bold text-white">{studentData.classRank > 0 ? `#${studentData.classRank}` : '--'}</p>
                                                 <p className="text-xs font-semibold text-yellow-300">{studentData.classPoints.toLocaleString()} pts</p>
                                             </CardContent>
                                         </Card>
                                         <Card className="bg-yellow-400/10 border-yellow-500/30">
                                              <CardContent className="p-3 text-center">
                                                 <p className="text-xs text-yellow-200/80">Total Points</p>
-                                                <p className="text-2xl font-bold text-white">#{studentData.schoolRank}</p>
+                                                <p className="text-2xl font-bold text-white">{studentData.schoolRank > 0 ? `#${studentData.schoolRank}` : '--'}</p>
                                                 <p className="text-xs font-semibold text-yellow-300">{studentData.points.toLocaleString()} pts</p>
                                             </CardContent>
                                         </Card>
@@ -516,3 +545,4 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+

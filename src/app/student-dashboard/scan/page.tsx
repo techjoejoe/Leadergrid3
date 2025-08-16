@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,7 +11,7 @@ import { ArrowLeft, Loader2, Rss } from 'lucide-react';
 import Link from 'next/link';
 import { isBefore, parseISO } from 'date-fns';
 import { db, app } from '@/lib/firebase';
-import { collection, addDoc, Timestamp, writeBatch, doc, increment } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, writeBatch, doc, increment, getDoc, setDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 
 const createMockUser = (): User => ({
@@ -79,6 +80,7 @@ export default function ScanPage() {
                 const studentInfo = { id: user.uid, name: user.displayName || 'Anonymous' };
                 
                 const batch = writeBatch(db);
+                const userRef = doc(db, "users", studentInfo.id);
 
                 // Handle Class Check-in QR Codes
                 if (data && data.type === 'class-check-in') {
@@ -112,10 +114,24 @@ export default function ScanPage() {
                         className: data.className,
                     });
                     
-                    // 3. Increment lifetime points if any were awarded
                     if (pointsAwarded > 0) {
-                        const userRef = doc(db, "users", studentInfo.id);
+                        // 3. Increment lifetime points 
                         batch.update(userRef, { lifetimePoints: increment(pointsAwarded) });
+                        
+                        // 4. Increment class-specific points
+                        const rosterRef = doc(db, "classes", data.classId, "roster", studentInfo.id);
+                        const rosterSnap = await getDoc(rosterRef);
+                        if (rosterSnap.exists()) {
+                            batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
+                        } else {
+                            // This handles the edge case where a student scanned a check-in code
+                            // for a class they haven't formally "joined" in the UI yet.
+                            // We can enroll them automatically.
+                            const studentDoc = await getDoc(userRef);
+                            if (studentDoc.exists()){
+                                batch.set(rosterRef, { ...studentDoc.data(), classPoints: pointsAwarded });
+                            }
+                        }
                     }
 
                     await batch.commit();
@@ -167,8 +183,16 @@ export default function ScanPage() {
 
                     // 2. Increment lifetime points
                     if (pointsAwarded > 0) {
-                        const userRef = doc(db, "users", studentInfo.id);
                         batch.update(userRef, { lifetimePoints: increment(pointsAwarded) });
+                        
+                        // 3. Increment class points if a classId is present
+                        if(data.classId) {
+                           const rosterRef = doc(db, "classes", data.classId, "roster", studentInfo.id);
+                           const rosterSnap = await getDoc(rosterRef);
+                           if(rosterSnap.exists()){
+                             batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
+                           }
+                        }
                     }
 
                     await batch.commit();
@@ -253,3 +277,4 @@ export default function ScanPage() {
         </div>
     );
 }
+
