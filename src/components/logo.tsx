@@ -8,7 +8,7 @@ interface LogoProps {
 export function Logo({ width = 150, height = 32 }: LogoProps) {
   return (
     <>
-       <Image src="/leadergrid-logo.png" alt="LeaderGrid Logo" width={width} height={height} unoptimized />
+       <Image src="/logo.png" alt="LeaderGrid Logo" width={width} height={height} unoptimized />
     </>
   );
 }
