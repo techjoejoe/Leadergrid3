@@ -48,7 +48,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, Timestamp, getDocs } from 'firebase/firestore';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
@@ -150,7 +150,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     }}
                 />
             ))}
-            {isFirst && <span className="absolute -top-8 text-6xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
+            {isFirst && <span className="absolute -top-10 text-8xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("h-20 w-20 border-4 border-white/50 z-10", isFirst && "h-32 w-32")}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
@@ -184,11 +184,11 @@ export default function StudentDashboardPage() {
     useEffect(() => {
         setIsClient(true);
     }, []);
-    
 
     const stableSetActiveClass = useCallback((cls: ClassInfo | null) => {
         setActiveClass(cls);
     }, []);
+    
 
     useEffect(() => {
         if (!isClient) return;
@@ -615,4 +615,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
