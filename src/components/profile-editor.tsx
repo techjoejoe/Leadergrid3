@@ -292,12 +292,10 @@ export function ProfileEditor({
         if (user.uid !== 'mock-user-id') {
             const userDocRef = doc(db, "users", user.uid);
             
-            // Get or Create user document
             const userDocSnap = await getDoc(userDocRef);
             let hadPhoto = false;
 
             if (!userDocSnap.exists()) {
-                // If doc doesn't exist, create it.
                 await setDoc(userDocRef, {
                     uid: user.uid,
                     displayName: user.displayName,
@@ -308,7 +306,6 @@ export function ProfileEditor({
                 hadPhoto = !!userDocSnap.data().photoURL;
             }
 
-            // Now, we can safely update
             await updateProfile(user, { photoURL: photoUrlIdentifier });
             await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
             
@@ -337,10 +334,9 @@ export function ProfileEditor({
         window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
         onAvatarChange(croppedImageUrl);
         
-        // Reset state after successful save
         setIsCropping(false);
         setImgSrc('');
-        onOpenChange(false); // Close dialog on success
+        onOpenChange(false);
         
     } catch (error) {
          toast({
