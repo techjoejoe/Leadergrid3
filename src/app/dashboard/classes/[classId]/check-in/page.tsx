@@ -67,11 +67,10 @@ export default function CheckInPage({ params }: { params: { classId: string } })
                     setClassDetails(classDocSnap.data() as ClassDetails);
                 }
 
-                // Fetch all users with the role 'student'
-                const usersCollection = collection(db, 'users');
-                const q = query(usersCollection, where('role', '==', 'student'));
-                const querySnapshot = await getDocs(q);
-                const fetchedStudents = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+                // Fetch students enrolled in this specific class
+                const rosterCollection = collection(db, `classes/${classId}/roster`);
+                const rosterSnapshot = await getDocs(rosterCollection);
+                const fetchedStudents = rosterSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
                 setStudents(fetchedStudents);
 
             } catch (error) {

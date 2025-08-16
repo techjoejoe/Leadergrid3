@@ -4,18 +4,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
-import { List, Play, Trash2, Trophy, Zap, Loader2 } from 'lucide-react';
+import { List, Play, Trash2, Trophy, Zap, Loader2, UserPlus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-
-interface Student {
-  id: string;
-  displayName: string;
-}
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface BuzzerEntry {
     name: string;
@@ -25,39 +19,12 @@ interface BuzzerEntry {
 export default function BuzzerPage() {
     const [buzzerList, setBuzzerList] = useState<BuzzerEntry[]>([]);
     const [isLive, setIsLive] = useState(false);
-    const [students, setStudents] = useState<Student[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const { toast } = useToast();
-
-
-    useEffect(() => {
-        async function fetchStudents() {
-            setIsLoading(true);
-            try {
-                const usersCollection = collection(db, 'users');
-                const q = query(usersCollection); // No role filter, get all users
-                const querySnapshot = await getDocs(q);
-                const fetchedStudents = querySnapshot.docs.map(doc => ({
-                    id: doc.id,
-                    displayName: doc.data().displayName || 'Anonymous',
-                }));
-                setStudents(fetchedStudents);
-            } catch (error) {
-                 console.error("Error fetching students:", error);
-                 toast({ title: 'Error', description: 'Could not load users.', variant: 'destructive' });
-            } finally {
-                setIsLoading(false);
-            }
-        }
-        fetchStudents();
-    }, [toast]);
+    const [participants, setParticipants] = useState<string[]>(['Player 1', 'Player 2', 'Player 3', 'Player 4']);
+    const [newParticipant, setNewParticipant] = useState('');
 
     const handleBuzz = (name: string) => {
         if (!isLive) return;
-
-        // Prevent a student from buzzing more than once
         if (buzzerList.some(entry => entry.name === name)) return;
-        
         setBuzzerList(prevList => [...prevList, { name, timestamp: new Date() }]);
     };
 
@@ -68,8 +35,20 @@ export default function BuzzerPage() {
     const handleToggleLive = () => {
         setIsLive(!isLive);
         if(isLive) {
-            handleReset(); // Reset when stopping the session
+            handleReset(); 
         }
+    }
+    
+    const handleAddParticipant = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newParticipant && !participants.includes(newParticipant)) {
+            setParticipants(prev => [...prev, newParticipant]);
+            setNewParticipant('');
+        }
+    }
+    
+    const handleRemoveParticipant = (name: string) => {
+        setParticipants(prev => prev.filter(p => p !== name));
     }
 
     const firstBuzzer = buzzerList[0];
@@ -81,29 +60,50 @@ export default function BuzzerPage() {
                     <CardTitle className="font-headline text-3xl flex items-center gap-2">
                         <Zap /> Live Buzzer
                     </CardTitle>
-                    <CardDescription>Click a user's name to simulate them buzzing in. The first to buzz wins!</CardDescription>
+                    <CardDescription>Add participants and start a session. Click a participant's name when they buzz in!</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <div className="flex justify-center items-center h-40">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {students.map((student) => (
+                <CardContent className="space-y-6">
+                    <div>
+                        <Label htmlFor="new-participant">Add Participant</Label>
+                        <form onSubmit={handleAddParticipant} className="flex items-center gap-2 mt-2">
+                            <Input
+                                id="new-participant"
+                                placeholder="Enter a name..."
+                                value={newParticipant}
+                                onChange={(e) => setNewParticipant(e.target.value)}
+                            />
+                            <Button type="submit" size="icon">
+                                <UserPlus className="h-4 w-4" />
+                            </Button>
+                        </form>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {participants.map((participant) => (
+                            <div key={participant} className="relative group">
                                 <Button
-                                    key={student.id}
                                     variant="outline"
                                     size="lg"
-                                    disabled={!isLive || buzzerList.some(b => b.name === student.displayName)}
-                                    onClick={() => handleBuzz(student.displayName)}
-                                    className="h-20 text-lg"
+                                    disabled={!isLive || buzzerList.some(b => b.name === participant)}
+                                    onClick={() => handleBuzz(participant)}
+                                    className="h-20 text-lg w-full"
                                 >
-                                    {student.displayName}
+                                    {participant}
                                 </Button>
-                            ))}
-                        </div>
-                    )}
+                                {!isLive && (
+                                     <Button 
+                                        variant="destructive"
+                                        size="icon"
+                                        className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={() => handleRemoveParticipant(participant)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                     </Button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
                 </CardContent>
                 <CardFooter className="flex-col items-start gap-4">
                      <Button onClick={handleToggleLive} size="lg" className="w-full">

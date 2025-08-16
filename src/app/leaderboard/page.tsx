@@ -133,7 +133,8 @@ export default function LeaderboardPage() {
         )
     }
     
-    const [top3, rest] = [leaderboardData.slice(0, 3), leaderboardData.slice(3)];
+    const top3 = leaderboardData.slice(0, 3);
+    const rest = leaderboardData.slice(3);
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600 text-white p-4 sm:p-6 md:p-8">

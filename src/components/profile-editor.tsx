@@ -330,8 +330,10 @@ export function ProfileEditor({
                 description: 'Your new photo has been set.',
             });
         }
-
-        window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
+        
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
+        }
         onAvatarChange(croppedImageUrl);
         
         setIsCropping(false);

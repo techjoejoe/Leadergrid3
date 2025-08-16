@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from "react";
@@ -8,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, User, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Student {
@@ -33,8 +32,8 @@ export default function StudentsPage() {
                     const data = doc.data();
                     return {
                         id: doc.id,
-                        displayName: data.displayName,
-                        email: data.email,
+                        displayName: data.displayName || 'Unnamed User',
+                        email: data.email || 'No email provided',
                         photoURL: data.photoURL,
                     } as Student;
                 });
@@ -85,11 +84,11 @@ export default function StudentsPage() {
                                                 {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
                                                 <AvatarFallback>{student.displayName?.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
                                             </Avatar>
-                                            {student.displayName || 'Unnamed User'}
+                                            {student.displayName}
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        {student.email || 'No email'}
+                                        {student.email}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         {/* Future actions can go here */}
