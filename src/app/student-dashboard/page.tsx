@@ -75,10 +75,11 @@ const initialStudentData: StudentData = {
 interface Badge { id: string, name: string; imageUrl: string; hint: string; }
 
 interface PointHistoryRecord { 
+    id: string;
     reason: string;
     points: number; 
     date: string; 
-    type: 'scan' | 'manual';
+    type: 'scan' | 'manual' | 'engagement';
 }
 
 interface LeaderboardEntry {
@@ -99,21 +100,27 @@ const getAvatarFromStorage = (photoURL: string | null) => {
 
 const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => {
     const isFirst = rank === 1;
+    const isSecond = rank === 2;
+    const isThird = rank === 3;
 
     return (
          <div className={cn(
-            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105",
-            isFirst ? "bg-yellow-500/80 row-span-2" : "bg-yellow-500/50",
-            rank === 2 && "md:mt-8",
-            rank === 3 && "md:mt-16"
+            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg",
+            isFirst && "bg-gradient-to-br from-yellow-400 to-amber-600 row-span-2",
+            isSecond && "bg-gradient-to-br from-slate-300 to-slate-500 md:mt-8",
+            isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 md:mt-16"
         )}>
             {isFirst && <Crown className="absolute -top-5 h-10 w-10 text-yellow-300 drop-shadow-lg" />}
              <Avatar className={cn("h-20 w-20 border-4 border-white/50", isFirst && "h-24 w-24")}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
             </Avatar>
-            <h3 className="mt-2 font-bold text-lg">{user.name}</h3>
-            <p className="text-sm font-semibold text-yellow-200">{user.points.toLocaleString()} pts</p>
+            <h3 className="mt-2 font-bold text-lg drop-shadow-sm">{user.name}</h3>
+            <p className={cn("text-sm font-semibold", 
+                isFirst && "text-amber-100",
+                isSecond && "text-slate-100",
+                isThird && "text-yellow-100"
+            )}>{user.points.toLocaleString()} pts</p>
         </div>
     )
 }
@@ -181,6 +188,7 @@ export default function StudentDashboardPage() {
                      const history = snapshot.docs.map(doc => {
                          const data = doc.data();
                          return {
+                             id: doc.id,
                              reason: data.reason,
                              points: data.points,
                              date: formatDistanceToNow((data.timestamp as Timestamp).toDate(), { addSuffix: true }),
@@ -256,6 +264,7 @@ export default function StudentDashboardPage() {
 
     useEffect(() => {
         if (!isClient) return;
+
         const storedClasses = localStorage.getItem('joinedClasses');
         if (storedClasses) {
             try {
@@ -266,9 +275,14 @@ export default function StudentDashboardPage() {
                 if (storedActiveClassCode) {
                     const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
                     setActiveClass(foundActiveClass || null);
+                } else if (classes.length > 0) {
+                    setActiveClass(classes[0]);
+                    localStorage.setItem('activeClassCode', classes[0].id);
                 }
             } catch (error) {
                 console.error("Failed to parse classes from localStorage", error);
+                localStorage.removeItem('joinedClasses');
+                localStorage.removeItem('activeClassCode');
                 setJoinedClasses([]);
             }
         }
@@ -521,8 +535,8 @@ export default function StudentDashboardPage() {
                         <CardContent>
                             {pointHistory.length > 0 ? (
                                 <div className="space-y-4">
-                                    {pointHistory.map((item, index) => (
-                                        <div key={index}>
+                                    {pointHistory.map((item) => (
+                                        <div key={item.id}>
                                             <div className="flex items-center justify-between">
                                                 <p className="font-medium">{item.reason}</p>
                                                 <div className="flex items-center gap-4">
