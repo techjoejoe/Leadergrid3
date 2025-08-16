@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -315,10 +315,12 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const checkedInCount = new Set(checkInLog.map(r => r.studentId)).size;
   const checkedInPercentage = enrolledStudents.length > 0 ? (checkedInCount / enrolledStudents.length) * 100 : 0;
   
-  const availableStudents = allStudents.filter(s => 
-    !enrolledStudents.some(es => es.id === s.id) &&
-    ((s.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) || (s.email || '').toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const availableStudents = useMemo(() => {
+    return allStudents.filter(s => 
+      !enrolledStudents.some(es => es.id === s.id) &&
+      ((s.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) || (s.email || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [allStudents, enrolledStudents, searchTerm]);
 
 
   return (
@@ -639,10 +641,3 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
-
-
-
-
-
-
-

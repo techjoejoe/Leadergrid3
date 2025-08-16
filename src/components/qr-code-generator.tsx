@@ -488,7 +488,7 @@ export function QrCodeGenerator() {
                                     <TableCell>
                                             <Badge variant="secondary">{code.points} pts</Badge>
                                     </TableCell>
-                                    <TableCell>{isValidDate ? format(date, "Pp") : "Invalid Date"}</TableCell>
+                                    <TableCell>{isValidDate ? format(date, "p, PPP") : "Invalid Date"}</TableCell>
                                     <TableCell className="text-right space-x-1">
                                     <Button variant="outline" size="icon" onClick={() => downloadQRCode(code)}>
                                             <Download className="h-4 w-4" />

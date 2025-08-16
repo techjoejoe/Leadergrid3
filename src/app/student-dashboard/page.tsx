@@ -588,7 +588,7 @@ export default function StudentDashboardPage() {
                                                     {userBadges.map((badge, index) => (
                                                         <div key={index} className="flex flex-col items-center gap-2">
                                                             <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                                <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
+                                                                {badge.imageUrl && <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />}
                                                                 <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
                                                             </Avatar>
                                                             <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
@@ -606,7 +606,7 @@ export default function StudentDashboardPage() {
                                                 {userBadges.map((badge, index) => (
                                                     <div key={index} className="flex flex-col items-center gap-2 text-center">
                                                         <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                            <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />
+                                                            {badge.imageUrl && <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />}
                                                             <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
                                                         </Avatar>
                                                         <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
@@ -737,5 +737,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    

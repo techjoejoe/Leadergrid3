@@ -147,5 +147,3 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile 
       </DropdownMenu>
   )
 }
-
-    
