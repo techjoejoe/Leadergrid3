@@ -268,7 +268,7 @@ export default function StudentDashboardPage() {
 
                 // Setup listener for point history
                  const historyRef = collection(db, "point_history");
-                 const q = query(historyRef, where("studentId", "==", currentUser.uid), limit(50));
+                 const q = query(historyRef, where("studentId", "==", currentUser.uid));
                  const unsubHistory = onSnapshot(q, (snapshot) => {
                      const history: PointHistoryRecord[] = snapshot.docs.map(doc => {
                          const data = doc.data();
@@ -281,8 +281,9 @@ export default function StudentDashboardPage() {
                              timestamp: data.timestamp
                          }
                      });
+                     // Sort on the client side to avoid needing a composite index
                      history.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-                     setPointHistory(history);
+                     setPointHistory(history.slice(0, 50)); // Limit to most recent 50
                  }, (error) => {
                     console.error("Firestore Error fetching point history: ", error);
                  });
@@ -707,3 +708,4 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
