@@ -61,7 +61,7 @@ export default function Home() {
           </div>
           <div className="container text-center animate-fade-in-up">
             <div className="flex justify-center mb-8">
-                <Logo width={300} height={64} />
+                <Logo width={600} height={128} />
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight font-headline sm:text-5xl md:text-6xl lg:text-7xl">
               Gamify Learning. Inspire Growth.
