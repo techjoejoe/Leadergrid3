@@ -39,7 +39,7 @@ const BONUS_POINTS = 100;
 export default function CheckInPage({ params }: { params: { classId: string } }) {
     const searchParams = useSearchParams();
     const { toast } = useToast();
-    const classId = params.classId;
+    const { classId } = params;
 
     const [checkInLog, setCheckInLog] = useState<CheckInRecord[]>([]);
     const [qrValue, setQrValue] = useState('');
