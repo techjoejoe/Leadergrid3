@@ -170,7 +170,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     ✨
                 </span>
             ))}
-            {isFirst && <span className="absolute top-0 text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>}
+            {isFirst && <span className="absolute -top-5 text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("border-4 z-10", 
                 isFirst && `h-40 w-40 ${coinStyles.first}`,
                 isSecond && `h-28 w-28 ${coinStyles.second}`,
@@ -235,6 +235,7 @@ export default function StudentDashboardPage() {
                 } catch (error) {
                     console.error("Failed to parse classes from localStorage", error);
                     localStorage.removeItem('joinedClasses');
+                    localStorage.removeItem('activeClassCode');
                     setJoinedClasses([]);
                     stableSetActiveClass(null);
                 }
@@ -267,7 +268,7 @@ export default function StudentDashboardPage() {
 
                 // Setup listener for point history
                  const historyRef = collection(db, "point_history");
-                 const q = query(historyRef, where("studentId", "==", currentUser.uid), limit(50));
+                 const q = query(historyRef, where("studentId", "==", currentUser.uid));
                  const unsubHistory = onSnapshot(q, (snapshot) => {
                      const history: PointHistoryRecord[] = snapshot.docs.map(doc => {
                          const data = doc.data();
@@ -282,7 +283,7 @@ export default function StudentDashboardPage() {
                      });
                      // Sort on the client
                      history.sort((a,b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-                     setPointHistory(history);
+                     setPointHistory(history.slice(0, 50));
                  }, (error) => {
                     console.error("Firestore Error fetching point history: ", error);
                  });
@@ -597,7 +598,13 @@ export default function StudentDashboardPage() {
                                     {activeClass ? `${activeClass.name} Leaderboard` : 'Live Leaderboard'}
                                 </CardTitle>
                                 <CardDescription>
-                                    {activeClass ? `Top members in ${activeClass.name}.` : 'Top members across the company.'}
+                                    {activeClass ? (
+                                        <>
+                                            Join Code: <UiBadge variant="secondary">{activeClass.code}</UiBadge>
+                                        </>
+                                    ) : (
+                                        'Top members across the company.'
+                                    )}
                                 </CardDescription>
                             </div>
                              <Button asChild variant="outline" className="group">
@@ -697,4 +704,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
