@@ -18,7 +18,6 @@ import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge, Building } fr
 import { getAuth, signOut, User, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { ProfileEditor } from "./profile-editor";
 import { useState, useEffect } from "react";
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
@@ -35,7 +34,6 @@ export function UserNav() {
   const auth = getAuth(app);
   const router = useRouter();
   const { toast } = useToast();
-  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
   const [initials, setInitials] = useState("AD");
   const [user, setUser] = useState<User | null>(null);
@@ -83,16 +81,9 @@ export function UserNav() {
     }
   }
   
-  const handleNameChange = (newName: string) => {
-      if(user) {
-          const name = newName || user.email || '';
-          setInitials(name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
-      }
-  }
-
   const displayName = user?.displayName || "Admin";
 
-  if (!isClient) {
+  if (!isClient || !user) {
     return (
         <Avatar className="h-8 w-8">
             <AvatarFallback>AD</AvatarFallback>
@@ -101,7 +92,6 @@ export function UserNav() {
   }
 
   return (
-    <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
@@ -155,10 +145,6 @@ export function UserNav() {
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem onSelect={() => setIsProfileEditorOpen(true)}>
-              <UserIcon className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/dashboard/settings">
                 <Settings className="mr-2 h-4 w-4" />
@@ -173,20 +159,5 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {user && (
-        <ProfileEditor
-            user={user}
-            open={isProfileEditorOpen} 
-            onOpenChange={setIsProfileEditorOpen}
-            onAvatarChange={setAvatar}
-            onNameChange={handleNameChange}
-            currentAvatar={avatar}
-            currentInitial={initials}
-            currentDisplayName={displayName}
-            currentEmail={user.email || ""}
-            storageKey={`adminAvatar`}
-        />
-      )}
-    </>
   )
 }

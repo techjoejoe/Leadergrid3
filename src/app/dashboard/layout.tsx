@@ -10,6 +10,7 @@ import { ActiveClassMenu } from '@/components/active-class-menu';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { ProfileButton } from '@/components/profile-button';
 
 // export const metadata: Metadata = {
 //   title: 'LeaderGrid Dashboard',
@@ -31,6 +32,7 @@ export default function DashboardLayout({
             <div className="w-full flex-1">
                 <ActiveClassMenu />
             </div>
+            <ProfileButton />
             <UserNav />
         </header>
         <main className="flex-1 p-4 sm:p-6">
