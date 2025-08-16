@@ -23,7 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { ClassInfo } from '@/components/join-class-dialog';
-import { writeBatch, collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
 
 export default function StudentSettingsPage() {
     const router = useRouter();
@@ -72,20 +72,15 @@ export default function StudentSettingsPage() {
         }
 
         try {
-            const batch = writeBatch(db);
-
             // Remove from class roster
             const rosterRef = doc(db, 'classes', classToLeave.id, 'roster', user.uid);
-            batch.delete(rosterRef);
+            await deleteDoc(rosterRef);
 
             // Remove from enrollments collection
             const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('classId', '==', classToLeave.id), where('studentId', '==', user.uid));
             const querySnapshot = await getDocs(enrollmentsQuery);
-            querySnapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-
-            await batch.commit();
+            const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+            await Promise.all(deletePromises);
 
             toast({
                 title: 'You have left the class.',
@@ -138,7 +133,7 @@ export default function StudentSettingsPage() {
                                             <AlertDialogTitle>Are you sure you want to leave "{cls.name}"?</AlertDialogTitle>
                                             <AlertDialogDescription>
                                                 This action cannot be undone. You will need to use the join code to join the class again.
-                                            </Description>
+                                            </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
