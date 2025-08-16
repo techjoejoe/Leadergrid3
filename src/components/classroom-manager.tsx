@@ -171,14 +171,19 @@ export function ClassroomManager({ classId }: { classId: string }) {
             enrolledAt: Timestamp.now()
         });
         
-        // 2. Add to class-specific roster subcollection with 0 points
+        // 2. Backfill points: check for any previous scans related to this class
+        const scansQuery = query(collection(db, 'scans'), where('studentId', '==', student.id), where('classId', '==', classId));
+        const scansSnapshot = await getDocs(scansQuery);
+        const initialClassPoints = scansSnapshot.docs.reduce((total, doc) => total + (doc.data().pointsAwarded || 0), 0);
+
+        // 3. Add to class-specific roster subcollection with backfilled points
         const rosterDocRef = doc(db, "classes", classId, "roster", student.id);
         const rosterDocSnap = await getDoc(rosterDocRef);
 
         if (!rosterDocSnap.exists()) {
              batch.set(rosterDocRef, {
                 ...student,
-                classPoints: 0
+                classPoints: initialClassPoints
             });
         }
         
@@ -186,7 +191,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
         toast({
             title: "Student Added",
-            description: `${student.displayName} has been added to the class.`
+            description: `${student.displayName} has been added to the class with ${initialClassPoints} starting points.`
         });
     } catch (error) {
         console.error("Error adding student to class:", error);
@@ -575,7 +580,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
               {adjustmentType === 'add' ? 'Add' : 'Subtract'} Points for {selectedStudent?.displayName}
             </DialogTitle>
             <DialogDescription>
-              Enter the number of points and a reason for the adjustment. This will affect ONLY class points.
+              Enter the number of points and a reason for the adjustment. This will affect both class and lifetime points.
             </DialogDescription>
           </DialogHeader>
           <Form {...pointsForm}>
@@ -622,6 +627,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
 
 
 
