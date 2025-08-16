@@ -490,7 +490,7 @@ export function ProfileEditor({
                 <p className="text-sm text-muted-foreground">
                     Click the button below to receive an email to reset your password.
                 </p>
-                <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword || user.uid === 'mock-user-id'}>
+                <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword || (user && user.uid === 'mock-user-id')}>
                     {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Send Password Reset Email
                 </Button>

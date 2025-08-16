@@ -92,6 +92,7 @@ interface LeaderboardEntry {
 }
 
 const getAvatarFromStorage = (photoURL: string | null) => {
+    if (typeof window === 'undefined') return null;
     if (photoURL && (photoURL.startsWith('studentAvatar_') || photoURL.startsWith('adminAvatar_'))) {
         return localStorage.getItem(photoURL);
     }
@@ -725,6 +726,7 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
 
 
 

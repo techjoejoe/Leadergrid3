@@ -28,6 +28,8 @@ interface UserNavProps {
   onEditProfile: () => void;
 }
 
+const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
+
 export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile }: UserNavProps) {
   const auth = getAuth(app);
   const router = useRouter();
@@ -76,7 +78,7 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile 
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
+              <AvatarImage src={avatarUrl || DEFAULT_AVATAR} alt={displayName} data-ai-hint="person portrait" />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </Button>
