@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge, Building } from "lucide-react"
-import { getAuth, signOut, User } from "firebase/auth";
+import { getAuth, signOut, User, onAuthStateChanged } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileEditor } from "./profile-editor";
@@ -34,27 +34,28 @@ export function UserNav() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+    const getAvatarFromStorage = (photoURL: string | null) => {
+        if (photoURL && photoURL.startsWith('adminAvatar_')) {
+            return localStorage.getItem(photoURL);
+        }
+        return photoURL;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
         if (currentUser) {
-            const photoKey = `adminAvatar_${currentUser.uid}`;
-            const savedAvatar = localStorage.getItem(photoKey);
-            if (savedAvatar) {
-                setAvatar(savedAvatar);
-            } else if (currentUser.photoURL) {
-                 setAvatar(currentUser.photoURL);
-            } else {
-                setAvatar(DEFAULT_AVATAR);
-            }
-            if (currentUser.displayName) {
-              setInitials(currentUser.displayName.substring(0, 2).toUpperCase());
-            } else if (currentUser.email) {
-              setInitials(currentUser.email.substring(0, 2).toUpperCase());
-            }
+            const newAvatar = getAvatarFromStorage(currentUser.photoURL);
+            setAvatar(newAvatar || DEFAULT_AVATAR);
+            
+            const name = currentUser.displayName || currentUser.email || '';
+            setInitials(
+                name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() ||
+                'AD'
+            );
         }
     });
     return () => unsubscribe();
-  }, []);
+  }, [auth]);
 
   const handleLogout = async () => {
     try {
@@ -71,6 +72,15 @@ export function UserNav() {
             variant: "destructive"
         });
     }
+  }
+  
+  const handleNameChange = (newName: string) => {
+      if(user) {
+          const updatedUser = {...user, displayName: newName };
+          setUser(updatedUser);
+          const name = newName || user.email || '';
+          setInitials(name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
+      }
   }
 
   const displayName = user?.displayName || "Admin";
@@ -154,7 +164,7 @@ export function UserNav() {
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatar}
-            onNameChange={(newName) => setUser(u => u ? {...u, displayName: newName} : null)}
+            onNameChange={handleNameChange}
             currentAvatar={avatar}
             currentInitial={initials}
             currentDisplayName={displayName}
