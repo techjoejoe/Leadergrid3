@@ -111,7 +111,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
             isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 md:mt-16"
         )}>
             {isFirst && <Crown className="absolute -top-5 h-10 w-10 text-yellow-300 drop-shadow-lg" />}
-             <Avatar className={cn("h-20 w-20 border-4 border-white/50", isFirst && "h-24 w-24")}>
+             <Avatar className={cn("h-20 w-20 border-4 border-white/50", isFirst && "h-32 w-32")}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
             </Avatar>
