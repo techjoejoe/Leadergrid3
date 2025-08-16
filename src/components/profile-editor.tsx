@@ -212,6 +212,14 @@ export function ProfileEditor({
   const onSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit for selection
+        toast({
+          title: "File is too large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive"
+        });
+        return;
+      }
       setCrop(undefined); 
       setIsProcessingPhoto(true);
       
@@ -240,6 +248,8 @@ export function ProfileEditor({
               description: error.message || "Could not process the selected file.",
               variant: "destructive",
           });
+          setImgSrc('');
+          setIsCropping(false);
           setIsProcessingPhoto(false);
       }
     }
@@ -266,92 +276,98 @@ export function ProfileEditor({
   }
 
   const handleCropComplete = async () => {
-    if (completedCrop && imgRef.current && user) {
+    if (!completedCrop || !imgRef.current || !user) {
+        toast({
+            title: "Error",
+            description: "Could not save photo. Crop data is missing.",
+            variant: "destructive",
+        });
+        return;
+    }
+
+    try {
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
         const photoUrlIdentifier = `${storageKey}_${user.uid}`;
-        try {
-            if (user.uid !== 'mock-user-id') {
-                const userDocRef = doc(db, "users", user.uid);
-                
-                const userDoc = await getDoc(userDocRef);
-                const hadPhoto = userDoc.exists() && !!userDoc.data().photoURL;
+        
+        if (user.uid !== 'mock-user-id') {
+            const userDocRef = doc(db, "users", user.uid);
+            
+            const userDoc = await getDoc(userDocRef);
+            const hadPhoto = userDoc.exists() && !!userDoc.data().photoURL;
 
-                await updateProfile(user, { photoURL: photoUrlIdentifier });
-                await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
-                
-                if (!hadPhoto) {
-                    await updateDoc(userDocRef, {
-                        lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
-                    });
-                     toast({
-                        title: 'BONUS!',
-                        description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
-                        className: 'bg-yellow-500 text-white',
-                    });
-                } else {
-                     toast({
-                        title: 'Profile Photo Updated',
-                        description: 'Your new photo has been set.',
-                    });
-                }
+            await updateProfile(user, { photoURL: photoUrlIdentifier });
+            await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
+            
+            if (!hadPhoto) {
+                await updateDoc(userDocRef, {
+                    lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
+                });
+                 toast({
+                    title: 'BONUS!',
+                    description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
+                    className: 'bg-yellow-500 text-white',
+                });
             } else {
                  toast({
                     title: 'Profile Photo Updated',
                     description: 'Your new photo has been set.',
                 });
             }
-
-            window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
-            onAvatarChange(croppedImageUrl);
-            
-        } catch (error) {
+        } else {
              toast({
-                title: "Error",
-                description: "Could not save your new photo.",
-                variant: "destructive",
+                title: 'Profile Photo Updated',
+                description: 'Your new photo has been set.',
             });
         }
+
+        window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
+        onAvatarChange(croppedImageUrl);
+        
+        // Reset state after successful save
         setIsCropping(false);
         setImgSrc('');
+        onOpenChange(false); // Close dialog on success
+        
+    } catch (error) {
+         toast({
+            title: "Error",
+            description: `Could not save your new photo. ${(error as Error).message}`,
+            variant: "destructive",
+        });
     }
   };
   
   function getCroppedImg(image: HTMLImageElement, crop: Crop): string {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
-    if (!crop.width || !crop.height) {
+    // Ensure crop dimensions are defined
+    if (typeof crop.width === 'undefined' || typeof crop.height === 'undefined' || typeof crop.x === 'undefined' || typeof crop.y === 'undefined') {
         throw new Error("Crop dimensions are not valid");
     }
 
-    const targetWidth = crop.width * scaleX;
-    const targetHeight = crop.height * scaleY;
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-        throw new Error('No 2d context');
-    }
+    canvas.width = Math.floor(crop.width * scaleX);
+    canvas.height = Math.floor(crop.height * scaleY);
     
-    const cropX = crop.x * scaleX;
-    const cropY = crop.y * scaleY;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("No 2d context");
+    }
 
     ctx.drawImage(
       image,
-      cropX,
-      cropY,
-      targetWidth,
-      targetHeight,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
       0,
       0,
-      targetWidth,
-      targetHeight
+      crop.width * scaleX,
+      crop.height * scaleY
     );
-
-    return canvas.toDataURL('image/jpeg');
+    
+    return canvas.toDataURL("image/jpeg");
   }
 
   return (
@@ -499,3 +515,5 @@ export function ProfileEditor({
     </Dialog>
   );
 }
+
+    
