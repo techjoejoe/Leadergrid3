@@ -43,12 +43,12 @@ import {
 } from "@/components/ui/dialog"
 import { Badge as UiBadge } from '@/components/ui/badge';
 import Link from 'next/link';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, Timestamp, getDocs } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
@@ -134,7 +134,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
 
     return (
          <div className={cn(
-            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg overflow-hidden",
+            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg",
             isFirst && "bg-gradient-to-br from-yellow-400 to-amber-600 row-span-2",
             isSecond && "bg-gradient-to-br from-slate-300 to-slate-500 md:mt-8",
             isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 md:mt-16"
@@ -150,7 +150,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     }}
                 />
             ))}
-            {isFirst && <span className="absolute -top-5 text-4xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
+            {isFirst && <span className="absolute -top-8 text-6xl drop-shadow-lg animate-float" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("h-20 w-20 border-4 border-white/50 z-10", isFirst && "h-32 w-32")}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
@@ -186,16 +186,20 @@ export default function StudentDashboardPage() {
     }, []);
     
 
+    const stableSetActiveClass = useCallback((cls: ClassInfo | null) => {
+        setActiveClass(cls);
+    }, []);
+
     useEffect(() => {
         if (!isClient) return;
-        
+
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
                 setDisplayName(currentUser.displayName || 'Student');
                 setAvatarUrl(getAvatarFromStorage(currentUser.photoURL));
 
-                // Get classes from local storage
+                // Get classes from local storage once
                 try {
                     const storedClasses = localStorage.getItem('joinedClasses');
                     const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
@@ -204,17 +208,19 @@ export default function StudentDashboardPage() {
                     const storedActiveClassCode = localStorage.getItem('activeClassCode');
                     if (storedActiveClassCode) {
                         const foundActiveClass = classes.find(c => c.id === storedActiveClassCode);
-                        setActiveClass(foundActiveClass || (classes.length > 0 ? classes[0] : null));
+                        stableSetActiveClass(foundActiveClass || (classes.length > 0 ? classes[0] : null));
                     } else if (classes.length > 0) {
-                        setActiveClass(classes[0]);
+                        stableSetActiveClass(classes[0]);
                         localStorage.setItem('activeClassCode', classes[0].id);
+                    } else {
+                        stableSetActiveClass(null);
                     }
-
                 } catch (error) {
                     console.error("Failed to parse classes from localStorage", error);
                     localStorage.removeItem('joinedClasses');
+                    setJoinedClasses([]);
+                    stableSetActiveClass(null);
                 }
-
 
                 // Setup listener for user document
                 const userDocRef = doc(db, 'users', currentUser.uid);
@@ -291,7 +297,7 @@ export default function StudentDashboardPage() {
         });
 
         return () => unsubscribe();
-    }, [auth, router, isClient]);
+    }, [auth, router, isClient, stableSetActiveClass]);
 
     // This effect runs when the activeClass changes to update the class-specific rank/points.
     useEffect(() => {
@@ -609,3 +615,4 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
