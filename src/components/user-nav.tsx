@@ -15,54 +15,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge, Building } from "lucide-react"
-import { getAuth, signOut, User, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signOut, User } from "firebase/auth";
 import { app } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 
-const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
-
-const getAvatarFromStorage = (photoURL: string | null) => {
-    if (photoURL && (photoURL.startsWith('adminAvatar_') || photoURL.startsWith('studentAvatar_'))) {
-        const storedAvatar = typeof window !== 'undefined' ? localStorage.getItem(photoURL) : null;
-        return storedAvatar;
-    }
-    return photoURL;
+interface UserNavProps {
+  user: User | null;
+  avatarUrl: string;
+  displayName: string;
+  initials: string;
+  onEditProfile: () => void;
 }
 
-export function UserNav() {
+export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile }: UserNavProps) {
   const auth = getAuth(app);
   const router = useRouter();
   const { toast } = useToast();
-  const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
-  const [initials, setInitials] = useState("AD");
-  const [user, setUser] = useState<User | null>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  useEffect(() => {
-    if (!isClient) return;
-    
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
-        if (currentUser) {
-            const newAvatar = getAvatarFromStorage(currentUser.photoURL);
-            setAvatar(newAvatar || DEFAULT_AVATAR);
-            
-            const name = currentUser.displayName || currentUser.email || '';
-            setInitials(
-                name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() ||
-                'AD'
-            );
-        } else {
-            setUser(null);
-        }
-    });
-    return () => unsubscribe();
-  }, [auth, isClient]);
 
   const handleLogout = async () => {
     try {
@@ -81,9 +55,7 @@ export function UserNav() {
     }
   }
   
-  const displayName = user?.displayName || "Admin";
-
-  if (!isClient || !user) {
+  if (!isClient) {
     return (
         <Avatar className="h-8 w-8">
             <AvatarFallback>AD</AvatarFallback>
@@ -91,12 +63,20 @@ export function UserNav() {
     );
   }
 
+  if (!user) {
+    return (
+       <Button asChild>
+          <Link href="/login">Login</Link>
+        </Button>
+    )
+  }
+
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={avatar} alt="@admin" data-ai-hint="person portrait" />
+              <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </Button>
@@ -110,6 +90,19 @@ export function UserNav() {
               </p>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+           <DropdownMenuGroup>
+             <DropdownMenuItem onSelect={onEditProfile}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Edit Profile</span>
+            </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+               <Link href="/dashboard/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
            <DropdownMenuGroup>
              <DropdownMenuItem asChild>
@@ -140,15 +133,6 @@ export function UserNav() {
               <Link href="/dashboard/company">
                 <Building className="mr-2 h-4 w-4" />
                 <span>Company</span>
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-          <DropdownMenuSeparator />
-          <DropdownMenuGroup>
-            <DropdownMenuItem asChild>
-              <Link href="/dashboard/settings">
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
