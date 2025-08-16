@@ -102,21 +102,62 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
     const isFirst = rank === 1;
     const isSecond = rank === 2;
     const isThird = rank === 3;
+    
+    const [sparkles, setSparkles] = useState<Array<{id: number, x: string, y: string, delay: string}>>([]);
+
+    useEffect(() => {
+        const generateSparkles = () => {
+            const newSparkles = Array.from({ length: 7 }).map((_, i) => ({
+                id: Math.random(),
+                x: `${Math.random() * 100}%`,
+                y: `${Math.random() * 100}%`,
+                delay: `${Math.random() * 1}s`
+            }));
+            setSparkles(newSparkles);
+
+            // Make sparkles disappear after animation
+            setTimeout(() => setSparkles([]), 1500);
+        };
+        
+        // Trigger sparkles at random intervals
+        let timeoutId: NodeJS.Timeout;
+        const scheduleNextSparkle = () => {
+           timeoutId = setTimeout(() => {
+                generateSparkles();
+                scheduleNextSparkle();
+           }, 2000 + Math.random() * 3000); // between 2-5 seconds
+        }
+        
+        scheduleNextSparkle();
+        
+        return () => clearTimeout(timeoutId);
+    }, []);
 
     return (
          <div className={cn(
-            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg",
+            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg overflow-hidden",
             isFirst && "bg-gradient-to-br from-yellow-400 to-amber-600 row-span-2",
             isSecond && "bg-gradient-to-br from-slate-300 to-slate-500 md:mt-8",
             isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 md:mt-16"
         )}>
+            {sparkles.map(s => (
+                <div 
+                    key={s.id}
+                    className="absolute w-2 h-2 bg-white rounded-full animate-sparkle"
+                    style={{
+                        top: s.y,
+                        left: s.x,
+                        animationDelay: s.delay,
+                    }}
+                />
+            ))}
             {isFirst && <Crown className="absolute -top-5 h-10 w-10 text-yellow-300 drop-shadow-lg" />}
-             <Avatar className={cn("h-20 w-20 border-4 border-white/50", isFirst && "h-32 w-32")}>
+             <Avatar className={cn("h-20 w-20 border-4 border-white/50 z-10", isFirst && "h-32 w-32")}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
             </Avatar>
-            <h3 className="mt-2 font-bold text-lg drop-shadow-sm">{user.name}</h3>
-            <p className={cn("text-sm font-semibold", 
+            <h3 className="mt-2 font-bold text-lg drop-shadow-sm z-10">{user.name}</h3>
+            <p className={cn("text-sm font-semibold z-10", 
                 isFirst && "text-amber-100",
                 isSecond && "text-slate-100",
                 isThird && "text-yellow-100"
@@ -200,7 +241,7 @@ export default function StudentDashboardPage() {
 
                 // Fetch top 10 students for leaderboard
                 const usersRef = collection(db, 'users');
-                const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(10));
+                const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(50));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
                      const data = snapshot.docs.map((doc, index) => {
                         const userData = doc.data();
@@ -575,3 +616,4 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
