@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, Timestamp, writeBatch } from "firebase/firestore";
+import { doc, setDoc, Timestamp, writeBatch, collection } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button"
 import {
@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 
 
 const loginSchema = z.object({
@@ -44,6 +44,7 @@ export default function StudentLoginPage() {
     const router = useRouter();
     const { toast } = useToast();
 
+    const [activeTab, setActiveTab] = useState("login");
     const [isLoading, setIsLoading] = useState(false);
     const [isResettingPassword, setIsResettingPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,14 @@ export default function StudentLoginPage() {
       resolver: zodResolver(signupSchema),
       defaultValues: { name: "", email: "", password: "" },
     });
+    
+    const handleTabChange = (value: string) => {
+        setActiveTab(value);
+        setError(null); // Clear errors when switching tabs
+        loginForm.clearErrors();
+        signupForm.clearErrors();
+    }
+
 
     const handleLogin = async (values: z.infer<typeof loginSchema>) => {
         setIsLoading(true);
@@ -68,11 +77,6 @@ export default function StudentLoginPage() {
         } catch (error: any) {
             const errorMessage = "Invalid email or password. Please try again.";
             setError(errorMessage);
-             toast({
-                title: "Login Failed",
-                description: errorMessage,
-                variant: "destructive"
-            });
         } finally {
             setIsLoading(false);
         }
@@ -119,13 +123,13 @@ export default function StudentLoginPage() {
             toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid! You've earned 100 points." });
             router.push('/student-dashboard');
         } catch (error: any) {
-            const errorMessage = "Could not create account. The email might be in use or the password is too weak.";
+             let errorMessage = "Could not create account. Please try again.";
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = "This email address is already in use.";
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = "The password is too weak. Please choose a stronger one.";
+            }
             setError(errorMessage);
-            toast({
-                title: "Sign Up Failed",
-                description: errorMessage,
-                variant: "destructive"
-            });
         } finally {
             setIsLoading(false);
         }
@@ -134,7 +138,7 @@ export default function StudentLoginPage() {
     const handlePasswordReset = async () => {
         const email = loginForm.getValues("email");
         if (!email) {
-            loginForm.setError("email", { type: "manual", message: "Enter your email to reset password." });
+            loginForm.setError("email", { type: "manual", message: "Please enter your email to reset password." });
             return;
         }
         setIsResettingPassword(true);
@@ -146,8 +150,7 @@ export default function StudentLoginPage() {
                 description: "Check your inbox for a link to reset your password.",
             });
         } catch (error: any) {
-            setError("Could not send reset email. Make sure the email is correct.");
-            toast({
+             toast({
                 title: "Error",
                 description: "Could not send reset email. Make sure the email is registered.",
                 variant: "destructive"
@@ -161,7 +164,7 @@ export default function StudentLoginPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-4">
         
-        <Tabs defaultValue="login" className="w-full max-w-sm">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full max-w-sm">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -195,7 +198,18 @@ export default function StudentLoginPage() {
                                   name="password"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <Label htmlFor="password-login">Password</Label>
+                                       <div className="flex items-center">
+                                            <Label htmlFor="password-login">Password</Label>
+                                            <Button 
+                                                type="button"
+                                                variant="link" 
+                                                onClick={handlePasswordReset} 
+                                                disabled={isResettingPassword}
+                                                className="ml-auto inline-block text-sm underline p-0 h-auto font-normal"
+                                            >
+                                                {isResettingPassword ? "Sending..." : "Forgot your password?"}
+                                            </Button>
+                                        </div>
                                       <FormControl>
                                         <Input id="password-login" type="password" {...field} />
                                       </FormControl>
@@ -211,22 +225,6 @@ export default function StudentLoginPage() {
                                 <Button type="submit" className="w-full" disabled={isLoading}>
                                     {isLoading ? <Loader2 className="animate-spin" /> : 'Login'}
                                 </Button>
-                                <Button variant="outline" className="w-full" asChild>
-                                    <Link href="/student-dashboard?mock=true">
-                                        Pretend to Login as Student
-                                    </Link>
-                                </Button>
-                                <div className="mt-4 text-center text-sm">
-                                    <Button 
-                                        type="button"
-                                        variant="link" 
-                                        onClick={handlePasswordReset} 
-                                        disabled={isResettingPassword}
-                                        className="p-0 h-auto font-normal"
-                                    >
-                                        {isResettingPassword ? "Sending..." : "Forgot your password?"}
-                                    </Button>
-                                </div>
                             </CardContent>
                         </form>
                     </Form>
@@ -235,7 +233,7 @@ export default function StudentLoginPage() {
             <TabsContent value="signup">
                 <Card>
                    <Form {...signupForm}>
-                        <form onSubmit={signupForm.handleSubmit(handleSignUp)}>
+                        <form onSubmit={signupForm.handleSubmit(handleSignUp)} className="space-y-4">
                             <CardHeader>
                                 <CardTitle className="text-2xl font-headline">Student Sign Up</CardTitle>
                                 <CardDescription>
@@ -248,7 +246,7 @@ export default function StudentLoginPage() {
                                   name="name"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <Label>Full Name</Label>
+                                      <FormLabel>Full Name</FormLabel>
                                       <FormControl>
                                         <Input placeholder="John Doe" {...field} />
                                       </FormControl>
@@ -261,7 +259,7 @@ export default function StudentLoginPage() {
                                   name="email"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <Label>Email</Label>
+                                      <FormLabel>Email</FormLabel>
                                       <FormControl>
                                         <Input type="email" placeholder="student@example.com" {...field} />
                                       </FormControl>
@@ -274,7 +272,7 @@ export default function StudentLoginPage() {
                                   name="password"
                                   render={({ field }) => (
                                     <FormItem>
-                                      <Label>Password</Label>
+                                      <FormLabel>Password</FormLabel>
                                       <FormControl>
                                         <Input type="password" {...field} />
                                       </FormControl>

@@ -12,6 +12,7 @@ import { isBefore, parseISO } from 'date-fns';
 import { db, auth } from '@/lib/firebase';
 import { collection, addDoc, Timestamp, writeBatch, doc, increment, getDoc, setDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const createMockUser = (): User => ({
     uid: 'mock-user-id',
@@ -40,6 +41,21 @@ function ScanPageContents() {
     const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        const getCameraPermission = async () => {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            setHasCameraPermission(true);
+            stream.getTracks().forEach(track => track.stop()); // Stop using camera immediately
+          } catch (err) {
+            console.error('Camera access denied:', err);
+            setHasCameraPermission(false);
+          }
+        };
+        getCameraPermission();
+    }, []);
 
     useEffect(() => {
         if (isMock) {
@@ -55,18 +71,19 @@ function ScanPageContents() {
             });
             return () => unsubscribe();
         }
-    }, [auth, router, toast, isMock]);
+    }, [router, toast, isMock]);
 
     const handleResult = async (result: any, error: any) => {
         if (!!result && !isProcessing && user) {
             setIsProcessing(true); // Prevent multiple scans
+            setError(null);
 
             if (isMock) {
                 toast({
                     title: 'Scan Successful (Mock Mode)',
                     description: `This would have awarded points for the scanned activity.`,
                 });
-                router.push('/student-dashboard?mock=true');
+                 setTimeout(() => router.push('/student-dashboard?mock=true'), 1500);
                 return;
             }
 
@@ -91,7 +108,7 @@ function ScanPageContents() {
                             description: "You are not a member of this class, see trainer",
                             variant: 'destructive',
                         });
-                        router.push('/student-dashboard');
+                        setTimeout(() => router.push('/student-dashboard'), 1500);
                         return;
                     }
 
@@ -161,7 +178,7 @@ function ScanPageContents() {
                         });
                     }
                     
-                    router.push('/student-dashboard');
+                    setTimeout(() => router.push('/student-dashboard'), 1500);
 
                 // Handle General Activity QR Codes
                 } else if (data && data.type === 'Activity' && data.expires) {
@@ -172,7 +189,7 @@ function ScanPageContents() {
                             description: `This code for "${data.name}" expired and is no longer valid.`,
                             variant: 'destructive',
                         });
-                        router.push('/student-dashboard');
+                        setTimeout(() => router.push('/student-dashboard'), 1500);
                         return;
                     }
 
@@ -186,7 +203,7 @@ function ScanPageContents() {
                                 description: "You are not a member of this class, see trainer",
                                 variant: "destructive"
                             });
-                            router.push('/student-dashboard');
+                             setTimeout(() => router.push('/student-dashboard'), 1500);
                             return;
                         }
                     }
@@ -237,7 +254,7 @@ function ScanPageContents() {
                         title: 'Success!',
                         description: `You earned ${pointsAwarded} points for "${data.name}".`,
                     });
-                    router.push('/student-dashboard');
+                     setTimeout(() => router.push('/student-dashboard'), 1500);
                 
                 } else {
                    setError("Invalid LeaderGrid QR code format.");
@@ -259,7 +276,7 @@ function ScanPageContents() {
         }
     };
 
-    if (!user) {
+    if (!user || hasCameraPermission === null) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-slate-900">
                 <Loader2 className="h-8 w-8 animate-spin text-white" />
@@ -282,13 +299,23 @@ function ScanPageContents() {
             <p className="text-lg text-slate-400 mb-8 z-10">Center the QR code in the box to earn points.</p>
             
             <div className="w-full max-w-md h-auto rounded-lg overflow-hidden border-4 border-primary shadow-2xl shadow-cyan-500/30">
-                 {!isProcessing && (
+                 {!isProcessing && hasCameraPermission && (
                     <QrReader
                         onResult={handleResult}
                         constraints={{ facingMode: 'environment' }}
                         containerStyle={{ width: '100%' }}
                         videoContainerStyle={{ paddingTop: '100%' }} // Creates a square aspect ratio
                     />
+                 )}
+                 {hasCameraPermission === false && (
+                     <div className="aspect-square bg-slate-800 flex flex-col items-center justify-center p-8 text-center">
+                         <Alert variant="destructive">
+                            <AlertTitle>Camera Access Denied</AlertTitle>
+                            <AlertDescription>
+                                Please enable camera permissions in your browser settings to use the scanner.
+                            </AlertDescription>
+                        </Alert>
+                     </div>
                  )}
             </div>
             
@@ -304,7 +331,7 @@ function ScanPageContents() {
                     <p>{error}</p>
                 </div>
             )}
-            {!error && !isProcessing && (
+            {!error && !isProcessing && hasCameraPermission && (
                  <div className="mt-6 flex items-center gap-2 text-slate-400 z-10">
                     <Rss className="h-5 w-5 animate-pulse" />
                     <p>Searching for QR code...</p>
