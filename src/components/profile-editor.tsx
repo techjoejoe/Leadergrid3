@@ -25,16 +25,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, Save, Check, SkipForward, User as UserIcon } from 'lucide-react';
+import { Loader2, Save, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import Cropper, { ReactCropperElement } from 'react-cropper';
-import 'cropperjs/dist/cropper.css';
 
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { auth, db, storage } from '@/lib/firebase';
-import { doc, updateDoc, increment, getDoc, writeBatch, collection, Timestamp, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import Image from 'next/image';
+import { auth, db } from '@/lib/firebase';
+import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -47,39 +43,23 @@ interface ProfileEditorProps {
   user: User | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAvatarChange: (newAvatar: string) => void;
   onNameChange: (newName: string) => void;
-  currentAvatar?: string;
-  currentInitial: string;
   currentDisplayName: string;
   currentEmail: string;
-  storageKey: string;
 }
-
-const PHOTO_UPLOAD_BONUS = 300;
 
 export function ProfileEditor({ 
     user,
     open, 
     onOpenChange, 
-    onAvatarChange,
     onNameChange,
-    currentAvatar, 
-    currentInitial,
     currentDisplayName,
     currentEmail,
-    storageKey
 }: ProfileEditorProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
-  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
-  const [isCropOpen, setIsCropOpen] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(open);
-  const cropperRef = useRef<ReactCropperElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -182,110 +162,8 @@ export function ProfileEditor({
       setIsLoadingPassword(false);
   }
 
-  const handleAvatarClick = () => {
-    if (isProcessingPhoto) return;
-    fileInputRef.current?.click();
-  };
-
-  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        setImageToCrop(reader.result as string);
-        setIsCropOpen(true);
-      });
-      reader.readAsDataURL(e.target.files[0]);
-    }
-    e.target.value = ''; // Reset file input to allow re-selection of the same file
-  };
-  
-  const getCroppedBlob = (): Promise<Blob | null> => {
-      return new Promise((resolve) => {
-          const cropper = cropperRef.current?.cropper;
-          if (!cropper) {
-              resolve(null);
-              return;
-          }
-          const canvas = cropper.getCroppedCanvas({
-              width: 256,
-              height: 256,
-              imageSmoothingQuality: 'high',
-          });
-           canvas.toBlob((blob) => {
-              setCroppedBlob(blob);
-              resolve(blob);
-          }, 'image/jpeg', 0.9);
-      });
-  };
-
-  const handleSaveCrop = async () => {
-    if (!user) return;
-    const blob = await getCroppedBlob();
-    if (!blob) {
-      toast({ title: "Error", description: "Could not process image crop.", variant: "destructive" });
-      return;
-    }
-
-    setIsProcessingPhoto(true);
-    toast({ title: 'Uploading photo...' });
-  
-    try {
-      const storageRef = ref(storage, `avatars/${user.uid}.jpg`);
-      const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
-  
-      // Wait for the upload to complete
-      await uploadTask;
-  
-      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-  
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { photoURL: downloadURL });
-      }
-  
-      const batch = writeBatch(db);
-      const userDocRef = doc(db, "users", user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      const hadPhoto = !!userDocSnap.data()?.photoURL;
-      const updateData: { photoURL: string; lifetimePoints?: any } = { photoURL: downloadURL };
-  
-      if (!hadPhoto && storageKey === 'studentAvatar') {
-        updateData.lifetimePoints = increment(PHOTO_UPLOAD_BONUS);
-        const historyRef = doc(collection(db, 'point_history'));
-        batch.set(historyRef, {
-          studentId: user.uid,
-          studentName: user.displayName,
-          points: PHOTO_UPLOAD_BONUS,
-          reason: 'Profile Photo Bonus',
-          type: 'engagement',
-          timestamp: Timestamp.now()
-        });
-        toast({
-          title: 'BONUS!',
-          description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
-          className: 'bg-yellow-500 text-white',
-        });
-      }
-  
-      batch.update(userDocRef, updateData);
-      await batch.commit();
-  
-      onAvatarChange(downloadURL);
-      toast({ title: "Success!", description: "Profile photo updated." });
-  
-    } catch (err) {
-      console.error("Photo save failed", err);
-      toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
-    } finally {
-      setIsProcessingPhoto(false);
-      setIsCropOpen(false);
-      onOpenChange(false);
-      setIsEditorOpen(false);
-    }
-  };
-
   return (
-    <>
-    <Dialog open={isEditorOpen && !isCropOpen} onOpenChange={(isOpen) => { setIsEditorOpen(isOpen); onOpenChange(isOpen); }}>
+    <Dialog open={isEditorOpen} onOpenChange={(isOpen) => { setIsEditorOpen(isOpen); onOpenChange(isOpen); }}>
       <DialogContent className="sm:max-w-[480px]">
         {!user ? (
           <DialogHeader>
@@ -303,26 +181,6 @@ export function ProfileEditor({
             </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
-            <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={currentAvatar} />
-                  <AvatarFallback><UserIcon className="h-10 w-10" /></AvatarFallback>
-                </Avatar>
-                <Button variant="outline" onClick={handleAvatarClick} disabled={isProcessingPhoto}>
-                    {isProcessingPhoto ? 
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : 
-                        <><UploadCloud className="mr-2" />Upload Photo</>
-                    }
-                </Button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={onFileInputChange}
-                  className="hidden"
-                  accept="image/png, image/jpeg, image/webp"
-                />
-            </div>
-
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-4">
                 <FormField
@@ -355,7 +213,8 @@ export function ProfileEditor({
                     )}
                 />
                  <Button type="submit" disabled={isLoading} className="w-full">
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Changes
                 </Button>
                 </form>
             </Form>
@@ -376,37 +235,5 @@ export function ProfileEditor({
       </DialogContent>
     </Dialog>
     
-    <Dialog open={isCropOpen} onOpenChange={setIsCropOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Crop your new photo</DialogTitle>
-                <DialogDescription>Adjust the image below to crop your avatar.</DialogDescription>
-            </DialogHeader>
-            {imageToCrop && (
-                 <Cropper
-                    ref={cropperRef}
-                    src={imageToCrop}
-                    style={{ height: 400, width: "100%" }}
-                    aspectRatio={1}
-                    viewMode={1}
-                    guides={false}
-                    background={false}
-                    responsive={true}
-                    checkOrientation={false}
-                 />
-            )}
-            <DialogFooter>
-                <Button variant="ghost" onClick={() => setIsCropOpen(false)} disabled={isProcessingPhoto}>
-                    <SkipForward className="mr-2 h-4 w-4" />
-                    Cancel
-                </Button>
-                <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
-                    {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Crop
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-    </>
-  );
+    );
 }

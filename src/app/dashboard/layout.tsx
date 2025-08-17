@@ -14,8 +14,6 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
-const DEFAULT_AVATAR = "/default-avatar.png";
-
 export default function DashboardLayout({
   children,
 }: {
@@ -23,7 +21,6 @@ export default function DashboardLayout({
 }) {
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
     const [user, setUser] = useState<User | null>(null);
-    const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
     const [initials, setInitials] = useState("AD");
     const [displayName, setDisplayName] = useState("Admin");
     const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +46,6 @@ export default function DashboardLayout({
                             const data = doc.data();
                             const name = data.displayName || currentUser.email || 'Admin';
                             setDisplayName(name);
-                            setAvatar(data.photoURL || DEFAULT_AVATAR);
                             setInitials(name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
                         }
                     });
@@ -113,7 +109,6 @@ export default function DashboardLayout({
                 </div>
                 <UserNav 
                     user={user}
-                    avatarUrl={avatar}
                     displayName={displayName}
                     initials={initials}
                     onEditProfile={() => setIsProfileEditorOpen(true)}
@@ -129,13 +124,9 @@ export default function DashboardLayout({
                 user={user}
                 open={isProfileEditorOpen} 
                 onOpenChange={setIsProfileEditorOpen}
-                onAvatarChange={setAvatar}
                 onNameChange={handleNameChange}
-                currentAvatar={avatar}
-                currentInitial={initials}
                 currentDisplayName={displayName}
                 currentEmail={user.email || ""}
-                storageKey="adminAvatar"
             />
         )}
     </div>

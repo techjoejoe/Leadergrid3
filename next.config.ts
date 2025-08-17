@@ -24,14 +24,6 @@ const nextConfig: NextConfig = {
             protocol: 'https',
             hostname: 'images.unsplash.com',
         },
-        {
-            protocol: 'https',
-            hostname: 'firebasestorage.googleapis.com',
-        },
-        {
-            protocol: "https",
-            hostname: "*.appspot.com"
-        }
     ],
   },
   async headers() {
@@ -46,5 +38,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-    

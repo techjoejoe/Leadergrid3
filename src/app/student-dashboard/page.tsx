@@ -81,8 +81,6 @@ interface LeaderboardEntry {
   rank: number;
 }
 
-const DEFAULT_AVATAR = "/default-avatar.png";
-
 const formatName = (name: string) => {
     if (!name) return 'Anonymous';
     const parts = name.split(' ');
@@ -101,7 +99,6 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
     const isFirst = rank === 1;
     const isSecond = rank === 2;
     const isThird = rank === 3;
-    const finalAvatarUrl = user.avatar ?? DEFAULT_AVATAR;
     
     return (
         <div className={cn("relative flex flex-col items-center justify-end text-white text-center w-full transition-transform hover:scale-105 group",
@@ -122,9 +119,6 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                 isSecond && `h-40 w-40 sm:h-48 sm:w-48 animate-glow-silver bg-gradient-to-br from-slate-200 via-slate-400 to-gray-500 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
                 isThird && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-bronze bg-gradient-to-br from-amber-500 via-amber-700 to-orange-900 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
             )}>
-                <AvatarImage asChild src={finalAvatarUrl} className="rounded-full">
-                    <Image src={finalAvatarUrl} alt={user.name} width={224} height={224} unoptimized />
-                </AvatarImage>
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full"><UserIcon className="h-24 w-24" /></AvatarFallback>
             </Avatar>
             <div className="relative w-full">
@@ -144,7 +138,6 @@ export default function StudentDashboardPage() {
     const [userBadges, setUserBadges] = useState<Badge[]>([]);
     const [pointHistory, setPointHistory] = useState<PointHistoryRecord[]>([]);
     const [user, setUser] = useState<User | null>(null);
-    const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
     const [displayName, setDisplayName] = useState('Student');
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
@@ -186,7 +179,6 @@ export default function StudentDashboardPage() {
                         const userData = doc.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
                         setDisplayName(userData.displayName || 'Student');
-                        setAvatarUrl(userData.photoURL || DEFAULT_AVATAR);
                     } else {
                         // User exists in Auth, but not in Firestore. Redirect to login to force signup flow.
                         router.push('/student-login');
@@ -238,7 +230,7 @@ export default function StudentDashboardPage() {
                             id: doc.id,
                             name: userData.displayName || 'Anonymous',
                             points: userData.lifetimePoints || 0,
-                            avatar: userData.photoURL || null,
+                            avatar: null,
                             initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         };
@@ -347,7 +339,7 @@ export default function StudentDashboardPage() {
                             id: doc.id,
                             name: studentData.displayName || 'Anonymous',
                             points: studentData.classPoints || 0,
-                            avatar: studentData.photoURL,
+                            avatar: null,
                             initial: (studentData.displayName || '??').substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         });
@@ -456,9 +448,6 @@ export default function StudentDashboardPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                                     <Avatar>
-                                        <AvatarImage asChild>
-                                            <Image src={avatarUrl} alt={displayName} width={40} height={40} unoptimized />
-                                        </AvatarImage>
                                         <AvatarFallback><UserIcon className="h-5 w-5" /></AvatarFallback>
                                     </Avatar>
                                 </Button>
@@ -505,9 +494,6 @@ export default function StudentDashboardPage() {
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 items-center justify-center gap-4 p-6 pt-0">
                                     <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
-                                        <AvatarImage asChild>
-                                            <Image src={avatarUrl} alt={displayName} width={144} height={144} unoptimized />
-                                        </AvatarImage>
                                         <AvatarFallback className="rounded-md text-3xl"><UserIcon className="h-20 w-20" /></AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-4">
@@ -623,15 +609,11 @@ export default function StudentDashboardPage() {
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
                                             {rest.map((user) => (
                                                 <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
-                                                    <Image
-                                                        src={user.avatar ?? DEFAULT_AVATAR}
-                                                        alt={user.name}
-                                                        fill
-                                                        className="object-cover transition-transform duration-300 group-hover:scale-110"
-                                                        unoptimized
-                                                    />
+                                                    <Avatar className="h-full w-full">
+                                                        <AvatarFallback className="rounded-xl text-3xl"><UserIcon /></AvatarFallback>
+                                                    </Avatar>
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                                                    <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
+                                                    <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{!isNaN(user.rank) ? user.rank : ''}</div>
                                                     <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
                                                         <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
                                                         <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
@@ -690,13 +672,9 @@ export default function StudentDashboardPage() {
             user={user}
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
-            onAvatarChange={setAvatarUrl}
             onNameChange={setDisplayName}
-            currentAvatar={avatarUrl}
-            currentInitial={displayInitial}
             currentDisplayName={displayName}
             currentEmail={displayEmail}
-            storageKey="studentAvatar"
         />
         </>
     );

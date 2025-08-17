@@ -23,8 +23,6 @@ export interface Student {
     role: 'student' | 'admin';
 }
 
-const DEFAULT_AVATAR = "/default-avatar.png";
-
 export default function StudentsPage() {
     const [students, setStudents] = useState<Student[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +40,6 @@ export default function StudentsPage() {
                     id: doc.id,
                     displayName: data.displayName || 'Unnamed User',
                     email: data.email || 'No email provided',
-                    photoURL: data.photoURL,
                     lifetimePoints: data.lifetimePoints || 0,
                     role: data.role || 'student',
                 } as Student;
@@ -203,9 +200,6 @@ export default function StudentsPage() {
                                 <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
-                                            <AvatarImage asChild>
-                                                <Image src={student.photoURL ?? DEFAULT_AVATAR} alt={student.displayName || ''} width={40} height={40} unoptimized />
-                                            </AvatarImage>
                                             <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
                                         {student.displayName}
@@ -239,5 +233,3 @@ export default function StudentsPage() {
         </Card>
     )
 }
-
-    

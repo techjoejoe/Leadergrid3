@@ -22,16 +22,13 @@ import Image from "next/image";
 
 interface UserNavProps {
   user: User | null;
-  avatarUrl: string;
   displayName: string;
   initials: string;
   onEditProfile: () => void;
   isSuperAdmin?: boolean;
 }
 
-const DEFAULT_AVATAR = "/default-avatar.png";
-
-export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile, isSuperAdmin = false }: UserNavProps) {
+export function UserNav({ user, displayName, initials, onEditProfile, isSuperAdmin = false }: UserNavProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -60,16 +57,11 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile,
     )
   }
   
-  const finalAvatarUrl = avatarUrl || DEFAULT_AVATAR;
-
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage asChild src={finalAvatarUrl} alt={displayName}>
-                <Image src={finalAvatarUrl} alt={displayName} width={32} height={32} unoptimized />
-              </AvatarImage>
               <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
             </Avatar>
           </Button>
@@ -140,5 +132,3 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile,
       </DropdownMenu>
   )
 }
-
-    
