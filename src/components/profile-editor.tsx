@@ -53,7 +53,6 @@ interface ProfileEditorProps {
   storageKey: string;
 }
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const PHOTO_UPLOAD_BONUS = 300;
 
 export function ProfileEditor({ 
@@ -174,97 +173,22 @@ export function ProfileEditor({
     if (!user || isProcessingPhoto) return;
     fileInputRef.current?.click();
   };
-  
-  const resizeImage = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          if (!ctx) return reject(new Error('Could not get canvas context'));
-
-          let { width, height } = img;
-          const MAX_WIDTH = 1024;
-          const MAX_HEIGHT = 1024;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          let quality = 0.9;
-          let dataUrl = canvas.toDataURL('image/jpeg', quality);
-
-          while (dataUrl.length > MAX_FILE_SIZE && quality > 0.1) {
-            quality -= 0.1;
-            dataUrl = canvas.toDataURL('image/jpeg', quality);
-          }
-          
-          if (dataUrl.length > MAX_FILE_SIZE) {
-            return reject(new Error("Image is too large to be resized automatically."));
-          }
-
-          resolve(dataUrl);
-        };
-        img.onerror = reject;
-        img.src = event.target?.result as string;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
 
   const onSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      setCrop(undefined); 
-      setIsProcessingPhoto(true);
-      
-      try {
-        let imageDataUrl: string;
-        if (file.size > MAX_FILE_SIZE) {
-            toast({
-                title: 'Resizing Image...',
-                description: 'Your image is large, we are optimizing it for you.',
-            });
-            imageDataUrl = await resizeImage(file);
-        } else {
-          imageDataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.addEventListener('load', () => resolve(reader.result?.toString() || ''));
-            reader.onerror = (error) => reject(error);
-            reader.readAsDataURL(file);
-          });
-        }
-        
-        setImgSrc(imageDataUrl);
+        const file = e.target.files[0];
+        setCrop(undefined); // Reset crop state
+        setIsProcessingPhoto(true);
 
-      } catch (error: any) {
-          toast({
-              title: "Error processing image",
-              description: error.message || "Could not process the selected file.",
-              variant: "destructive",
-          });
-          setImgSrc('');
-          setIsCropping(false);
-          setIsProcessingPhoto(false);
-      }
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+            setImgSrc(reader.result?.toString() || '');
+            // No longer showing processing toast, it should be fast
+            setIsProcessingPhoto(false);
+        });
+        reader.readAsDataURL(file);
     }
-  };
+};
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
@@ -386,8 +310,10 @@ export function ProfileEditor({
     const canvas = document.createElement("canvas");
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    const targetWidth = 256; // Max width for avatar
-    const targetHeight = 256; // Max height for avatar
+    
+    // Aggressively resize to a smaller avatar size
+    const targetWidth = 128; 
+    const targetHeight = 128;
 
     if (typeof crop.width === 'undefined' || typeof crop.height === 'undefined' || typeof crop.x === 'undefined' || typeof crop.y === 'undefined') {
         throw new Error("Crop dimensions are not valid");
@@ -419,7 +345,7 @@ export function ProfileEditor({
     );
     
     // Use a specific quality setting for JPEG to control file size
-    return canvas.toDataURL("image/jpeg", 0.9);
+    return canvas.toDataURL("image/jpeg", 0.85);
   }
 
   return (
@@ -567,3 +493,5 @@ export function ProfileEditor({
     </Dialog>
   );
 }
+
+    
