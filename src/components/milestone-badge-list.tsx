@@ -9,7 +9,7 @@ const milestoneBadges = [
     name: 'Intern of Incentives',
     description: 'Awarded for earning your first 200 points.',
     points: 200,
-    imageUrl: '/logo.png',
+    imageUrl: '/intern.png',
     hint: 'smiley face tie',
   },
   {
