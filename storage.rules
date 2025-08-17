@@ -1,0 +1,21 @@
+
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow public read access to all files in the 'avatars' folder
+    match /avatars/{allPaths=**} {
+      allow read;
+    }
+    
+    // Allow authenticated users to write to their own avatar file.
+    // The uploaded file must be an image and smaller than 5MB.
+    // The user's UID must match the filename.
+    match /avatars/{userId} {
+      allow write: if request.auth != null 
+                    && request.auth.uid == userId
+                    && request.resource.size < 5 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

@@ -30,8 +30,10 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -50,10 +52,47 @@ interface ProfileEditorProps {
   currentInitial: string;
   currentDisplayName: string;
   currentEmail: string;
-  storageKey: string;
 }
 
 const PHOTO_UPLOAD_BONUS = 300;
+
+function getCroppedBlob(image: HTMLImageElement, crop: Crop): Promise<Blob | null> {
+    return new Promise((resolve) => {
+        const canvas = document.createElement("canvas");
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+        
+        canvas.width = 128;
+        canvas.height = 128;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("No 2d context");
+        }
+
+        const cropX = crop.x * scaleX;
+        const cropY = crop.y * scaleY;
+        const cropWidth = crop.width * scaleX;
+        const cropHeight = crop.height * scaleY;
+
+        ctx.drawImage(
+          image,
+          cropX,
+          cropY,
+          cropWidth,
+          cropHeight,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        }, 'image/jpeg', 0.9);
+    });
+}
+
 
 export function ProfileEditor({ 
     user,
@@ -65,7 +104,6 @@ export function ProfileEditor({
     currentInitial,
     currentDisplayName,
     currentEmail,
-    storageKey,
 }: ProfileEditorProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -205,7 +243,7 @@ export function ProfileEditor({
       height
     );
     setCrop(newCrop);
-    setCompletedCrop(newCrop); // Guarantee completedCrop is set
+    setCompletedCrop(newCrop);
   }
 
   const handleCropComplete = async () => {
@@ -221,7 +259,15 @@ export function ProfileEditor({
     setIsProcessingPhoto(true);
 
     try {
-        const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
+        const imageBlob = await getCroppedBlob(imgRef.current, completedCrop);
+        if (!imageBlob) {
+            throw new Error('Could not create image blob.');
+        }
+
+        // Upload to Firebase Storage
+        const avatarRef = storageRef(storage, `avatars/${user.uid}.jpg`);
+        const uploadResult = await uploadBytes(avatarRef, imageBlob);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
         
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", user.uid);
@@ -232,11 +278,11 @@ export function ProfileEditor({
              hadPhoto = !!userDocSnap.data().photoURL;
         }
 
-        // Update Auth profile and Firestore with the direct base64 URL
-        await updateProfile(user, { photoURL: croppedImageUrl });
-        batch.update(userDocRef, { photoURL: croppedImageUrl });
+        // Update Auth profile and Firestore with the new storage URL
+        await updateProfile(user, { photoURL: downloadURL });
+        batch.update(userDocRef, { photoURL: downloadURL });
         
-        // Find all classes the user is enrolled in.
+        // Find all classes the user is enrolled in and update their roster photo
         const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
         const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
         
@@ -244,10 +290,9 @@ export function ProfileEditor({
             const classId = enrollmentDoc.data().classId;
             if (classId) {
                 const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                const rosterSnap = await getDoc(rosterDocRef);
+                 const rosterSnap = await getDoc(rosterDocRef);
                 if (rosterSnap.exists()){
-                  batch.update(rosterDocRef, { photoURL: croppedImageUrl });
-                   // Also give them class points for the photo upload if it's their first time
+                  batch.update(rosterDocRef, { photoURL: downloadURL });
                   if (!hadPhoto) {
                       batch.update(rosterDocRef, { classPoints: increment(PHOTO_UPLOAD_BONUS) });
                   }
@@ -283,8 +328,7 @@ export function ProfileEditor({
         }
 
         await batch.commit();
-        
-        onAvatarChange(croppedImageUrl);
+        onAvatarChange(downloadURL);
         
         setIsCropping(false);
         setImgSrc('');
@@ -310,44 +354,6 @@ export function ProfileEditor({
         setIsProcessingPhoto(false);
     }
   };
-  
-  function getCroppedImg(image: HTMLImageElement, crop: Crop): string {
-    const canvas = document.createElement("canvas");
-    
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    
-    if (typeof crop.width === 'undefined' || typeof crop.height === 'undefined' || typeof crop.x === 'undefined' || typeof crop.y === 'undefined') {
-        throw new Error("Crop dimensions are not valid");
-    }
-
-    canvas.width = 128;
-    canvas.height = 128;
-    
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("No 2d context");
-    }
-    
-    const cropX = crop.x * scaleX;
-    const cropY = crop.y * scaleY;
-    const cropWidth = crop.width * scaleX;
-    const cropHeight = crop.height * scaleY;
-
-    ctx.drawImage(
-      image,
-      cropX,
-      cropY,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      128,
-      128
-    );
-    
-    return canvas.toDataURL("image/jpeg", 0.85);
-  }
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
@@ -405,7 +411,7 @@ export function ProfileEditor({
                   ref={fileInputRef}
                   onChange={onSelectFile}
                   className="hidden"
-                  accept="image/*"
+                  accept="image/png, image/jpeg, image/webp"
                   disabled={isProcessingPhoto}
                 />
             </div>
