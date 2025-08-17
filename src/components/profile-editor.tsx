@@ -210,12 +210,12 @@ export function ProfileEditor({
   }
 
   const handleSaveCrop = async () => {
-      if (!user) return;
-      
-      setIsProcessingPhoto(true);
-      toast({ title: 'Processing Photo', description: 'Please wait...' });
+    if (!user) return;
+    
+    setIsProcessingPhoto(true);
+    toast({ title: 'Processing Photo', description: 'Please wait...' });
 
-      try {
+    try {
         const croppedBlob = await getCroppedBlob();
         if (!croppedBlob) {
             throw new Error("Failed to get cropped image.");
@@ -430,5 +430,3 @@ export function ProfileEditor({
     </>
   );
 }
-
-    
