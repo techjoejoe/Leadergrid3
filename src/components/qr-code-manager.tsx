@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, orderBy, or } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, orderBy, or, and } from 'firebase/firestore';
 import type { Class } from './create-class-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
@@ -81,8 +81,10 @@ export function QrCodeManager({ classId }: { classId: string }) {
             const now = Timestamp.now();
             const q = query(
                 collection(db, "qrcodes"),
-                where("expirationDate", ">", now),
-                or(where("classId", "==", classId), where("classId", "==", null)),
+                and(
+                    where("expirationDate", ">", now),
+                    or(where("classId", "==", classId), where("classId", "==", null))
+                ),
                 orderBy("expirationDate", "desc")
             );
             const querySnapshot = await getDocs(q);
@@ -502,3 +504,5 @@ export function QrCodeManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
+    
