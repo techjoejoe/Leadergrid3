@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -33,7 +34,7 @@ import 'cropperjs/dist/cropper.css';
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, writeBatch, collection, Timestamp, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL, uploadBytesResumable } from "firebase/storage";
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 
 const profileFormSchema = z.object({
@@ -226,24 +227,22 @@ export function ProfileEditor({
 
     setIsProcessingPhoto(true);
     toast({ title: "Uploading photo..." });
-    console.log("handleSaveCrop: Starting photo upload process.");
-    
+
     const controller = new AbortController();
     const timer = setTimeout(() => {
         controller.abort();
     }, 30000);
 
     try {
+        console.log("handleSaveCrop: 1. Starting upload to Firebase Storage.");
         const path = `avatars/${user.uid}.jpg`;
         const photoRef = storageRef(storage, path);
         const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
-
-        console.log("handleSaveCrop: 1. Starting upload to Firebase Storage.");
         const task = uploadBytesResumable(photoRef, blob, { ...metadata, signal: controller.signal });
 
         await new Promise<void>((resolve, reject) => {
             task.on("state_changed",
-              () => {}, // We can add a progress handler here in the future
+              () => {}, // Progress handler can be added here
               (error) => {
                 // Handle errors, including cancellation from the watchdog timer
                 if (error.code === 'storage/canceled') {
@@ -258,14 +257,12 @@ export function ProfileEditor({
 
         console.log("handleSaveCrop: 2. Getting download URL.");
         const downloadURL = await getDownloadURL(photoRef);
-        console.log(`handleSaveCrop: Got URL: ${downloadURL}`);
         
         const batch = writeBatch(db);
         
         console.log("handleSaveCrop: 3. Updating Firebase Auth profile.");
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
-            console.log("handleSaveCrop: 3a. updateProfile completed.");
         }
         
         console.log("handleSaveCrop: 4. Updating Firestore user document.");
@@ -293,11 +290,9 @@ export function ProfileEditor({
         }
         
         await batch.commit();
-        console.log("handleSaveCrop: 4d. Batch commit completed.");
 
         toast({ title: "Success!", description: "Profile photo updated." });
         onAvatarChange(downloadURL);
-        console.log("handleSaveCrop: 5. Closing dialogs.");
         
     } catch (err) {
         console.error("handleSaveCrop: Photo save failed", err);
