@@ -55,15 +55,18 @@ export default function StudentsPage() {
     
     const TableSkeleton = () => (
         <TableBody>
-             {[...Array(5)].map((_, i) => (
+             {[...Array(10)].map((_, i) => (
                 <TableRow key={i}>
                     <TableCell>
                         <div className="flex items-center gap-3">
                             <Skeleton className="h-10 w-10 rounded-full" />
-                            <Skeleton className="h-5 w-32" />
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-24" />
+                            </div>
                         </div>
                     </TableCell>
-                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                     <TableCell className="text-right">
                        {/* Action skeletons can go here if needed */}
                     </TableCell>

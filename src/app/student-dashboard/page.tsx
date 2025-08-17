@@ -148,6 +148,7 @@ export default function StudentDashboardPage() {
     const [isClient, setIsClient] = useState(false);
     const [companyLeaderboard, setCompanyLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
     const router = useRouter();
 
@@ -165,7 +166,7 @@ export default function StudentDashboardPage() {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                // setDisplayName(currentUser.displayName || 'Student');
+                setIsLoading(true);
 
                 // Setup listener for user document
                 const userDocRef = doc(db, 'users', currentUser.uid);
@@ -229,6 +230,7 @@ export default function StudentDashboardPage() {
                         };
                     });
                     setCompanyLeaderboard(data);
+                    setIsLoading(false);
                 });
 
 
@@ -316,6 +318,7 @@ export default function StudentDashboardPage() {
             // Show company leaderboard
             setLeaderboardData(companyLeaderboard);
         } else {
+            setIsLoading(true);
             // Show class leaderboard, only including students with points > 0
             const classRosterQuery = query(
                 collection(db, 'classes', activeClass.id, 'roster'), 
@@ -336,6 +339,7 @@ export default function StudentDashboardPage() {
                     };
                 });
                 setLeaderboardData(classLeaderboard);
+                setIsLoading(false);
             });
             return () => unsubscribe();
         }
@@ -541,7 +545,11 @@ export default function StudentDashboardPage() {
                                     </Dialog>
                                 </CardHeader>
                                 <CardContent className="flex-1">
-                                    {userBadges.length > 0 ? (
+                                    {isLoading ? (
+                                        <div className="flex justify-center items-center h-full">
+                                            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                        </div>
+                                    ) : userBadges.length > 0 ? (
                                         <ScrollArea className="h-full max-h-[220px] pr-4">
                                              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-4">
                                                 {userBadges.map((badge, index) => (
@@ -589,43 +597,49 @@ export default function StudentDashboardPage() {
                             </Button>
                         </CardHeader>
                         <CardContent>
-                             <div className="space-y-4">
-                                {/* Podium */}
-                                <div className="flex items-end justify-center gap-2 md:gap-4">
-                                    {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
-                                    {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
-                                    {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
+                            {isLoading ? (
+                                <div className="flex justify-center items-center h-48">
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
-                                {/* Rest of Leaderboard */}
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
-                                    {rest.map((user) => (
-                                        <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
-                                            {user.avatar ? (
-                                                <Image
-                                                    src={user.avatar}
-                                                    alt={user.name}
-                                                    fill
-                                                    className="object-cover transition-transform duration-300 group-hover:scale-110"
-                                                    unoptimized
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full bg-secondary flex items-center justify-center">
-                                                    <span className="text-4xl font-bold text-secondary-foreground">{user.initial}</span>
-                                                </div>
-                                            )}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                                            <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
-                                            <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                                                <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
-                                                <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
-                                                    <Star className="h-3 w-3" />
-                                                    <span>{user.points.toLocaleString()} pts</span>
+                            ) : (
+                                <div className="space-y-4">
+                                    {/* Podium */}
+                                    <div className="flex items-end justify-center gap-2 md:gap-4">
+                                        {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
+                                        {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
+                                        {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
+                                    </div>
+                                    {/* Rest of Leaderboard */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
+                                        {rest.map((user) => (
+                                            <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
+                                                {user.avatar ? (
+                                                    <Image
+                                                        src={user.avatar}
+                                                        alt={user.name}
+                                                        fill
+                                                        className="object-cover transition-transform duration-300 group-hover:scale-110"
+                                                        unoptimized
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-secondary flex items-center justify-center">
+                                                        <span className="text-4xl font-bold text-secondary-foreground">{user.initial}</span>
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                                                <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
+                                                <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                                                    <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
+                                                    <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
+                                                        <Star className="h-3 w-3" />
+                                                        <span>{user.points.toLocaleString()} pts</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -636,7 +650,11 @@ export default function StudentDashboardPage() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {pointHistory.length > 0 ? (
+                            {isLoading ? (
+                                <div className="flex justify-center items-center h-48">
+                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                </div>
+                            ) : pointHistory.length > 0 ? (
                                 <div className="space-y-4">
                                     {pointHistory.map((item) => (
                                         <div key={item.id}>
@@ -678,5 +696,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    
