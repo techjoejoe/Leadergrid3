@@ -25,8 +25,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, User as UserIcon } from 'lucide-react';
+import { Loader2, Save, User as UserIcon, Upload, Check } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+
 
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
@@ -48,6 +51,27 @@ interface ProfileEditorProps {
   currentEmail: string;
 }
 
+function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number
+) {
+  return centerCrop(
+    makeAspectCrop(
+      {
+        unit: '%',
+        width: 90,
+      },
+      aspect,
+      mediaWidth,
+      mediaHeight
+    ),
+    mediaWidth,
+    mediaHeight
+  );
+}
+
+
 export function ProfileEditor({ 
     user,
     open, 
@@ -60,6 +84,17 @@ export function ProfileEditor({
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(open);
+
+  // Photo Cropping State
+  const [imgSrc, setImgSrc] = useState('');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const [aspect, setAspect] = useState<number | undefined>(1);
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+  
+  const imgRef = useRef<HTMLImageElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -71,6 +106,12 @@ export function ProfileEditor({
 
   useEffect(() => {
     setIsEditorOpen(open);
+    if (!open) {
+        // Reset image state when dialog closes
+        setImgSrc('');
+        setCrop(undefined);
+        setCompletedCrop(undefined);
+    }
   }, [open]);
 
   useEffect(() => {
@@ -81,6 +122,30 @@ export function ProfileEditor({
       });
     }
   }, [isEditorOpen, currentDisplayName, currentEmail, form]);
+  
+  function onSelectFile(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files.length > 0) {
+      setCrop(undefined); // Makes crop preview update between images.
+      const reader = new FileReader();
+      reader.addEventListener('load', () =>
+        setImgSrc(reader.result?.toString() || ''),
+      );
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  }
+
+  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    if (aspect) {
+      const { width, height } = e.currentTarget;
+      setCrop(centerAspectCrop(width, height, aspect));
+    }
+  }
+
+  async function handleSaveCrop() {
+    // This is where the upload logic will go in the next step.
+    console.log("Saving cropped image...");
+    onOpenChange(false);
+  }
 
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
@@ -164,7 +229,7 @@ export function ProfileEditor({
 
   return (
     <Dialog open={isEditorOpen} onOpenChange={(isOpen) => { setIsEditorOpen(isOpen); onOpenChange(isOpen); }}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-2xl">
         {!user ? (
           <DialogHeader>
             <DialogTitle>Loading Profile</DialogTitle>
@@ -175,71 +240,121 @@ export function ProfileEditor({
         ) : (
             <>
             <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
-                Make changes to your profile here. Click save when you're done.
-            </DialogDescription>
+              <DialogTitle>Edit Profile</DialogTitle>
+              <DialogDescription>
+                  Make changes to your profile here. Click save when you're done.
+              </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-6 py-4">
-                <div className="flex items-center justify-center">
-                    <Avatar className="h-24 w-24">
-                        <AvatarImage src={user.photoURL || ''} alt={currentDisplayName} />
-                        <AvatarFallback><UserIcon className="h-12 w-12" /></AvatarFallback>
-                    </Avatar>
+            
+            <div className="grid md:grid-cols-2 gap-8 py-4">
+                {/* Left side: Profile Form */}
+                <div className="space-y-4">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="displayName"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Display Name</FormLabel>
+                                <FormControl>
+                                <Input placeholder="Your Name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                <Input type="email" placeholder="Your Email" {...field} disabled />
+                                </FormControl>
+                                <FormDescription>
+                                  Your email address cannot be changed from this screen.
+                                </FormDescription>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                        <Button type="submit" disabled={isLoading} className="w-full">
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Name Changes
+                        </Button>
+                        </form>
+                    </Form>
+                     <div className="space-y-2 border-t pt-4">
+                        <h3 className="font-semibold text-sm">Password Reset</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Click the button below to receive an email to reset your password.
+                        </p>
+                        <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword}>
+                            {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Send Password Reset Email
+                        </Button>
+                    </div>
                 </div>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-4">
-                <FormField
-                    control={form.control}
-                    name="displayName"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Display Name</FormLabel>
-                        <FormControl>
-                        <Input placeholder="Your Name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                        <Input type="email" placeholder="Your Email" {...field} disabled />
-                        </FormControl>
-                        <FormDescription>
-                          Your email address cannot be changed from this screen.
-                        </FormDescription>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-                 <Button type="submit" disabled={isLoading} className="w-full">
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Changes
-                </Button>
-                </form>
-            </Form>
 
-            <div className="space-y-2 border-t pt-4">
-                <h3 className="font-semibold text-sm">Password Reset</h3>
-                <p className="text-sm text-muted-foreground">
-                    Click the button below to receive an email to reset your password.
-                </p>
-                <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword || (user && user.uid === 'mock-user-id')}>
-                    {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Send Password Reset Email
-                </Button>
-            </div>
+                {/* Right side: Photo Editor */}
+                <div className="space-y-4">
+                    <FormItem>
+                        <FormLabel>Profile Photo</FormLabel>
+                         <div className="flex items-center gap-4">
+                            <Avatar className="h-16 w-16">
+                                <AvatarImage src={user.photoURL || ''} alt={currentDisplayName} />
+                                <AvatarFallback><UserIcon className="h-8 w-8" /></AvatarFallback>
+                            </Avatar>
+                            <Input
+                                ref={fileInputRef}
+                                id="photo-upload"
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={onSelectFile}
+                            />
+                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                <Upload className="mr-2 h-4 w-4" /> Change Photo
+                            </Button>
+                        </div>
+                    </FormItem>
+                   
+                    {!!imgSrc && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                        <ReactCrop
+                            crop={crop}
+                            onChange={(_, percentCrop) => setCrop(percentCrop)}
+                            onComplete={(c) => setCompletedCrop(c)}
+                            aspect={aspect}
+                            minHeight={100}
+                        >
+                            <img
+                                ref={imgRef}
+                                alt="Crop me"
+                                src={imgSrc}
+                                onLoad={onImageLoad}
+                                className="max-h-[40vh]"
+                            />
+                        </ReactCrop>
+                        <div className="flex flex-col items-center gap-4">
+                             <Button 
+                                onClick={handleSaveCrop} 
+                                disabled={isProcessingPhoto}
+                                className="w-full"
+                             >
+                                {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                                Set New Profile Photo
+                            </Button>
+                        </div>
+                    </div>
+                    )}
+                </div>
             </div>
             </>
         )}
       </DialogContent>
     </Dialog>
-    
     );
 }
