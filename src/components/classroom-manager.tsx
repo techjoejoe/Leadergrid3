@@ -227,45 +227,50 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const onPointsSubmit = async (values: PointsFormValues) => {
     if (!selectedStudent) return;
     setIsLoading(true);
+
     try {
-        const pointsToAdjust = adjustmentType === 'add' ? values.points : -values.points;
-        
-        const batch = writeBatch(db);
-        
-        // 1. Update class-specific points.
-        const rosterRef = doc(db, 'classes', classId, 'roster', selectedStudent.id);
-        batch.update(rosterRef, { classPoints: increment(pointsToAdjust) });
+      const rosterRef = doc(db, 'classes', classId, 'roster', selectedStudent.id);
+      const rosterSnap = await getDoc(rosterRef);
 
-        // 2. Update lifetime points.
-        const userRef = doc(db, 'users', selectedStudent.id);
-        batch.update(userRef, { lifetimePoints: increment(pointsToAdjust) });
+      if (!rosterSnap.exists()) {
+        throw new Error("Student is not enrolled in this class roster.");
+      }
 
-        // 3. Create a point history record
-        const historyRef = doc(collection(db, 'point_history'));
-        batch.set(historyRef, {
-            studentId: selectedStudent.id,
-            studentName: selectedStudent.displayName || 'Anonymous',
-            points: pointsToAdjust,
-            reason: values.reason,
-            type: 'manual',
-            classId: classId,
-            timestamp: Timestamp.now()
-        });
+      const pointsToAdjust = adjustmentType === 'add' ? values.points : -values.points;
+      const batch = writeBatch(db);
+      
+      // 1. Update class-specific points.
+      batch.update(rosterRef, { classPoints: increment(pointsToAdjust) });
 
-        await batch.commit();
+      // 2. Update lifetime points.
+      const userRef = doc(db, 'users', selectedStudent.id);
+      batch.update(userRef, { lifetimePoints: increment(pointsToAdjust) });
 
-        toast({
-            title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
-            description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.displayName || 'a student'} for: ${values.reason}.`,
-        });
+      // 3. Create a point history record
+      const historyRef = doc(collection(db, 'point_history'));
+      batch.set(historyRef, {
+        studentId: selectedStudent.id,
+        studentName: selectedStudent.displayName || 'Anonymous',
+        points: pointsToAdjust,
+        reason: values.reason,
+        type: 'manual',
+        classId: classId,
+        timestamp: Timestamp.now()
+      });
 
-    } catch(error) {
-        console.error("Error updating points:", error);
-        toast({ title: 'Error', description: 'Could not update student points. They may not be enrolled in this class.', variant: 'destructive'});
+      await batch.commit();
+
+      toast({
+        title: `Points ${adjustmentType === 'add' ? 'Added' : 'Subtracted'}!`,
+        description: `${values.points} points have been ${adjustmentType === 'add' ? 'given to' : 'taken from'} ${selectedStudent.displayName || 'a student'} for: ${values.reason}.`,
+      });
+    } catch (error) {
+      console.error("Error updating points:", error);
+      toast({ title: 'Error', description: 'Could not update student points. They may not be enrolled in this class.', variant: 'destructive' });
     } finally {
-        setIsLoading(false);
-        setIsPointsDialogOpen(false);
-        pointsForm.reset({ points: 10, reason: '' });
+      setIsLoading(false);
+      setIsPointsDialogOpen(false);
+      pointsForm.reset({ points: 10, reason: '' });
     }
   };
 
