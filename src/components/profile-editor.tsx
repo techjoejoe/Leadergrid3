@@ -34,7 +34,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
-import { getDownloadURL, ref as storageRef, uploadBytesResumable } from 'firebase/storage';
+import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -183,23 +183,11 @@ export function ProfileEditor({
 
         const filePath = `avatars/${user.uid}.jpg`;
         const fileRef = storageRef(storage, filePath);
-        const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: 'image/jpeg' });
 
-        await new Promise<void>((resolve, reject) => {
-            uploadTask.on(
-                'state_changed',
-                (snapshot) => { /* Optional: Handle progress updates */ },
-                (error) => {
-                    console.error("Upload failed:", error);
-                    reject(error);
-                },
-                () => {
-                    resolve();
-                }
-            );
-        });
+        // Use uploadBytes for a simpler, promise-based upload
+        await uploadBytes(fileRef, blob);
 
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        const downloadURL = await getDownloadURL(fileRef);
 
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
