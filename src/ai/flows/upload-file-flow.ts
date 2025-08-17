@@ -1,5 +1,5 @@
 
-'use server';
+'server';
 /**
  * @fileOverview A flow for uploading files to Firebase Storage.
  */
