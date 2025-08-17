@@ -44,7 +44,7 @@ const milestoneBadges = [
     name: 'Fifty-Thousand Feat',
     description: 'Awarded for achieving 50,000 lifetime points.',
     points: 50000,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/fiftythousand.png',
     hint: 'diamond trophy',
   },
   {
