@@ -12,7 +12,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserActions } from "@/components/user-actions";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
 
 export interface Student {
     id: string;
@@ -42,6 +41,7 @@ export default function StudentsPage() {
                     email: data.email || 'No email provided',
                     lifetimePoints: data.lifetimePoints || 0,
                     role: data.role || 'student',
+                    photoURL: data.photoURL,
                 } as Student;
             });
             setStudents(fetchedStudents);
@@ -200,6 +200,7 @@ export default function StudentsPage() {
                                 <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
+                                            <AvatarImage src={student.photoURL} alt={student.displayName} />
                                             <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
                                         {student.displayName}

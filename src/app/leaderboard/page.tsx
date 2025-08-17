@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown, Loader2, Star, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 import React, { useEffect, useState, Suspense, useCallback } from "react";
 import { db, auth } from "@/lib/firebase";
 import { collection, query, orderBy, limit, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
@@ -21,6 +20,7 @@ interface LeaderboardEntry {
   name: string;
   points: number;
   initial: string;
+  photoURL?: string;
 }
 
 interface ClassDetails {
@@ -57,7 +57,7 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="h-48 w-48 lg:h-64 lg:w-64 bg-gradient-to-tr from-yellow-400 via-amber-200 to-yellow-500 rounded-full animate-sunburst-spin opacity-30 blur-2xl"></div>
                     </div>
-                    <span className="absolute -top-8 text-8xl sm:text-9xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>
+                    <span className="absolute -top-8 text-9xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>
                 </>
             )}
              <Avatar className={cn("z-10 rounded-full p-1.5", 
@@ -65,6 +65,7 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
                 isSecond && `h-40 w-40 sm:h-48 sm:w-48 animate-glow-silver bg-gradient-to-br from-slate-200 via-slate-400 to-gray-500 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
                 isThird && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-bronze bg-gradient-to-br from-amber-500 via-amber-700 to-orange-900 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
              )}>
+                <AvatarImage src={user.photoURL} alt={user.name} />
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full"><User className="h-24 w-24" /></AvatarFallback>
             </Avatar>
             <div className="relative w-full">
@@ -140,7 +141,8 @@ function LeaderboardPageContents() {
                         name: name,
                         points: userData[pointField] || 0,
                         initial: (name).substring(0, 2).toUpperCase(),
-                        rank: index + 1
+                        rank: index + 1,
+                        photoURL: userData.photoURL
                     });
                 }
             });
@@ -211,6 +213,7 @@ function LeaderboardPageContents() {
                 {rest.map((user) => (
                     <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
                         <Avatar className="h-full w-full">
+                           <AvatarImage src={user.photoURL} alt={user.name} />
                            <AvatarFallback className="rounded-xl text-3xl"><User /></AvatarFallback>
                         </Avatar>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>

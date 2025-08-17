@@ -27,12 +27,12 @@ import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
 import { db, auth } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDocs, updateDoc, increment, addDoc, deleteDoc, getDoc, setDoc, orderBy } from 'firebase/firestore';
-import Image from 'next/image';
 
 interface Student {
     id: string;
     displayName?: string | null;
     email: string;
+    photoURL?: string;
     lifetimePoints: number;
 }
 
@@ -424,6 +424,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                 <div key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
+                                            <AvatarImage src={student.photoURL} alt={student.displayName} />
                                             <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
                                         <div>
@@ -464,6 +465,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                         <TableCell>
                             <div className="flex items-center gap-4">
                             <Avatar>
+                                <AvatarImage src={student.photoURL} alt={student.displayName} />
                                 <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{student.displayName || 'Unnamed User'}</span>

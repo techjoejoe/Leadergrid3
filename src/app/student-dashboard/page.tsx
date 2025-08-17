@@ -45,7 +45,6 @@ import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
 
 interface StudentData {
     points: number; 
@@ -119,6 +118,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                 isSecond && `h-40 w-40 sm:h-48 sm:w-48 animate-glow-silver bg-gradient-to-br from-slate-200 via-slate-400 to-gray-500 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
                 isThird && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-bronze bg-gradient-to-br from-amber-500 via-amber-700 to-orange-900 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
             )}>
+                <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full"><UserIcon className="h-24 w-24" /></AvatarFallback>
             </Avatar>
             <div className="relative w-full">
@@ -139,6 +139,7 @@ export default function StudentDashboardPage() {
     const [pointHistory, setPointHistory] = useState<PointHistoryRecord[]>([]);
     const [user, setUser] = useState<User | null>(null);
     const [displayName, setDisplayName] = useState('Student');
+    const [photoURL, setPhotoURL] = useState<string | null>(null);
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
@@ -171,6 +172,7 @@ export default function StudentDashboardPage() {
                 }
 
                 setUser(currentUser);
+                setPhotoURL(currentUser.photoURL);
                 setIsLoading(true);
 
                 // Setup listener for user document
@@ -179,6 +181,7 @@ export default function StudentDashboardPage() {
                         const userData = doc.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
                         setDisplayName(userData.displayName || 'Student');
+                        setPhotoURL(userData.photoURL);
                     } else {
                         // User exists in Auth, but not in Firestore. Redirect to login to force signup flow.
                         router.push('/student-login');
@@ -230,7 +233,7 @@ export default function StudentDashboardPage() {
                             id: doc.id,
                             name: userData.displayName || 'Anonymous',
                             points: userData.lifetimePoints || 0,
-                            avatar: null,
+                            avatar: userData.photoURL || null,
                             initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         };
@@ -339,7 +342,7 @@ export default function StudentDashboardPage() {
                             id: doc.id,
                             name: studentData.displayName || 'Anonymous',
                             points: studentData.classPoints || 0,
-                            avatar: null,
+                            avatar: studentData.photoURL || null,
                             initial: (studentData.displayName || '??').substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         });
@@ -419,7 +422,6 @@ export default function StudentDashboardPage() {
     }
 
     const displayEmail = user?.email || 'student@example.com';
-    const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     const top3 = leaderboardData.slice(0, 3);
     const rest = leaderboardData.slice(3, 8); // Only show up to 5 more people
@@ -448,6 +450,7 @@ export default function StudentDashboardPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                                     <Avatar>
+                                        <AvatarImage src={photoURL || ''} alt={displayName} />
                                         <AvatarFallback><UserIcon className="h-5 w-5" /></AvatarFallback>
                                     </Avatar>
                                 </Button>
@@ -494,6 +497,7 @@ export default function StudentDashboardPage() {
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 items-center justify-center gap-4 p-6 pt-0">
                                     <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
+                                        <AvatarImage src={photoURL || ''} alt={displayName} />
                                         <AvatarFallback className="rounded-md text-3xl"><UserIcon className="h-20 w-20" /></AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-4">
@@ -610,7 +614,8 @@ export default function StudentDashboardPage() {
                                             {rest.map((user) => (
                                                 <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
                                                     <Avatar className="h-full w-full">
-                                                        <AvatarFallback className="rounded-xl text-3xl"><UserIcon /></AvatarFallback>
+                                                       <AvatarImage src={user.avatar} alt={user.name} />
+                                                       <AvatarFallback className="rounded-xl text-3xl"><UserIcon /></AvatarFallback>
                                                     </Avatar>
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                                                     <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{!isNaN(user.rank) ? user.rank : ''}</div>
@@ -679,5 +684,3 @@ export default function StudentDashboardPage() {
         </>
     );
 }
-
-    

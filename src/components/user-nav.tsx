@@ -18,7 +18,6 @@ import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge as BadgeIcon, 
 import { signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import Image from "next/image";
 
 interface UserNavProps {
   user: User | null;
@@ -62,6 +61,7 @@ export function UserNav({ user, displayName, initials, onEditProfile, isSuperAdm
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
+              <AvatarImage src={user.photoURL || ''} alt={displayName} />
               <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
             </Avatar>
           </Button>

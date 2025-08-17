@@ -181,6 +181,12 @@ export function ProfileEditor({
             </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
+                <div className="flex items-center justify-center">
+                    <Avatar className="h-24 w-24">
+                        <AvatarImage src={user.photoURL || ''} alt={currentDisplayName} />
+                        <AvatarFallback><UserIcon className="h-12 w-12" /></AvatarFallback>
+                    </Avatar>
+                </div>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-4">
                 <FormField
