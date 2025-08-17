@@ -9,7 +9,7 @@ const milestoneBadges = [
     name: 'Intern of Incentives',
     description: 'Awarded for earning your first 200 points.',
     points: 200,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/intern-of-incentives.png',
     hint: 'backpack trophy',
   },
   {
@@ -30,7 +30,7 @@ const milestoneBadges = [
     name: 'Ten-Thousand Triumph',
     description: 'Awarded for earning a monumental 10,000 points.',
     points: 10000,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/tenthousand.png',
     hint: 'gold medal',
   },
   {
