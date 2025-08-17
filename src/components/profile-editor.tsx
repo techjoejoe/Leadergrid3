@@ -30,10 +30,11 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 
-import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
+import { User, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
-import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc, writeBatch, collection, Timestamp, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { processAvatar } from '@/ai/flows/process-avatar-flow';
 
 
 const profileFormSchema = z.object({
@@ -76,6 +77,7 @@ export function ProfileEditor({
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const cropperRef = useRef<ReactCropperElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -104,7 +106,9 @@ export function ProfileEditor({
         const batch = writeBatch(db);
 
         // Update Firebase Auth profile
-        await updateProfile(user, { displayName: values.displayName });
+        if(auth.currentUser) {
+            await updateProfile(auth.currentUser, { displayName: values.displayName });
+        }
 
         // Update user document in 'users' collection
         const userDocRef = doc(db, "users", user.uid);
@@ -178,8 +182,8 @@ export function ProfileEditor({
     if (isProcessingPhoto) return;
     fileInputRef.current?.click();
   };
-  
-  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const reader = new FileReader();
       reader.addEventListener('load', () => {
@@ -188,8 +192,9 @@ export function ProfileEditor({
       });
       reader.readAsDataURL(e.target.files[0]);
     }
-    e.target.value = ''; // Reset file input
+    e.target.value = ''; // Reset file input to allow re-selection of the same file
   };
+  
   
   const getCroppedBlob = (): Promise<Blob | null> => {
       return new Promise((resolve) => {
@@ -203,7 +208,7 @@ export function ProfileEditor({
               height: 256,
               imageSmoothingQuality: 'high',
           });
-          canvas.toBlob((blob) => {
+           canvas.toBlob((blob) => {
               resolve(blob);
           }, 'image/jpeg', 0.9);
       });
@@ -211,8 +216,8 @@ export function ProfileEditor({
 
   const handleSaveCrop = async () => {
     console.log("handleSaveCrop: Initiating save.");
-    const croppedBlob = await getCroppedBlob();
-    if (!user || !croppedBlob) {
+    const blob = await getCroppedBlob();
+    if (!user || !blob) {
         toast({ title: "Error", description: "Could not process image. Please try again.", variant: "destructive" });
         return;
     }
@@ -234,24 +239,11 @@ export function ProfileEditor({
         const photoRef = storageRef(storage, path);
         const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
         
-        const task = uploadBytesResumable(photoRef, croppedBlob, { ...metadata, signal: controller.signal });
+        const task = uploadBytesResumable(photoRef, blob, { ...metadata, signal: controller.signal });
         await new Promise<void>((resolve, reject) => {
           task.on("state_changed",
             () => {},
             (error) => {
-              // A full list of error codes is available at
-              // https://firebase.google.com/docs/storage/web/handle-errors
-              switch (error.code) {
-                case 'storage/unauthorized':
-                  console.error("Storage unauthorized");
-                  break;
-                case 'storage/canceled':
-                  console.error("Storage canceled");
-                  break;
-                case 'storage/unknown':
-                  console.error("Storage unknown error");
-                  break;
-              }
               reject(error);
             },
             () => {
@@ -265,7 +257,7 @@ export function ProfileEditor({
         console.log("handleSaveCrop: 2. Getting download URL.");
         const downloadURL = await getDownloadURL(photoRef);
         console.log(`handleSaveCrop: Got URL: ${downloadURL}`);
-
+        
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", user.uid);
 
@@ -352,7 +344,7 @@ export function ProfileEditor({
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={onFileSelect}
+                  onChange={onFileInputChange}
                   className="hidden"
                   accept="image/png, image/jpeg, image/webp"
                 />
