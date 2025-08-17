@@ -14,7 +14,8 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Class } from '@/components/create-class-form';
 
-export default function ClassDetailsPage({ params: { classId } }: { params: { classId: string } }) {
+export default function ClassDetailsPage({ params }: { params: { classId: string } }) {
+    const { classId } = params;
     const [classDetails, setClassDetails] = useState<Class | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     
