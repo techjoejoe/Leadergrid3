@@ -225,89 +225,63 @@ export function ProfileEditor({
       toast({ title: "Error", description: "Could not process image crop.", variant: "destructive" });
       return;
     }
-  
+
     setIsProcessingPhoto(true);
-    let timer: NodeJS.Timeout;
+    toast({ title: 'Uploading photo...' });
   
     try {
-      toast({ title: 'Uploading photo...' });
-  
-      const controller = new AbortController();
-      timer = setTimeout(() => {
-        controller.abort();
-      }, 30000);
-  
       const storageRef = ref(storage, `avatars/${user.uid}.jpg`);
       const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
   
-      await new Promise<void>((resolve, reject) => {
-        uploadTask.on('state_changed',
-          () => {}, // Progress can be handled here if needed
-          (error) => {
-            if (error.code === 'storage/canceled') {
-              toast({ title: "Upload Timeout", description: "The upload took too long, please try again.", variant: "destructive" });
-            } else {
-              toast({ title: "Upload Failed", description: "Could not upload photo. Please check your connection and try again.", variant: "destructive" });
-            }
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              
-              if (auth.currentUser) {
-                await updateProfile(auth.currentUser, { photoURL: downloadURL });
-              }
+      // Wait for the upload to complete
+      await uploadTask;
   
-              const batch = writeBatch(db);
-              const userDocRef = doc(db, "users", user.uid);
-              const userDocSnap = await getDoc(userDocRef);
-              const hadPhoto = !!userDocSnap.data()?.photoURL;
-              const updateData: { photoURL: string; lifetimePoints?: any } = { photoURL: downloadURL };
+      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
   
-              if (!hadPhoto && storageKey === 'studentAvatar') {
-                updateData.lifetimePoints = increment(PHOTO_UPLOAD_BONUS);
-                const historyRef = doc(collection(db, 'point_history'));
-                batch.set(historyRef, {
-                  studentId: user.uid,
-                  studentName: user.displayName,
-                  points: PHOTO_UPLOAD_BONUS,
-                  reason: 'Profile Photo Bonus',
-                  type: 'engagement',
-                  timestamp: Timestamp.now()
-                });
-                toast({
-                  title: 'BONUS!',
-                  description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
-                  className: 'bg-yellow-500 text-white',
-                });
-              }
-              
-              batch.update(userDocRef, updateData);
-              await batch.commit();
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: downloadURL });
+      }
   
-              onAvatarChange(downloadURL);
-              toast({ title: "Success!", description: "Profile photo updated." });
-              resolve();
-            } catch (error) {
-              toast({ title: "Update Failed", description: "Photo uploaded, but profile update failed.", variant: "destructive" });
-              reject(error);
-            }
-          }
-        );
-      });
+      const batch = writeBatch(db);
+      const userDocRef = doc(db, "users", user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      const hadPhoto = !!userDocSnap.data()?.photoURL;
+      const updateData: { photoURL: string; lifetimePoints?: any } = { photoURL: downloadURL };
+  
+      if (!hadPhoto && storageKey === 'studentAvatar') {
+        updateData.lifetimePoints = increment(PHOTO_UPLOAD_BONUS);
+        const historyRef = doc(collection(db, 'point_history'));
+        batch.set(historyRef, {
+          studentId: user.uid,
+          studentName: user.displayName,
+          points: PHOTO_UPLOAD_BONUS,
+          reason: 'Profile Photo Bonus',
+          type: 'engagement',
+          timestamp: Timestamp.now()
+        });
+        toast({
+          title: 'BONUS!',
+          description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
+          className: 'bg-yellow-500 text-white',
+        });
+      }
+  
+      batch.update(userDocRef, updateData);
+      await batch.commit();
+  
+      onAvatarChange(downloadURL);
+      toast({ title: "Success!", description: "Profile photo updated." });
   
     } catch (err) {
       console.error("Photo save failed", err);
       toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
     } finally {
-        if(timer) clearTimeout(timer);
-        setIsProcessingPhoto(false);
-        setIsCropOpen(false);
-        onOpenChange(false);
-        setIsEditorOpen(false);
+      setIsProcessingPhoto(false);
+      setIsCropOpen(false);
+      onOpenChange(false);
+      setIsEditorOpen(false);
     }
-  }
+  };
 
   return (
     <>
