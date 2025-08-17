@@ -52,6 +52,7 @@ interface ProfileEditorProps {
   currentInitial: string;
   currentDisplayName: string;
   currentEmail: string;
+  storageKey: string;
 }
 
 const PHOTO_UPLOAD_BONUS = 300;
@@ -104,6 +105,7 @@ export function ProfileEditor({
     currentInitial,
     currentDisplayName,
     currentEmail,
+    storageKey
 }: ProfileEditorProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -293,14 +295,14 @@ export function ProfileEditor({
                  const rosterSnap = await getDoc(rosterDocRef);
                 if (rosterSnap.exists()){
                   batch.update(rosterDocRef, { photoURL: downloadURL });
-                  if (!hadPhoto) {
+                  if (!hadPhoto && storageKey === 'studentAvatar') {
                       batch.update(rosterDocRef, { classPoints: increment(PHOTO_UPLOAD_BONUS) });
                   }
                 }
             }
         }
 
-        if (!hadPhoto) {
+        if (!hadPhoto && storageKey === 'studentAvatar') {
             batch.update(userDocRef, {
                 lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
             });
