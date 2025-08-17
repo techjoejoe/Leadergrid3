@@ -27,8 +27,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import Cropper, { ReactCropperElement } from "react-cropper";
-import "cropperjs/dist/cropper.css";
+import { processAvatar } from '@/ai/flows/process-avatar-flow';
 
 import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
@@ -75,12 +74,7 @@ export function ProfileEditor({
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cropperRef = useRef<ReactCropperElement>(null);
-
-  const [imgSrc, setImgSrc] = useState('');
-  const [isCropperOpen, setIsCropperOpen] = useState(false);
   
-
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -181,60 +175,29 @@ export function ProfileEditor({
     fileInputRef.current?.click();
   };
   
-  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-        const reader = new FileReader();
-        reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
-        reader.readAsDataURL(e.target.files[0]);
-        setIsCropperOpen(true);
-        e.target.value = ''; // Reset file input
+  const onFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !user) {
+        return;
     }
-  }
 
-  const handleSaveCrop = async () => {
-    if (!user || !cropperRef.current?.cropper) return;
-    
+    const file = e.target.files[0];
+    e.target.value = ''; // Reset file input
+
     setIsProcessingPhoto(true);
-    toast({ title: 'Processing Photo', description: 'Please wait...' });
+    toast({ title: 'Uploading...', description: 'Your photo is being uploaded and processed.' });
 
     try {
-        const cropper = cropperRef.current.cropper;
-        const cropData = cropper.getData(true);
-        const sourceImage = cropper.getImageData();
+        // 1. Upload raw image to a temporary path
+        const tempPath = `temp_avatars/${user.uid}/${file.name}`;
+        const tempStorageRef = storageRef(storage, tempPath);
+        await uploadBytes(tempStorageRef, file);
+        const tempUrl = await getDownloadURL(tempStorageRef);
 
-        // Use OffscreenCanvas for processing to avoid blocking the main thread
-        const canvas = new OffscreenCanvas(256, 256);
-        const ctx = canvas.getContext('2d');
+        // 2. Call the Genkit flow to process the image
+        const result = await processAvatar({ tempPath, tempUrl, userId: user.uid });
+        const downloadURL = result.finalUrl;
 
-        if (!ctx) {
-            throw new Error('Could not get OffscreenCanvas context');
-        }
-
-        ctx.drawImage(
-            sourceImage.naturalWidth ? cropper.image : sourceImage,
-            cropData.x,
-            cropData.y,
-            cropData.width,
-            cropData.height,
-            0,
-            0,
-            256,
-            256
-        );
-
-        const blob = await canvas.convertToBlob({
-            type: 'image/jpeg',
-            quality: 0.9,
-        });
-
-        if (!blob) {
-            throw new Error("Failed to get cropped image.");
-        }
-
-        const finalStorageRef = storageRef(storage, `avatars/${user.uid}.jpg`);
-        await uploadBytes(finalStorageRef, blob, { contentType: 'image/jpeg' });
-        const downloadURL = await getDownloadURL(finalStorageRef);
-
+        // 3. Update user profiles with final URL
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
@@ -282,34 +245,21 @@ export function ProfileEditor({
         
         await batch.commit();
         onAvatarChange(downloadURL);
-        
-    } catch (error: any) {
-        console.error("Error updating photo:", error);
-         if (error.code === 'auth/requires-recent-login') {
-            toast({
-                title: 'Authentication Required',
-                description: 'This is a sensitive action. Please log out and log back in to update your profile.',
-                variant: 'destructive',
-                duration: 8000,
-            });
-        } else {
-            toast({
-                title: "Error",
-                description: 'Could not save your new photo. Please try again.',
-                variant: "destructive",
-            });
-        }
+
+    } catch (error) {
+        console.error("Error processing photo:", error);
+        toast({
+            title: "Upload Failed",
+            description: "There was an error processing your photo. Please try again.",
+            variant: "destructive"
+        });
     } finally {
         setIsProcessingPhoto(false);
-        setIsCropperOpen(false);
-        setImgSrc('');
     }
   }
 
-
   return (
-    <>
-    <Dialog open={open && !isCropperOpen} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         {!user ? (
           <DialogHeader>
@@ -400,44 +350,5 @@ export function ProfileEditor({
         )}
       </DialogContent>
     </Dialog>
-     <Dialog open={isCropperOpen} onOpenChange={setIsCropperOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Crop your new photo</DialogTitle>
-            <DialogDescription>
-              Adjust the selection to crop your profile picture.
-            </DialogDescription>
-          </DialogHeader>
-          {imgSrc && (
-            <Cropper
-                ref={cropperRef}
-                src={imgSrc}
-                style={{ height: 400, width: "100%" }}
-                aspectRatio={1}
-                viewMode={1}
-                guides={true}
-                background={false}
-                responsive={true}
-                autoCropArea={1}
-                checkOrientation={false}
-            />
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsCropperOpen(false);
-                setImgSrc('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
-                {isProcessingPhoto ? <Loader2 className="mr-2 animate-spin" /> : "Save Crop"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }
