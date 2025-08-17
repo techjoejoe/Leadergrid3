@@ -179,15 +179,15 @@ export function ProfileEditor({
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setCrop(undefined) // Makes crop preview update between images.
-      const reader = new FileReader()
+      setCrop(undefined); // Makes crop preview update between images.
+      const reader = new FileReader();
       reader.addEventListener('load', () => {
         setImgSrc(reader.result?.toString() || '');
         setIsCropping(true);
       });
-      reader.readAsDataURL(e.target.files[0])
+      reader.readAsDataURL(e.target.files[0]);
     }
-  }
+  };
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
@@ -228,15 +228,8 @@ export function ProfileEditor({
         const userDocSnap = await getDoc(userDocRef);
         let hadPhoto = false;
 
-        if (!userDocSnap.exists()) {
-            batch.set(userDocRef, {
-                uid: user.uid,
-                displayName: user.displayName,
-                email: user.email,
-                role: storageKey === 'adminAvatar' ? 'admin' : 'student'
-            });
-        } else {
-            hadPhoto = !!userDocSnap.data().photoURL;
+        if (userDocSnap.exists()) {
+             hadPhoto = !!userDocSnap.data().photoURL;
         }
 
         // Update Auth profile and Firestore with the direct base64 URL
