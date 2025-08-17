@@ -2,7 +2,6 @@
 'use client';
 
 import { UserNav } from '@/components/user-nav';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarTrigger, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { useState, useEffect } from 'react';
@@ -10,34 +9,8 @@ import { ProfileEditor } from '@/components/profile-editor';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import {
-    Grip,
-    Users,
-    QrCode,
-    Award,
-    Building,
-    User as UserIcon,
-    Settings,
-    Zap
-} from 'lucide-react';
-import { usePathname } from 'next/navigation';
-
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
-
-const navLinks = [
-    { href: "/dashboard", label: "Overview", icon: Grip },
-    { href: "/dashboard/classes", label: "Classes", icon: Users },
-    { href: "/dashboard/qrcodes", label: "QR Codes", icon: QrCode },
-    { href: "/dashboard/badges", label: "Badges", icon: Award },
-    { href: "/dashboard/students", label: "Students", icon: UserIcon },
-    { href: "/dashboard/buzzer", label: "Buzzer", icon: Zap },
-    { href: "/dashboard/company", label: "Company", icon: Building },
-];
-
-const bottomLinks = [
-    { href: "/dashboard/settings", label: "Settings", icon: Settings },
-]
 
 export default function DashboardLayout({
   children,
@@ -49,7 +22,6 @@ export default function DashboardLayout({
     const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
     const [initials, setInitials] = useState("AD");
     const [displayName, setDisplayName] = useState("Admin");
-    const pathname = usePathname();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -84,49 +56,25 @@ export default function DashboardLayout({
     }
 
   return (
-    <SidebarProvider>
-        <Sidebar>
-             <SidebarHeader>
-                <div className="flex items-center gap-2 p-2">
-                    <Logo width={120} height={28}/>
-                </div>
-            </SidebarHeader>
-            <SidebarContent>
-                <SidebarMenu>
-                    {navLinks.map((item) => (
-                        <SidebarMenuItem key={item.href}>
-                            <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
-                                <Link href={item.href}>
-                                    <item.icon />
-                                    <span>{item.label}</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-            </SidebarContent>
-             <SidebarFooter>
-                <SidebarMenu>
-                    {bottomLinks.map((item) => (
-                         <SidebarMenuItem key={item.href}>
-                            <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
-                                <Link href={item.href}>
-                                    <item.icon />
-                                    <span>{item.label}</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
-                </SidebarMenu>
-             </SidebarFooter>
-        </Sidebar>
-        <div className="flex flex-col flex-1">
-            <header className="flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
-                <div className="md:hidden">
-                    <SidebarTrigger />
-                </div>
-                <div className="flex-1">
-                   {/* Can add breadcrumbs or other header content here */}
+    <div className="flex min-h-screen w-full flex-col">
+        <header className="sticky top-0 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 z-40">
+            <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+            <Link
+                href="#"
+                className="flex items-center gap-2 text-lg font-semibold md:text-base"
+            >
+                <Logo />
+            </Link>
+            <Link
+                href="/dashboard"
+                className="text-foreground transition-colors hover:text-foreground"
+            >
+                Dashboard
+            </Link>
+            </nav>
+            <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+                <div className="ml-auto flex-1 sm:flex-initial">
+                   {/* Can add search or other header items here */}
                 </div>
                 <UserNav 
                     user={user}
@@ -135,11 +83,11 @@ export default function DashboardLayout({
                     initials={initials}
                     onEditProfile={() => setIsProfileEditorOpen(true)}
                 />
-            </header>
-            <main className="flex-1 p-4 sm:p-6 bg-muted/40">
-                {children}
-            </main>
-        </div>
+            </div>
+        </header>
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 bg-muted/40">
+            {children}
+        </main>
         {user && (
             <ProfileEditor
                 user={user}
@@ -154,6 +102,6 @@ export default function DashboardLayout({
                 storageKey={`adminAvatar`}
             />
         )}
-    </SidebarProvider>
+    </div>
   );
 }

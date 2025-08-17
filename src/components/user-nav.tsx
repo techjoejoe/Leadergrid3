@@ -18,7 +18,6 @@ import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge as BadgeIcon, 
 import { signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
 
 interface UserNavProps {
   user: User | null;
@@ -33,11 +32,6 @@ const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
 export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile }: UserNavProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -54,14 +48,6 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile 
             variant: "destructive"
         });
     }
-  }
-  
-  if (!isClient) {
-    return (
-        <Avatar className="h-8 w-8">
-            <AvatarFallback>AD</AvatarFallback>
-        </Avatar>
-    );
   }
 
   if (!user) {
