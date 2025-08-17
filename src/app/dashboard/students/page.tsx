@@ -105,7 +105,7 @@ export default function StudentsPage() {
                     <TableHead>User</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Points</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead className="text-center w-[300px]">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -124,8 +124,9 @@ export default function StudentsPage() {
                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell className="text-right">
                            <div className="flex gap-2 justify-center">
-                             <Skeleton className="h-8 w-8 inline-block" />
-                             <Skeleton className="h-8 w-8 inline-block" />
+                             <Skeleton className="h-8 w-20" />
+                             <Skeleton className="h-8 w-20" />
+                             <Skeleton className="h-8 w-20" />
                            </div>
                         </TableCell>
                     </TableRow>
@@ -174,7 +175,7 @@ export default function StudentsPage() {
                             <TableHead>User</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Points</TableHead>
-                            <TableHead className="text-center">Actions</TableHead>
+                            <TableHead className="text-center w-[300px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

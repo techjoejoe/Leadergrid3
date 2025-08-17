@@ -48,7 +48,7 @@ import {
   getDocs,
   orderBy
 } from 'firebase/firestore';
-import { Loader2, PlusCircle, MinusCircle, Trash2, FileDown, UserPlus } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, FileDown, Edit, Pencil } from 'lucide-react';
 import type { Student } from '@/app/dashboard/students/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { format } from 'date-fns';
@@ -102,6 +102,7 @@ export function UserActions({
 
   const handleOpenPointsDialog = (type: 'add' | 'subtract') => {
     setAdjustmentType(type);
+    pointsForm.reset({ reason: '', points: 10 });
     setIsPointsDialogOpen(true);
   };
   
@@ -328,21 +329,21 @@ export function UserActions({
   }
 
   return (
-    <div className="flex justify-center gap-2">
+    <div className="flex items-center justify-center gap-4">
       <Dialog open={isPointsDialogOpen} onOpenChange={setIsPointsDialogOpen}>
         <DialogTrigger asChild>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog('add')}>
-              <PlusCircle className="h-4 w-4 text-green-500" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog('subtract')}>
-              <MinusCircle className="h-4 w-4 text-red-500" />
-            </Button>
-          </div>
+          <Button variant="outline" size="sm">
+            <Pencil className="mr-2 h-3 w-3" />
+            Adjust Points
+          </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Adjust Points for {selectedUser?.displayName}</DialogTitle>
+             <div className="flex gap-1 pt-2">
+                <Button size="sm" variant={adjustmentType === 'add' ? 'default' : 'outline'} onClick={() => setAdjustmentType('add')}>Add</Button>
+                <Button size="sm" variant={adjustmentType === 'subtract' ? 'destructive' : 'outline'} onClick={() => setAdjustmentType('subtract')}>Subtract</Button>
+             </div>
           </DialogHeader>
           <Form {...pointsForm}>
             <form onSubmit={pointsForm.handleSubmit(onPointsSubmit)} className="space-y-4">
@@ -354,8 +355,8 @@ export function UserActions({
               )} />
               <DialogFooter>
                 <Button type="button" variant="ghost" onClick={() => setIsPointsDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="animate-spin" /> : `Confirm ${adjustmentType}`}
+                <Button type="submit" disabled={isLoading} variant={adjustmentType === 'subtract' ? 'destructive' : 'default'}>
+                  {isLoading ? <Loader2 className="animate-spin" /> : `Confirm ${adjustmentType === 'add' ? 'Addition' : 'Subtraction'}`}
                 </Button>
               </DialogFooter>
             </form>
@@ -363,14 +364,16 @@ export function UserActions({
         </DialogContent>
       </Dialog>
 
-      <Button variant="outline" size="icon" onClick={handleGenerateReport} disabled={isReporting}>
-        {isReporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+      <Button variant="outline" size="sm" onClick={handleGenerateReport} disabled={isReporting}>
+        {isReporting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <FileDown className="mr-2 h-3 w-3" />}
+        Report
       </Button>
       
        <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="icon" disabled={selectedUser?.role === 'admin'}>
-                <Trash2 className="h-4 w-4" />
+            <Button variant="destructive" size="sm" disabled={selectedUser?.role === 'admin'}>
+                <Trash2 className="mr-2 h-3 w-3" />
+                Delete
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
