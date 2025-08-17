@@ -65,22 +65,22 @@ const milestoneBadges = [
 
 export function MilestoneBadgeList() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {milestoneBadges.map((badge) => (
-        <Card key={badge.name} className="text-center flex flex-col items-center p-3">
-          <div className="w-20 h-20 relative mb-2 flex items-center justify-center">
+        <Card key={badge.name} className="text-center flex flex-col items-center p-2">
+          <div className="w-16 h-16 relative mb-1 flex items-center justify-center">
               <Image 
                   src={badge.imageUrl} 
                   alt={badge.name} 
-                  width={80}
-                  height={80}
+                  width={64}
+                  height={64}
                   data-ai-hint={badge.hint}
                   unoptimized={badge.imageUrl.startsWith('/')}
               />
            </div>
-          <h3 className="font-semibold text-sm leading-tight">{badge.name}</h3>
-          <p className="text-sm font-bold text-primary mt-1">{badge.points.toLocaleString()} Points</p>
-          <p className="text-xs text-muted-foreground mt-1 px-1">{badge.description}</p>
+          <h3 className="font-semibold text-xs leading-tight">{badge.name}</h3>
+          <p className="text-xs font-bold text-primary">{badge.points.toLocaleString()} Points</p>
+          <p className="text-[10px] text-muted-foreground mt-1 px-1">{badge.description}</p>
         </Card>
       ))}
     </div>
