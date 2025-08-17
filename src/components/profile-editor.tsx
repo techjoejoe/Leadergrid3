@@ -26,10 +26,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, User as UserIcon } from 'lucide-react';
+import { Loader2, UploadCloud } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import Cropper, { ReactCropperElement } from "react-cropper";
+import "cropperjs/dist/cropper.css";
+
 import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
@@ -58,49 +59,6 @@ interface ProfileEditorProps {
 
 const PHOTO_UPLOAD_BONUS = 300;
 
-function getCroppedBlob(image: HTMLImageElement, crop: Crop): Promise<Blob> {
-    return new Promise((resolve, reject) => {
-        const canvas = document.createElement('canvas');
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
-        
-        const targetWidth = 128;
-        const targetHeight = 128;
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            return reject(new Error('Failed to get canvas context'));
-        }
-
-        const cropX = crop.x * scaleX;
-        const cropY = crop.y * scaleY;
-        const cropWidth = crop.width * scaleX;
-        const cropHeight = crop.height * scaleY;
-
-        ctx.drawImage(
-            image,
-            cropX,
-            cropY,
-            cropWidth,
-            cropHeight,
-            0,
-            0,
-            targetWidth,
-            targetHeight
-        );
-
-        canvas.toBlob(blob => {
-            if (!blob) {
-                return reject(new Error('Canvas is empty'));
-            }
-            resolve(blob);
-        }, 'image/jpeg', 0.9);
-    });
-}
-
-
 export function ProfileEditor({ 
     user,
     open, 
@@ -118,12 +76,11 @@ export function ProfileEditor({
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cropperRef = useRef<ReactCropperElement>(null);
 
   const [imgSrc, setImgSrc] = useState('');
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [isCropperOpen, setIsCropperOpen] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
+  
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -226,7 +183,6 @@ export function ProfileEditor({
   
   const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-        setCrop(undefined); // Reset crop when new image is selected
         const reader = new FileReader();
         reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
         reader.readAsDataURL(e.target.files[0]);
@@ -235,25 +191,35 @@ export function ProfileEditor({
     }
   }
 
-  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const { width, height } = e.currentTarget;
-    const initialCrop = centerCrop(
-        makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
-        width,
-        height
-    );
-    setCrop(initialCrop);
-    setCompletedCrop(initialCrop); // Set initial completed crop
-  };
+  const getCroppedBlob = (): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+        const cropper = cropperRef.current?.cropper;
+        if (!cropper) {
+            return resolve(null);
+        }
+        cropper.getCroppedCanvas({
+            width: 256,
+            height: 256,
+            minWidth: 128,
+            minHeight: 128,
+            imageSmoothingQuality: 'high',
+        }).toBlob((blob) => {
+            resolve(blob);
+        }, 'image/jpeg', 0.9);
+    });
+  }
 
   const handleSaveCrop = async () => {
-      if (!completedCrop || !imgRef.current || !user) {
-          return;
-      }
+      if (!user) return;
+      
       setIsProcessingPhoto(true);
 
       try {
-        const croppedBlob = await getCroppedBlob(imgRef.current, completedCrop);
+        const croppedBlob = await getCroppedBlob();
+        if (!croppedBlob) {
+            throw new Error("Failed to get cropped image.");
+        }
+
         const finalStorageRef = storageRef(storage, `avatars/${user.uid}.jpg`);
         await uploadBytes(finalStorageRef, croppedBlob, { contentType: 'image/jpeg' });
         const downloadURL = await getDownloadURL(finalStorageRef);
@@ -326,6 +292,7 @@ export function ProfileEditor({
     } finally {
         setIsProcessingPhoto(false);
         setIsCropperOpen(false);
+        setImgSrc('');
     }
   }
 
@@ -430,21 +397,18 @@ export function ProfileEditor({
             </DialogDescription>
           </DialogHeader>
           {imgSrc && (
-            <ReactCrop
-              crop={crop}
-              onChange={(_, percentCrop) => setCrop(percentCrop)}
-              onComplete={(c) => setCompletedCrop(c)}
-              aspect={1}
-              minWidth={100}
-            >
-              <img
-                ref={imgRef}
-                alt="Crop me"
+            <Cropper
+                ref={cropperRef}
                 src={imgSrc}
-                onLoad={onImageLoad}
-                style={{ maxHeight: "70vh" }}
-              />
-            </ReactCrop>
+                style={{ height: 400, width: "100%" }}
+                aspectRatio={1}
+                viewMode={1}
+                guides={true}
+                background={false}
+                responsive={true}
+                autoCropArea={1}
+                checkOrientation={false}
+            />
           )}
           <DialogFooter>
             <Button
@@ -454,10 +418,10 @@ export function ProfileEditor({
                 setImgSrc('');
               }}
             >
-              Skip
+              Cancel
             </Button>
             <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
-                {isProcessingPhoto ? <Loader2 className="mr-2 animate-spin" /> : "Next"}
+                {isProcessingPhoto ? <Loader2 className="mr-2 animate-spin" /> : "Save Crop"}
             </Button>
           </DialogFooter>
         </DialogContent>
