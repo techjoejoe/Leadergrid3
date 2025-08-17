@@ -74,7 +74,8 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
   const [isLoading, setIsLoading] = useState(false);
   const [isStudentsLoading, setIsStudentsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [addStudentSearchTerm, setAddStudentSearchTerm] = useState("");
+  const [rosterSearchTerm, setRosterSearchTerm] = useState("");
   const { toast } = useToast();
   const router = useRouter();
   
@@ -85,7 +86,8 @@ export function ClassroomManager({ classId }: { classId: string }) {
     async function fetchAllStudents() {
         try {
             const usersCollection = collection(db, 'users');
-            const q = query(usersCollection); // No role filter
+            // We only need to fetch students, not admins
+            const q = query(usersCollection, where("role", "==", "student"));
             const querySnapshot = await getDocs(q);
             const fetchedStudents = querySnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -311,12 +313,18 @@ export function ClassroomManager({ classId }: { classId: string }) {
   const checkedInCount = new Set(checkInLog.map(r => r.studentId)).size;
   const checkedInPercentage = enrolledStudents.length > 0 ? (checkedInCount / enrolledStudents.length) * 100 : 0;
   
-  const availableStudents = useMemo(() => {
+  const availableStudentsToAdd = useMemo(() => {
     return allStudents.filter(s => 
       !enrolledStudents.some(es => es.id === s.id) &&
-      ((s.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) || (s.email || '').toLowerCase().includes(searchTerm.toLowerCase()))
+      ((s.displayName || '').toLowerCase().includes(addStudentSearchTerm.toLowerCase()) || (s.email || '').toLowerCase().includes(addStudentSearchTerm.toLowerCase()))
     );
-  }, [allStudents, enrolledStudents, searchTerm]);
+  }, [allStudents, enrolledStudents, addStudentSearchTerm]);
+  
+  const filteredRoster = useMemo(() => {
+      return enrolledStudents.filter(s => 
+        ((s.displayName || '').toLowerCase().includes(rosterSearchTerm.toLowerCase()) || (s.email || '').toLowerCase().includes(rosterSearchTerm.toLowerCase()))
+      )
+  }, [enrolledStudents, rosterSearchTerm]);
 
 
   return (
@@ -324,55 +332,66 @@ export function ClassroomManager({ classId }: { classId: string }) {
       <div className="lg:col-span-2 space-y-6">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-                <div>
+                <div className='flex-1'>
                     <CardTitle>Class Roster</CardTitle>
                     <CardDescription>Manage points for anyone enrolled in this class.</CardDescription>
                 </div>
-                <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Add User
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Add User to Class</DialogTitle>
-                            <DialogDescription>Search for a user to enroll them in this class.</DialogDescription>
-                        </DialogHeader>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input 
-                                placeholder="Search by name or email..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                        <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
-                           {availableStudents.length > 0 ? availableStudents.map(student => (
-                               <div key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
-                                   <div className="flex items-center gap-3">
-                                       <Avatar>
-                                           {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
-                                           <AvatarFallback>{student.displayName?.substring(0,2).toUpperCase() || '??'}</AvatarFallback>
-                                       </Avatar>
-                                       <div>
-                                           <p className="font-medium">{student.displayName || 'Unnamed User'}</p>
-                                           <p className="text-sm text-muted-foreground">{student.email}</p>
-                                       </div>
-                                   </div>
-                                   <Button size="sm" onClick={() => handleAddStudent(student)}>
-                                       <PlusCircle className="mr-2 h-4 w-4"/>
-                                       Add
-                                   </Button>
-                               </div>
-                           )) : (
-                               <p className="text-center text-muted-foreground p-4">No users found matching your search.</p>
-                           )}
-                        </div>
-                    </DialogContent>
-                </Dialog>
+                <div className='flex items-center gap-2'>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Filter roster..."
+                            value={rosterSearchTerm}
+                            onChange={(e) => setRosterSearchTerm(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
+                    <Dialog open={isAddStudentDialogOpen} onOpenChange={setIsAddStudentDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Add User
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Add User to Class</DialogTitle>
+                                <DialogDescription>Search for a user to enroll them in this class.</DialogDescription>
+                            </DialogHeader>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search by name or email..."
+                                    value={addStudentSearchTerm}
+                                    onChange={(e) => setAddStudentSearchTerm(e.target.value)}
+                                    className="pl-10"
+                                />
+                            </div>
+                            <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
+                            {availableStudentsToAdd.length > 0 ? availableStudentsToAdd.map(student => (
+                                <div key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar>
+                                            {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
+                                            <AvatarFallback>{student.displayName?.substring(0,2).toUpperCase() || '??'}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{student.displayName || 'Unnamed User'}</p>
+                                            <p className="text-sm text-muted-foreground">{student.email}</p>
+                                        </div>
+                                    </div>
+                                    <Button size="sm" onClick={() => handleAddStudent(student)}>
+                                        <PlusCircle className="mr-2 h-4 w-4"/>
+                                        Add
+                                    </Button>
+                                </div>
+                            )) : (
+                                <p className="text-center text-muted-foreground p-4">No users found matching your search.</p>
+                            )}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </CardHeader>
             <CardContent>
             {isStudentsLoading ? (
@@ -390,7 +409,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {enrolledStudents.map(student => (
+                    {filteredRoster.map(student => (
                         <TableRow key={student.id}>
                         <TableCell>
                             <div className="flex items-center gap-4">
@@ -405,23 +424,23 @@ export function ClassroomManager({ classId }: { classId: string }) {
                         <TableCell className="text-center font-semibold text-muted-foreground">{student.lifetimePoints.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                                <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'add')}>
+                                <Button aria-label="Add points" variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'add')}>
                                     <PlusCircle className="h-4 w-4 text-green-500" />
                                 </Button>
-                                <Button variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
+                                <Button aria-label="Subtract points" variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'subtract')}>
                                     <MinusCircle className="h-4 w-4 text-red-500" />
                                 </Button>
-                                <Button variant="destructive" size="icon" onClick={() => handleRemoveStudent(student)}>
+                                <Button aria-label="Remove user" variant="destructive" size="icon" onClick={() => handleRemoveStudent(student)}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             </div>
                         </TableCell>
                         </TableRow>
                     ))}
-                     {enrolledStudents.length === 0 && (
+                     {filteredRoster.length === 0 && (
                         <TableRow>
                             <TableCell colSpan={4} className="text-center h-24 text-muted-foreground">
-                                No users enrolled in this class yet.
+                                {rosterSearchTerm ? 'No students match your filter.' : 'No users enrolled in this class yet.'}
                             </TableCell>
                         </TableRow>
                      )}
@@ -450,7 +469,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {enrolledStudents.map((student, index) => (
+                            {filteredRoster.slice(0,10).map((student, index) => (
                                 <TableRow key={student.id}>
                                     <TableCell className="font-bold text-lg">{index + 1}</TableCell>
                                     <TableCell>
@@ -465,7 +484,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                     <TableCell className="text-right font-bold text-lg">{student.classPoints?.toLocaleString() ?? 0}</TableCell>
                                 </TableRow>
                             ))}
-                            {enrolledStudents.length === 0 && (
+                            {filteredRoster.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
                                         No one has earned points in this class yet.
@@ -544,7 +563,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <CardTitle>Attendance Log</CardTitle>
-                    <Button variant="outline" size="icon" onClick={downloadCSV} disabled={checkInLog.length === 0}>
+                    <Button variant="outline" size="icon" onClick={downloadCSV} disabled={checkInLog.length === 0} aria-label="Download attendance log">
                         <Download className="h-4 w-4" />
                     </Button>
                 </div>
