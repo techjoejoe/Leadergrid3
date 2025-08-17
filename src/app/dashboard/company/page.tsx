@@ -20,7 +20,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
 import { Badge } from "@/components/ui/badge";
 
@@ -68,12 +68,13 @@ export default function CompanyPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        setIsLoading(true);
-        try {
-            const logsRef = collection(db, "audit_logs");
-            const q = query(logsRef, orderBy("timestamp", "desc"), limit(20));
-            
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        async function fetchAuditLogs() {
+            setIsLoading(true);
+            try {
+                const logsRef = collection(db, "audit_logs");
+                const q = query(logsRef, orderBy("timestamp", "desc"), limit(20));
+                
+                const querySnapshot = await getDocs(q);
                 const logs = querySnapshot.docs.map(doc => {
                     const data = doc.data();
                     const logDate = (data.timestamp as Timestamp).toDate();
@@ -88,15 +89,14 @@ export default function CompanyPage() {
                     };
                 });
                 setAuditLogs(logs);
+
+            } catch (error) {
+                console.error("Error fetching audit logs:", error);
+            } finally {
                 setIsLoading(false);
-            });
-
-            return () => unsubscribe();
-
-        } catch (error) {
-            console.error("Error fetching audit logs:", error);
-            setIsLoading(false);
+            }
         }
+        fetchAuditLogs();
     }, []);
 
     return (
@@ -113,7 +113,7 @@ export default function CompanyPage() {
                     <CardContent>
                     <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                        Realtime stats coming soon
+                        Updates nightly
                     </p>
                     </CardContent>
                 </Card>
@@ -127,7 +127,7 @@ export default function CompanyPage() {
                     <CardContent>
                     <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                        Realtime stats coming soon
+                        Updates nightly
                     </p>
                     </CardContent>
                 </Card>
@@ -139,7 +139,7 @@ export default function CompanyPage() {
                     <CardContent>
                     <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                        Realtime stats coming soon
+                        Updates nightly
                     </p>
                     </CardContent>
                 </Card>
@@ -151,7 +151,7 @@ export default function CompanyPage() {
                     <CardContent>
                     <div className="text-2xl font-bold">--</div>
                     <p className="text-xs text-muted-foreground">
-                       Realtime stats coming soon
+                       Updates nightly
                     </p>
                     </CardContent>
                 </Card>
