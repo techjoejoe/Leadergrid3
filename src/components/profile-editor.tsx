@@ -35,6 +35,7 @@ import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, writeBatch, collection, Timestamp, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import Image from 'next/image';
 
 
 const profileFormSchema = z.object({
@@ -78,6 +79,7 @@ export function ProfileEditor({
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
+  const [isEditorOpen, setIsEditorOpen] = useState(open);
   const cropperRef = useRef<ReactCropperElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -90,13 +92,17 @@ export function ProfileEditor({
   });
 
   useEffect(() => {
-    if (open) {
+    setIsEditorOpen(open);
+  }, [open]);
+
+  useEffect(() => {
+    if (isEditorOpen) {
       form.reset({
         displayName: currentDisplayName,
         email: currentEmail,
       });
     }
-  }, [open, currentDisplayName, currentEmail, form]);
+  }, [isEditorOpen, currentDisplayName, currentEmail, form]);
 
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
@@ -215,10 +221,11 @@ export function ProfileEditor({
   };
 
   const handleSaveCrop = async () => {
-    if (!user) {
-        toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
+    if (!user || !cropperRef.current) {
+        toast({ title: 'Error', description: "User or image cropper not available.", variant: 'destructive'});
         return;
     }
+
     const blob = await getCroppedBlob();
     if (!blob) {
         toast({ title: "Error", description: "Could not process image.", variant: "destructive" });
@@ -238,13 +245,12 @@ export function ProfileEditor({
         const path = `avatars/${user.uid}.jpg`;
         const photoRef = storageRef(storage, path);
         const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
+        
         const task = uploadBytesResumable(photoRef, blob, { ...metadata, signal: controller.signal });
-
         await new Promise<void>((resolve, reject) => {
             task.on("state_changed",
               () => {}, // Progress handler can be added here
               (error) => {
-                // Handle errors, including cancellation from the watchdog timer
                 if (error.code === 'storage/canceled') {
                   toast({ title: "Upload timed out", description: "Please check your network and try again.", variant: "destructive" });
                 }
@@ -253,8 +259,6 @@ export function ProfileEditor({
               () => resolve() // Success
             );
         });
-        console.log("handleSaveCrop: 1a. uploadBytesResumable completed.");
-
         console.log("handleSaveCrop: 2. Getting download URL.");
         const downloadURL = await getDownloadURL(photoRef);
         
@@ -269,10 +273,13 @@ export function ProfileEditor({
         const userDocRef = doc(db, "users", user.uid);
         batch.update(userDocRef, { photoURL: downloadURL });
         
+        console.log("handleSaveCrop: 4a. Checking if user had a photo before.");
         const userDocSnap = await getDoc(userDocRef);
         const hadPhoto = !!userDocSnap.data()?.photoURL;
+
         if (!hadPhoto && storageKey === 'studentAvatar') {
-             batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
+            console.log("handleSaveCrop: 4b. Awarding bonus points.");
+            batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
             const historyRef = doc(collection(db, 'point_history'));
             batch.set(historyRef, {
                 studentId: user.uid,
@@ -296,7 +303,6 @@ export function ProfileEditor({
         
     } catch (err) {
         console.error("handleSaveCrop: Photo save failed", err);
-        // Toast for timeout is handled in the upload promise reject
         if ((err as any)?.code !== 'storage/canceled') {
             toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
         }
@@ -312,7 +318,7 @@ export function ProfileEditor({
 
   return (
     <>
-    <Dialog open={open && !isCropOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isEditorOpen && !isCropOpen} onOpenChange={(isOpen) => { setIsEditorOpen(isOpen); onOpenChange(isOpen); }}>
       <DialogContent className="sm:max-w-[480px]">
         {!user ? (
           <DialogHeader>
@@ -437,5 +443,3 @@ export function ProfileEditor({
     </>
   );
 }
-
-    
