@@ -141,9 +141,14 @@ export function ProfileEditor({
     }
   }
 
+  function onCropComplete(crop: Crop) {
+    setCompletedCrop(crop);
+  }
+
   async function handleSaveCrop() {
     // This is where the upload logic will go in the next step.
     console.log("Saving cropped image...");
+    // For now, just close the dialog.
     onOpenChange(false);
   }
 
@@ -246,112 +251,116 @@ export function ProfileEditor({
               </DialogDescription>
             </DialogHeader>
             
-            <div className="grid md:grid-cols-2 gap-8 py-4">
-                {/* Left side: Profile Form */}
-                <div className="space-y-4">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="displayName"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Display Name</FormLabel>
-                                <FormControl>
-                                <Input placeholder="Your Name" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="email"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email</FormLabel>
-                                <FormControl>
-                                <Input type="email" placeholder="Your Email" {...field} disabled />
-                                </FormControl>
-                                <FormDescription>
-                                  Your email address cannot be changed from this screen.
-                                </FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <Button type="submit" disabled={isLoading} className="w-full">
-                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Save Name Changes
-                        </Button>
-                        </form>
-                    </Form>
-                     <div className="space-y-2 border-t pt-4">
-                        <h3 className="font-semibold text-sm">Password Reset</h3>
-                        <p className="text-sm text-muted-foreground">
-                            Click the button below to receive an email to reset your password.
-                        </p>
-                        <Button variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword}>
-                            {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Send Password Reset Email
-                        </Button>
-                    </div>
-                </div>
+             <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleUpdateProfile)} className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-8 py-4">
+                        {/* Left side: Profile Form */}
+                        <div className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="displayName"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Display Name</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="Your Name" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl>
+                                    <Input type="email" placeholder="Your Email" {...field} disabled />
+                                    </FormControl>
+                                    <FormDescription>
+                                    Your email address cannot be changed from this screen.
+                                    </FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <div className="space-y-2 border-t pt-4">
+                                <h3 className="font-semibold text-sm">Password Reset</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Click the button below to receive an email to reset your password.
+                                </p>
+                                <Button type="button" variant="outline" onClick={handlePasswordReset} disabled={isLoadingPassword}>
+                                    {isLoadingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Send Password Reset Email
+                                </Button>
+                            </div>
+                        </div>
 
-                {/* Right side: Photo Editor */}
-                <div className="space-y-4">
-                    <FormItem>
-                        <FormLabel>Profile Photo</FormLabel>
-                         <div className="flex items-center gap-4">
-                            <Avatar className="h-16 w-16">
-                                <AvatarImage src={user.photoURL || ''} alt={currentDisplayName} />
-                                <AvatarFallback><UserIcon className="h-8 w-8" /></AvatarFallback>
-                            </Avatar>
-                            <Input
-                                ref={fileInputRef}
-                                id="photo-upload"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={onSelectFile}
-                            />
-                             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
-                                <Upload className="mr-2 h-4 w-4" /> Change Photo
-                            </Button>
-                        </div>
-                    </FormItem>
-                   
-                    {!!imgSrc && (
-                    <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                        <ReactCrop
-                            crop={crop}
-                            onChange={(_, percentCrop) => setCrop(percentCrop)}
-                            onComplete={(c) => setCompletedCrop(c)}
-                            aspect={aspect}
-                            minHeight={100}
-                        >
-                            <img
-                                ref={imgRef}
-                                alt="Crop me"
-                                src={imgSrc}
-                                onLoad={onImageLoad}
-                                className="max-h-[40vh]"
-                            />
-                        </ReactCrop>
-                        <div className="flex flex-col items-center gap-4">
-                             <Button 
-                                onClick={handleSaveCrop} 
-                                disabled={isProcessingPhoto}
-                                className="w-full"
-                             >
-                                {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                                Set New Profile Photo
-                            </Button>
+                        {/* Right side: Photo Editor */}
+                        <div className="space-y-4">
+                            <FormItem>
+                                <FormLabel>Profile Photo</FormLabel>
+                                <div className="flex items-center gap-4">
+                                    <Avatar className="h-16 w-16">
+                                        <AvatarImage src={user.photoURL || ''} alt={currentDisplayName} />
+                                        <AvatarFallback><UserIcon className="h-8 w-8" /></AvatarFallback>
+                                    </Avatar>
+                                    <Input
+                                        ref={fileInputRef}
+                                        id="photo-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={onSelectFile}
+                                    />
+                                    <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                                        <Upload className="mr-2 h-4 w-4" /> Change Photo
+                                    </Button>
+                                </div>
+                            </FormItem>
+                        
+                            {!!imgSrc && (
+                            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                                <ReactCrop
+                                    crop={crop}
+                                    onChange={(_, percentCrop) => setCrop(percentCrop)}
+                                    onComplete={onCropComplete}
+                                    aspect={aspect}
+                                    minHeight={100}
+                                >
+                                    <img
+                                        ref={imgRef}
+                                        alt="Crop me"
+                                        src={imgSrc}
+                                        onLoad={onImageLoad}
+                                        className="max-h-[40vh]"
+                                    />
+                                </ReactCrop>
+                                <div className="flex flex-col items-center gap-4">
+                                    <Button 
+                                        type="button"
+                                        onClick={handleSaveCrop} 
+                                        disabled={isProcessingPhoto}
+                                        className="w-full"
+                                    >
+                                        {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                                        Set New Profile Photo
+                                    </Button>
+                                </div>
+                            </div>
+                            )}
                         </div>
                     </div>
-                    )}
-                </div>
-            </div>
+                     <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Save Profile Changes
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
             </>
         )}
       </DialogContent>
