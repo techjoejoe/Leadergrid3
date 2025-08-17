@@ -4,61 +4,60 @@
 
 @layer base {
   :root {
-    --background: 261 80% 12%; /* Deep Party Purple */
-    --foreground: 240 25% 98%; 
-    --card: 316 72% 51% / 0.1; /* Semi-transparent Hot Pink */
-    --card-foreground: 240 25% 98%;
-    --popover: 261 80% 12%;
-    --popover-foreground: 240 25% 98%;
-    --primary: 48 96% 58%; /* Festive Gold */
-    --primary-foreground: 261 80% 12%;
-    --secondary: 316 72% 51%; /* Hot Pink */
-    --secondary-foreground: 240 25% 98%;
-    --muted: 261 80% 20%;
-    --muted-foreground: 261 30% 70%;
-    --accent: 48 96% 58% / 0.1; /* Semi-transparent Gold */
-    --accent-foreground: 48 96% 70%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 316 72% 51% / 0.2; /* Semi-transparent Hot Pink Border */
-    --input: 261 80% 20%;
-    --ring: 48 96% 58%; /* Festive Gold */
-    --radius: 0.5rem;
-    --chart-1: 48 96% 58%; /* Festive Gold */
-    --chart-2: 316 72% 51%; /* Hot Pink */
-    --chart-3: 173 98% 46%; /* Bright Teal */
-    --chart-4: 261 95% 68%; /* Electric Violet */
-    --chart-5: 240 25% 98%;
-    --sidebar-background: 261 80% 12%;
-    --sidebar-foreground: 240 25% 98%;
-    --sidebar-primary: 48 96% 58%;
-    --sidebar-primary-foreground: 261 80% 12%;
-    --sidebar-accent: 316 72% 51%;
-    --sidebar-accent-foreground: 240 25% 98%;
-    --sidebar-border: 261 80% 20%;
-    --sidebar-ring: 48 96% 58%;
+    --background: 228 100% 99%; /* Soft Surface */
+    --foreground: 210 29% 17%; /* Neutral Text */
+    --card: 196 92% 94%; /* Card Tint 1 */
+    --card-foreground: 210 29% 17%;
+    --popover: 228 100% 99%;
+    --popover-foreground: 210 29% 17%;
+    --primary: 212 100% 38%; /* Leadership Blue */
+    --primary-foreground: 228 100% 99%;
+    --secondary: 194 100% 46%; /* Sky Accent */
+    --secondary-foreground: 215 39% 21%;
+    --muted: 220 33% 91%; /* Card Tint 2 */
+    --muted-foreground: 215 14% 43%; /* Secondary Text */
+    --accent: 81 76% 62%; /* Progress Lime */
+    --accent-foreground: 215 39% 21%;
+    --destructive: 0 72% 51%; /* Danger */
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%; /* Dividers */
+    --input: 220 13% 91%;
+    --ring: 212 100% 38%;
+    --chart-1: 212 100% 38%; /* Leadership Blue */
+    --chart-2: 194 100% 46%; /* Sky Accent */
+    --chart-3: 81 76% 62%; /* Progress Lime */
+    --chart-4: 215 39% 21%; /* Depth Navy */
+    --chart-5: 215 14% 43%; /* Secondary Text */
+    --sidebar-background: 215 39% 21%; /* Depth Navy */
+    --sidebar-foreground: 228 100% 99%;
+    --sidebar-primary: 212 100% 38%;
+    --sidebar-primary-foreground: 228 100% 99%;
+    --sidebar-accent: 194 100% 46%;
+    --sidebar-accent-foreground: 215 39% 21%;
+    --sidebar-border: 215 39% 31%;
+    --sidebar-ring: 212 100% 38%;
   }
 
   .dark {
-    --background: 261 80% 12%; /* Deep Party Purple */
-    --foreground: 240 25% 98%; 
-    --card: 316 72% 51% / 0.1; /* Semi-transparent Hot Pink */
-    --card-foreground: 240 25% 98%;
-    --popover: 261 80% 12%;
-    --popover-foreground: 240 25% 98%;
-    --primary: 48 96% 58%; /* Festive Gold */
-    --primary-foreground: 261 80% 12%;
-    --secondary: 316 72% 51%; /* Hot Pink */
-    --secondary-foreground: 240 25% 98%;
-    --muted: 261 80% 20%;
-    --muted-foreground: 261 30% 70%;
-    --accent: 48 96% 58% / 0.1; /* Semi-transparent Gold */
-    --accent-foreground: 48 96% 70%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 316 72% 51% / 0.2; /* Semi-transparent Hot Pink Border */
-    --input: 261 80% 20%;
-    --ring: 48 96% 58%; /* Festive Gold */
+    --background: 215 39% 21%; /* Depth Navy */
+    --foreground: 228 100% 99%; /* Soft Surface */
+    --card: 215 39% 26%;
+    --card-foreground: 228 100% 99%;
+    --popover: 215 39% 21%;
+    --popover-foreground: 228 100% 99%;
+    --primary: 194 100% 46%; /* Sky Accent */
+    --primary-foreground: 215 39% 11%;
+    --secondary: 212 100% 38%; /* Leadership Blue */
+    --secondary-foreground: 228 100% 99%;
+    --muted: 215 39% 31%;
+    --muted-foreground: 215 14% 63%; /* Lighter Secondary Text for dark mode */
+    --accent: 81 76% 62%; /* Progress Lime */
+    --accent-foreground: 215 39% 11%;
+    --destructive: 0 72% 51%; /* Danger */
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 39% 31%;
+    --input: 215 39% 31%;
+    --ring: 194 100% 46%;
   }
 }
 
