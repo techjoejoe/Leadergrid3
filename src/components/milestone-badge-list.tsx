@@ -64,12 +64,13 @@ export function MilestoneBadgeList() {
         <Card key={badge.name} className="text-center flex flex-col items-center p-4">
           <div className="w-24 h-24 relative mb-2 flex items-center justify-center">
               {badge.isLocal ? (
-                <img 
+                <Image 
                     src={badge.imageUrl} 
                     alt={badge.name}
                     width={96}
                     height={96}
                     className="mb-2"
+                    unoptimized
                 />
               ) : (
                 <Image 
