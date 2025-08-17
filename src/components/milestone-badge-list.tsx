@@ -9,7 +9,7 @@ const milestoneBadges = [
     name: 'Intern of Incentives',
     description: 'Awarded for earning your first 200 points.',
     points: 200,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/intern-of-incentives.png',
     hint: 'backpack trophy',
   },
   {
