@@ -183,21 +183,16 @@ export function ProfileEditor({
     fileInputRef.current?.click();
   };
 
-  const onSelectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-        const file = e.target.files[0];
-        setCrop(undefined); // Reset crop state
-        setIsProcessingPhoto(true);
-
-        const reader = new FileReader();
-        reader.addEventListener('load', () => {
-            setImgSrc(reader.result?.toString() || '');
-            // No longer showing processing toast, it should be fast
-            setIsProcessingPhoto(false);
-        });
-        reader.readAsDataURL(file);
+      setCrop(undefined) // Makes crop preview update between images.
+      const reader = new FileReader()
+      reader.addEventListener('load', () =>
+        setImgSrc(reader.result?.toString() || '')
+      )
+      reader.readAsDataURL(e.target.files[0])
     }
-};
+  }
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { width, height } = e.currentTarget;
@@ -216,7 +211,6 @@ export function ProfileEditor({
     );
     setCrop(newCrop);
     setCompletedCrop(newCrop); // Set initial crop as completed
-    setIsProcessingPhoto(false);
   }
 
   const handleCropComplete = async () => {
@@ -228,6 +222,8 @@ export function ProfileEditor({
         });
         return;
     }
+
+    setIsProcessingPhoto(true);
 
     try {
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
@@ -315,12 +311,15 @@ export function ProfileEditor({
                 duration: 8000,
             });
         } else {
+            console.error("Error saving photo:", error);
             toast({
                 title: "Error",
                 description: 'Could not save your new photo. Please try again.',
                 variant: "destructive",
             });
         }
+    } finally {
+        setIsProcessingPhoto(false);
     }
   };
   
@@ -329,8 +328,7 @@ export function ProfileEditor({
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
-    // Aggressively resize to a smaller avatar size
-    const targetWidth = 128; 
+    const targetWidth = 128;
     const targetHeight = 128;
 
     if (typeof crop.width === 'undefined' || typeof crop.height === 'undefined' || typeof crop.x === 'undefined' || typeof crop.y === 'undefined') {
@@ -362,7 +360,6 @@ export function ProfileEditor({
       targetHeight
     );
     
-    // Use a specific quality setting for JPEG to control file size
     return canvas.toDataURL("image/jpeg", 0.85);
   }
 
@@ -511,3 +508,5 @@ export function ProfileEditor({
     </Dialog>
   );
 }
+
+    
