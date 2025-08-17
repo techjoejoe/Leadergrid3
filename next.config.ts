@@ -21,9 +21,15 @@ const nextConfig: NextConfig = {
         }
     ],
   },
-  allowedDevOrigins: [
-    "*://*.cloudworkstations.dev",
-  ]
+  async headers() {
+    // In a production environment, you would want to be more restrictive than this
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'Access-Control-Allow-Origin', value: '*' }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
