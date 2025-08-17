@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, SearchX, QrCode } from "lucide-react";
+import { ArrowLeft, Loader2, SearchX, QrCode, Crown } from "lucide-react";
 import Link from "next/link";
 import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
@@ -78,6 +78,11 @@ export default function ClassDetailsPage() {
                 <Button variant="outline" size="icon" asChild>
                     <Link href="/dashboard/classes">
                         <ArrowLeft className="h-4 w-4" />
+                    </Link>
+                </Button>
+                 <Button variant="outline" size="icon" asChild>
+                    <Link href={`/leaderboard?classId=${classId}`}>
+                        <Crown className="h-4 w-4" />
                     </Link>
                 </Button>
                 <h1 className="font-headline text-3xl font-bold">{classDetails.name}</h1>

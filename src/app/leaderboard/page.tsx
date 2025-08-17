@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown, Loader2, Star, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, where, doc, getDoc } from 'firebase/firestore';
+import { useSearchParams } from "next/navigation";
 
 interface LeaderboardEntry {
   rank: number;
@@ -18,6 +19,10 @@ interface LeaderboardEntry {
   points: number;
   avatar: string | null;
   initial: string;
+}
+
+interface ClassDetails {
+    name: string;
 }
 
 const formatName = (name: string) => {
@@ -72,16 +77,34 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
     )
 }
 
-export default function LeaderboardPage() {
+function LeaderboardPageContents() {
+    const searchParams = useSearchParams();
+    const classId = searchParams.get('classId');
+
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
 
     useEffect(() => {
         async function fetchLeaderboard() {
             setIsLoading(true);
             try {
-                const usersRef = collection(db, 'users');
-                const q = query(usersRef, orderBy("lifetimePoints", "desc"), limit(50));
+                let q;
+                let pointField = 'lifetimePoints';
+
+                if (classId) {
+                    const classDocRef = doc(db, 'classes', classId);
+                    const classDocSnap = await getDoc(classDocRef);
+                    if (classDocSnap.exists()) {
+                        setClassDetails(classDocSnap.data() as ClassDetails);
+                    }
+                    q = query(collection(db, `classes/${classId}/roster`), orderBy("classPoints", "desc"), limit(50));
+                    pointField = 'classPoints';
+                } else {
+                    const usersRef = collection(db, 'users');
+                    q = query(usersRef, orderBy("lifetimePoints", "desc"), limit(50));
+                }
+                
                 const querySnapshot = await getDocs(q);
 
                 const data = querySnapshot.docs.map((doc, index) => {
@@ -90,7 +113,7 @@ export default function LeaderboardPage() {
                     return {
                         id: doc.id,
                         name: name,
-                        points: userData.lifetimePoints || 0,
+                        points: userData[pointField] || 0,
                         avatar: userData.photoURL || null,
                         initial: (name).substring(0, 2).toUpperCase(),
                         rank: index + 1
@@ -105,7 +128,7 @@ export default function LeaderboardPage() {
             }
         }
         fetchLeaderboard();
-    }, []);
+    }, [classId]);
 
     if (isLoading) {
         return (
@@ -142,12 +165,12 @@ export default function LeaderboardPage() {
         <div className="relative z-10 w-full max-w-5xl mx-auto">
             <div className="flex items-center justify-start mb-6">
                 <Button variant="outline" size="icon" asChild className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-                    <Link href="/student-dashboard">
+                    <Link href={classId ? `/dashboard/classes/${classId}`: "/student-dashboard"}>
                         <ArrowLeft className="h-4 w-4" />
                     </Link>
                 </Button>
                 <div className="flex-1 text-center">
-                    <h1 className="text-4xl font-headline font-bold">Leaderboard</h1>
+                    <h1 className="text-4xl font-headline font-bold">{classDetails ? `${classDetails.name} Leaderboard` : 'Leaderboard'}</h1>
                 </div>
                  <div className="w-10"></div>
             </div>
@@ -191,6 +214,15 @@ export default function LeaderboardPage() {
         </div>
     </div>
   );
+}
+
+
+export default function LeaderboardPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600"><Loader2 className="h-10 w-10 animate-spin text-white" /></div>}>
+            <LeaderboardPageContents />
+        </Suspense>
+    )
 }
 
     
