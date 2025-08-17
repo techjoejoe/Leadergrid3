@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, Save, Check, SkipForward } from 'lucide-react';
+import { Loader2, UploadCloud, Save, Check, SkipForward, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
@@ -33,7 +33,7 @@ import 'cropperjs/dist/cropper.css';
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, writeBatch, collection, Timestamp, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref as storageRef, uploadBytes, getDownloadURL, uploadBytesResumable } from "firebase/storage";
 
 
 const profileFormSchema = z.object({
@@ -75,6 +75,7 @@ export function ProfileEditor({
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [croppedBlob, setCroppedBlob] = useState<Blob | null>(null);
   const [isCropOpen, setIsCropOpen] = useState(false);
   const cropperRef = useRef<ReactCropperElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -206,46 +207,68 @@ export function ProfileEditor({
               imageSmoothingQuality: 'high',
           });
            canvas.toBlob((blob) => {
+              setCroppedBlob(blob);
               resolve(blob);
           }, 'image/jpeg', 0.9);
       });
   };
 
   const handleSaveCrop = async () => {
-    const croppedBlob = await getCroppedBlob();
-    if (!user || !croppedBlob) {
-        toast({ title: "Error", description: "Could not process image. Please try again.", variant: "destructive" });
+    if (!user) {
+        toast({ title: "Error", description: "You must be logged in.", variant: "destructive" });
         return;
     }
-    
-    setIsProcessingPhoto(true);
-    toast({ title: 'Uploading photo...' });
+    const blob = await getCroppedBlob();
+    if (!blob) {
+        toast({ title: "Error", description: "Could not process image.", variant: "destructive" });
+        return;
+    }
 
+    setIsProcessingPhoto(true);
+    toast({ title: "Uploading photo..." });
     console.log("handleSaveCrop: Starting photo upload process.");
+    
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+        controller.abort();
+    }, 30000);
+
     try {
-        console.log("handleSaveCrop: 1. Starting upload to Firebase Storage.");
         const path = `avatars/${user.uid}.jpg`;
         const photoRef = storageRef(storage, path);
         const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
-        await uploadBytes(photoRef, croppedBlob, metadata);
-        console.log("handleSaveCrop: 1a. uploadBytes completed.");
+
+        console.log("handleSaveCrop: 1. Starting upload to Firebase Storage.");
+        const task = uploadBytesResumable(photoRef, blob, { ...metadata, signal: controller.signal });
+
+        await new Promise<void>((resolve, reject) => {
+            task.on("state_changed",
+              () => {}, // We can add a progress handler here in the future
+              (error) => {
+                // Handle errors, including cancellation from the watchdog timer
+                if (error.code === 'storage/canceled') {
+                  toast({ title: "Upload timed out", description: "Please check your network and try again.", variant: "destructive" });
+                }
+                reject(error);
+              },
+              () => resolve() // Success
+            );
+        });
+        console.log("handleSaveCrop: 1a. uploadBytesResumable completed.");
 
         console.log("handleSaveCrop: 2. Getting download URL.");
         const downloadURL = await getDownloadURL(photoRef);
         console.log(`handleSaveCrop: Got URL: ${downloadURL}`);
         
+        const batch = writeBatch(db);
+        
         console.log("handleSaveCrop: 3. Updating Firebase Auth profile.");
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
             console.log("handleSaveCrop: 3a. updateProfile completed.");
-        } else {
-            console.log("handleSaveCrop: 3b. User not authenticated, throwing error.");
-            throw new Error("User not authenticated.");
         }
         
         console.log("handleSaveCrop: 4. Updating Firestore user document.");
-        const batch = writeBatch(db);
-        console.log("handleSaveCrop: 4a. Created batch and referencing user doc.");
         const userDocRef = doc(db, "users", user.uid);
         batch.update(userDocRef, { photoURL: downloadURL });
         
@@ -253,7 +276,6 @@ export function ProfileEditor({
         const hadPhoto = !!userDocSnap.data()?.photoURL;
         if (!hadPhoto && storageKey === 'studentAvatar') {
              batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
-            console.log(`handleSaveCrop: 4b. User didn't have photo, adding ${PHOTO_UPLOAD_BONUS} points.`);
             const historyRef = doc(collection(db, 'point_history'));
             batch.set(historyRef, {
                 studentId: user.uid,
@@ -279,14 +301,19 @@ export function ProfileEditor({
         
     } catch (err) {
         console.error("handleSaveCrop: Photo save failed", err);
-        toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
+        // Toast for timeout is handled in the upload promise reject
+        if ((err as any)?.code !== 'storage/canceled') {
+            toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
+        }
     } finally {
         console.log("handleSaveCrop: 6. Final cleanup.");
+        clearTimeout(timer);
         setIsProcessingPhoto(false);
         setIsCropOpen(false);
         onOpenChange(false);
     }
   }
+
 
   return (
     <>
@@ -311,7 +338,7 @@ export function ProfileEditor({
             <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
                   <AvatarImage src={currentAvatar} />
-                  <AvatarFallback>{currentInitial}</AvatarFallback>
+                  <AvatarFallback><UserIcon className="h-10 w-10" /></AvatarFallback>
                 </Avatar>
                 <Button variant="outline" onClick={handleAvatarClick} disabled={isProcessingPhoto}>
                     {isProcessingPhoto ? 
@@ -415,3 +442,5 @@ export function ProfileEditor({
     </>
   );
 }
+
+    

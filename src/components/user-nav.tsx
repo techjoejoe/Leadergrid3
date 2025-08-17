@@ -70,7 +70,7 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile,
               <AvatarImage asChild src={finalAvatarUrl} alt={displayName}>
                 <Image src={finalAvatarUrl} alt={displayName} width={32} height={32} unoptimized />
               </AvatarImage>
-              <AvatarFallback>{initials}</AvatarFallback>
+              <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>

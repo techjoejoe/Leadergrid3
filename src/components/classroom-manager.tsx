@@ -21,7 +21,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, MinusCircle, Loader2, Download, Check, Play, UserPlus, Trash2, Search, Award } from 'lucide-react';
+import { PlusCircle, MinusCircle, Loader2, Download, Check, Play, UserPlus, Trash2, Search, Award, User as UserIcon } from 'lucide-react';
 import { format, addMinutes, isToday } from 'date-fns';
 import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
@@ -430,7 +430,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                             <AvatarImage asChild>
                                                 <Image src={student.photoURL ?? DEFAULT_AVATAR} alt={student.displayName || ''} width={40} height={40} unoptimized />
                                             </AvatarImage>
-                                            <AvatarFallback>{student.displayName?.substring(0,2).toUpperCase() || '??'}</AvatarFallback>
+                                            <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <p className="font-medium">{student.displayName || 'Unnamed User'}</p>
@@ -473,7 +473,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                 <AvatarImage asChild>
                                     <Image src={student.photoURL ?? DEFAULT_AVATAR} alt={student.displayName || ''} width={40} height={40} unoptimized />
                                 </AvatarImage>
-                                <AvatarFallback>{(student.displayName || '??').substring(0,2).toUpperCase()}</AvatarFallback>
+                                <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{student.displayName || 'Unnamed User'}</span>
                             </div>

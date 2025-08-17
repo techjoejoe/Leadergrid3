@@ -125,7 +125,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                 <AvatarImage asChild src={finalAvatarUrl} className="rounded-full">
                     <Image src={finalAvatarUrl} alt={user.name} width={224} height={224} unoptimized />
                 </AvatarImage>
-                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full">{user.initial}</AvatarFallback>
+                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full"><UserIcon className="h-24 w-24" /></AvatarFallback>
             </Avatar>
             <div className="relative w-full">
                 <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
@@ -459,7 +459,7 @@ export default function StudentDashboardPage() {
                                         <AvatarImage asChild>
                                             <Image src={avatarUrl} alt={displayName} width={40} height={40} unoptimized />
                                         </AvatarImage>
-                                        <AvatarFallback>{displayInitial}</AvatarFallback>
+                                        <AvatarFallback><UserIcon className="h-5 w-5" /></AvatarFallback>
                                     </Avatar>
                                 </Button>
                             </DropdownMenuTrigger>
@@ -508,7 +508,7 @@ export default function StudentDashboardPage() {
                                         <AvatarImage asChild>
                                             <Image src={avatarUrl} alt={displayName} width={144} height={144} unoptimized />
                                         </AvatarImage>
-                                        <AvatarFallback className="rounded-md text-3xl">{displayInitial}</AvatarFallback>
+                                        <AvatarFallback className="rounded-md text-3xl"><UserIcon className="h-20 w-20" /></AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-4">
                                         <Card className="bg-yellow-400/10 border-yellow-500/30">

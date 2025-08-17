@@ -10,7 +10,8 @@ import {
     ShieldCheck,
     Download,
     Star,
-    ScanLine
+    ScanLine,
+    User as UserIcon,
   } from "lucide-react"
   
   import {
@@ -314,7 +315,7 @@ export default function CompanyPage() {
                             {auditLogs.map((log) => (
                                 <div key={log.id} className="flex items-center">
                                     <Avatar className="h-9 w-9">
-                                        <AvatarFallback>{log.actorName.substring(0,2).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                     </Avatar>
                                     <div className="ml-4 space-y-1">
                                         <p className="text-sm font-medium leading-none">
@@ -332,3 +333,4 @@ export default function CompanyPage() {
         </div>
     )
   }
+

@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Users, PlusCircle } from "lucide-react";
+import { Loader2, Users, PlusCircle, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db, auth } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, deleteDoc, doc, writeBatch, where, addDoc, Timestamp } from "firebase/firestore";
@@ -206,7 +206,7 @@ export default function StudentsPage() {
                                             <AvatarImage asChild>
                                                 <Image src={student.photoURL ?? DEFAULT_AVATAR} alt={student.displayName || ''} width={40} height={40} unoptimized />
                                             </AvatarImage>
-                                            <AvatarFallback>{student.displayName?.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
+                                            <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
                                         {student.displayName}
                                     </div>
