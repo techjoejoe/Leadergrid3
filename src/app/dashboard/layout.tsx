@@ -63,7 +63,7 @@ export default function DashboardLayout({
         });
 
         return () => unsubscribe();
-    }, [auth, isClient]);
+    }, [isClient]);
 
     const handleNameChange = (newName: string) => {
         setDisplayName(newName);

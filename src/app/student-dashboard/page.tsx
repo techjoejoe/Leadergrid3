@@ -214,6 +214,10 @@ export default function StudentDashboardPage() {
 
     useEffect(() => {
         setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isClient) return;
 
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
@@ -301,7 +305,7 @@ export default function StudentDashboardPage() {
         });
 
         return () => unsubscribe();
-    }, [auth, router, stableSetActiveClass]);
+    }, [isClient, router, stableSetActiveClass]);
 
     // New effect to handle client-side only state
     useEffect(() => {
