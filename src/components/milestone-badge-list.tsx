@@ -9,37 +9,43 @@ const milestoneBadges = [
     name: 'Point Pioneer',
     description: 'Awarded for earning your first 1,000 points.',
     points: 1000,
-    imageUrl: '/badges/milestone_1k.png',
+    imageUrl: 'https://placehold.co/96x96.png',
+    hint: 'bronze medal',
   },
   {
     name: 'Five-Star Finisher',
     description: 'Awarded for earning a total of 5,000 points.',
     points: 5000,
-    imageUrl: '/badges/milestone_5k.png',
+    imageUrl: 'https://placehold.co/96x96.png',
+    hint: 'silver medal',
   },
   {
     name: 'Ten-Thousand Triumph',
     description: 'Awarded for earning a monumental 10,000 points.',
     points: 10000,
-    imageUrl: '/badges/milestone_10k.png',
+    imageUrl: 'https://placehold.co/96x96.png',
+    hint: 'gold medal',
   },
   {
     name: 'Point Pro',
     description: 'Awarded for achieving 25,000 lifetime points.',
     points: 25000,
-    imageUrl: '/badges/milestone_25k.png',
+    imageUrl: 'https://placehold.co/96x96.png',
+    hint: 'platinum trophy',
   },
    {
     name: 'Fifty-Thousand Feat',
     description: 'Awarded for achieving 50,000 lifetime points.',
     points: 50000,
-    imageUrl: '/badges/milestone_50k.png',
+    imageUrl: 'https://placehold.co/96x96.png',
+    hint: 'diamond trophy',
   },
   {
     name: 'Centurion of Credit',
     description: 'Awarded for the incredible achievement of 100,000 lifetime points.',
     points: 100000,
-    imageUrl: '/badges/milestone_100k.png',
+    imageUrl: 'https://placehold.co/96x96.png',
+    hint: 'glowing award',
   },
 ];
 
@@ -54,7 +60,7 @@ export function MilestoneBadgeList() {
                 alt={badge.name} 
                 width={96}
                 height={96}
-                data-ai-hint="golden trophy"
+                data-ai-hint={badge.hint}
                 className="mb-2"
              />
            </div>
