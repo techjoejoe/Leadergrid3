@@ -121,10 +121,13 @@ export default function ClassDetailsPage() {
                         <Crown className="h-4 w-4" />
                     </Link>
                 </Button>
-                <h1 className="font-headline text-3xl font-bold">{classDetails.name}</h1>
-                 <Button variant="outline" size="icon" onClick={() => setIsRenameDialogOpen(true)}>
-                    <Pencil className="h-4 w-4" />
-                </Button>
+                <div 
+                    className="flex items-center gap-2 cursor-pointer group"
+                    onClick={() => setIsRenameDialogOpen(true)}
+                >
+                    <h1 className="font-headline text-3xl font-bold group-hover:text-primary transition-colors">{classDetails.name}</h1>
+                    <Pencil className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
             </div>
             <Card>
                 <CardHeader>
