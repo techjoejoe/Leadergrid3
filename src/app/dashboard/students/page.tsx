@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Users, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, deleteDoc, doc, writeBatch, where } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy, deleteDoc, doc, writeBatch, where, addDoc, Timestamp } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserActions } from "@/components/user-actions";
@@ -66,6 +66,9 @@ export default function StudentsPage() {
     }
     
     const handleUserDeleted = async (userId: string) => {
+        const userToDelete = students.find(s => s.id === userId);
+        if (!userToDelete) return;
+
         try {
             const batch = writeBatch(db);
 
@@ -83,8 +86,20 @@ export default function StudentsPage() {
                 batch.delete(enrollmentDoc.ref); // Delete the enrollment record itself
             }
             
-            // Note: Deleting from Firebase Auth is a sensitive operation not done here.
-            // This removes them from the application's view.
+            // 3. Audit Log
+            const currentUser = auth.currentUser;
+            if(currentUser) {
+                const auditLogRef = doc(collection(db, 'audit_logs'));
+                batch.set(auditLogRef, {
+                    actorId: currentUser.uid,
+                    actorName: currentUser.displayName || 'Admin',
+                    action: 'user_deleted',
+                    targetType: 'user',
+                    targetId: userId,
+                    details: { deletedUserName: userToDelete.displayName, deletedUserEmail: userToDelete.email },
+                    timestamp: Timestamp.now()
+                });
+            }
 
             await batch.commit();
 
@@ -219,3 +234,5 @@ export default function StudentsPage() {
         </Card>
     )
 }
+
+    

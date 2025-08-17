@@ -38,7 +38,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, addDoc, getDocs, deleteDoc, doc, query, where, Timestamp, orderBy, or, and } from 'firebase/firestore';
 import type { Class } from './create-class-form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -166,6 +166,21 @@ export function QrCodeManager({ classId }: { classId: string }) {
 
     try {
         const docRef = await addDoc(collection(db, 'qrcodes'), newCodeForDb);
+        
+        // Audit Log
+        const currentUser = auth.currentUser;
+        if(currentUser) {
+            await addDoc(collection(db, 'audit_logs'), {
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || 'Admin',
+                action: 'qr_code_created',
+                targetType: 'qrcode',
+                targetId: docRef.id,
+                details: { name: values.name, points: values.points, class: selectedClass?.name || 'General' },
+                timestamp: Timestamp.now()
+            });
+        }
+
         const newCodeForState: GeneratedQrCode = {
             id: docRef.id,
             ...newCodeForDb,
@@ -251,6 +266,21 @@ export function QrCodeManager({ classId }: { classId: string }) {
   const handleDeleteCode = async (codeToDelete: GeneratedQrCode) => {
     try {
         await deleteDoc(doc(db, "qrcodes", codeToDelete.id));
+
+        // Audit Log
+        const currentUser = auth.currentUser;
+        if(currentUser) {
+            await addDoc(collection(db, 'audit_logs'), {
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || 'Admin',
+                action: 'qr_code_deleted',
+                targetType: 'qrcode',
+                targetId: codeToDelete.id,
+                details: { name: codeToDelete.name },
+                timestamp: Timestamp.now()
+            });
+        }
+        
         setGeneratedCodes((prevCodes) => prevCodes.filter(code => code.id !== codeToDelete.id));
         toast({
             title: "QR Code Deleted",
@@ -505,7 +535,5 @@ export function QrCodeManager({ classId }: { classId: string }) {
     </div>
   );
 }
-
-    
 
     

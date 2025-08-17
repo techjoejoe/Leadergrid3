@@ -6,7 +6,8 @@ import {
     Award,
     DollarSign,
     Users,
-    Loader2
+    Loader2,
+    ShieldCheck
   } from "lucide-react"
   
   import {
@@ -19,47 +20,83 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, getDocs, Timestamp } from "firebase/firestore";
+import { collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
 import { formatDistanceToNow } from 'date-fns';
+import { Badge } from "@/components/ui/badge";
 
-interface RecentActivity {
+interface AuditLog {
   id: string;
-  studentName: string;
+  actorName: string;
   action: string;
+  targetType: string;
+  targetId: string;
+  details: Record<string, any>;
   timestamp: string;
+}
+
+const formatAction = (action: string, details: Record<string, any>, targetType: string): string => {
+    switch(action) {
+        case 'point_adjustment':
+            return `adjusted points for ${details.studentName} by ${details.points > 0 ? '+' : ''}${details.points}`;
+        case 'qr_code_created':
+            return `created QR code "${details.name}"`;
+        case 'qr_code_deleted':
+            return `deleted QR code "${details.name}"`;
+        case 'class_created':
+            return `created class "${details.name}"`;
+        case 'class_deleted':
+            return `deleted class "${details.name}"`;
+        case 'user_created':
+            return `created a new user: ${details.displayName}`;
+        case 'user_deleted':
+            return `deleted a user`;
+        case 'badge_created':
+            return `created badge "${details.name}"`;
+        case 'badge_deleted':
+            return `deleted badge "${details.name}"`;
+        case 'student_added_to_class':
+            return `added ${details.studentName} to class`;
+        case 'student_removed_from_class':
+            return `removed ${details.studentName} from class`;
+        default:
+            return action.replace(/_/g, ' ');
+    }
 }
   
 export default function CompanyPage() {
-    const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+    const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        async function fetchRecentActivities() {
-            setIsLoading(true);
-            try {
-                const scansRef = collection(db, "scans");
-                const q = query(scansRef, orderBy("scanDate", "desc"), limit(5));
-                const querySnapshot = await getDocs(q);
-                
-                const activities = querySnapshot.docs.map(doc => {
+        setIsLoading(true);
+        try {
+            const logsRef = collection(db, "audit_logs");
+            const q = query(logsRef, orderBy("timestamp", "desc"), limit(20));
+            
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const logs = querySnapshot.docs.map(doc => {
                     const data = doc.data();
-                    const scanDate = (data.scanDate as Timestamp).toDate();
+                    const logDate = (data.timestamp as Timestamp).toDate();
                     return {
                         id: doc.id,
-                        studentName: data.studentName,
-                        action: `scanned "${data.activityName}" for ${data.pointsAwarded} points`,
-                        timestamp: formatDistanceToNow(scanDate, { addSuffix: true }),
+                        actorName: data.actorName,
+                        action: formatAction(data.action, data.details, data.targetType),
+                        targetType: data.targetType,
+                        targetId: data.targetId,
+                        details: data.details,
+                        timestamp: formatDistanceToNow(logDate, { addSuffix: true }),
                     };
                 });
-                setRecentActivities(activities);
-            } catch (error) {
-                console.error("Error fetching recent activities:", error);
-            } finally {
+                setAuditLogs(logs);
                 setIsLoading(false);
-            }
-        }
+            });
 
-        fetchRecentActivities();
+            return () => unsubscribe();
+
+        } catch (error) {
+            console.error("Error fetching audit logs:", error);
+            setIsLoading(false);
+        }
     }, []);
 
     return (
@@ -122,9 +159,11 @@ export default function CompanyPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="col-span-full">
                     <CardHeader>
-                    <CardTitle className="font-headline">Recent Activity</CardTitle>
+                    <CardTitle className="font-headline flex items-center gap-2">
+                        <ShieldCheck /> Audit Log
+                    </CardTitle>
                     <CardDescription>
-                        A log of recent student scans and achievements across the company.
+                        A log of recent administrative actions performed across the platform.
                     </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -134,17 +173,17 @@ export default function CompanyPage() {
                            </div>
                        ) : (
                            <div className="space-y-6">
-                            {recentActivities.map((activity) => (
-                                <div key={activity.id} className="flex items-center">
+                            {auditLogs.map((log) => (
+                                <div key={log.id} className="flex items-center">
                                     <Avatar className="h-9 w-9">
-                                        <AvatarFallback>{activity.studentName.substring(0,2).toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback>{log.actorName.substring(0,2).toUpperCase()}</AvatarFallback>
                                     </Avatar>
                                     <div className="ml-4 space-y-1">
                                         <p className="text-sm font-medium leading-none">
-                                            <span className="font-semibold">{activity.studentName}</span> {activity.action}
+                                            <span className="font-semibold">{log.actorName}</span> {log.action}
                                         </p>
                                     </div>
-                                    <div className="ml-auto font-medium text-xs text-muted-foreground">{activity.timestamp}</div>
+                                    <div className="ml-auto font-medium text-xs text-muted-foreground">{log.timestamp}</div>
                                 </div>
                             ))}
                            </div>
@@ -155,3 +194,5 @@ export default function CompanyPage() {
         </div>
     )
   }
+
+    

@@ -36,7 +36,7 @@ import {
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import {
   collection,
   doc,
@@ -46,7 +46,8 @@ import {
   query,
   where,
   getDocs,
-  orderBy
+  orderBy,
+  addDoc
 } from 'firebase/firestore';
 import { Loader2, PlusCircle, Trash2, FileDown, Edit, Pencil } from 'lucide-react';
 import type { Student } from '@/app/dashboard/students/page';
@@ -194,6 +195,7 @@ export function UserActions({
 
     const pointsToAdjust = adjustmentType === 'add' ? values.points : -values.points;
     const batch = writeBatch(db);
+    const currentUser = auth.currentUser;
 
     try {
       const userRef = doc(db, 'users', selectedUser.id);
@@ -208,6 +210,23 @@ export function UserActions({
         type: 'manual_admin',
         timestamp: Timestamp.now(),
       });
+      
+      // Audit log
+      if(currentUser) {
+          addDoc(collection(db, 'audit_logs'), {
+              actorId: currentUser.uid,
+              actorName: currentUser.displayName || 'Admin',
+              action: 'point_adjustment',
+              targetType: 'user',
+              targetId: selectedUser.id,
+              details: { 
+                  studentName: selectedUser.displayName, 
+                  points: pointsToAdjust,
+                  reason: values.reason 
+              },
+              timestamp: Timestamp.now()
+          });
+      }
 
       await batch.commit();
 
@@ -234,6 +253,7 @@ export function UserActions({
 
   const onAddUserSubmit = async (values: AddUserFormValues) => {
     setIsLoading(true);
+    const currentUser = auth.currentUser;
     // This is a simplified version. A real implementation would use Firebase Admin SDK on the backend
     // to create a user with an email and password, then create their Firestore doc.
     // For this prototype, we'll just create the Firestore document.
@@ -259,6 +279,19 @@ export function UserActions({
                 reason: 'Initial points on creation',
                 type: 'manual_admin',
                 timestamp: Timestamp.now(),
+            });
+        }
+        
+        if (currentUser) {
+             const auditLogRef = doc(collection(db, 'audit_logs'));
+             batch.set(auditLogRef, {
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || 'Admin',
+                action: 'user_created',
+                targetType: 'user',
+                targetId: newUser.id,
+                details: { displayName: newUser.displayName, email: newUser.email, role: newUser.role },
+                timestamp: Timestamp.now()
             });
         }
         
@@ -395,3 +428,5 @@ export function UserActions({
     </div>
   );
 }
+
+    

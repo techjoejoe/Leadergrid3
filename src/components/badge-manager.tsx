@@ -13,8 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Award, ImagePlus, Loader2, Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,6 +141,20 @@ export function BadgeManager() {
         };
 
         const docRef = await addDoc(collection(db, "badges"), newBadgeData);
+        
+        // Audit log
+        const currentUser = auth.currentUser;
+        if(currentUser) {
+            await addDoc(collection(db, 'audit_logs'), {
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || 'Admin',
+                action: 'badge_created',
+                targetType: 'badge',
+                targetId: docRef.id,
+                details: { name: values.name },
+                timestamp: Timestamp.now()
+            });
+        }
 
         const newBadge: Badge = {
           id: docRef.id,
@@ -217,6 +231,21 @@ export function BadgeManager() {
   const handleDeleteBadge = async (badgeId: string, badgeName: string) => {
       try {
           await deleteDoc(doc(db, "badges", badgeId));
+          
+          // Audit log
+          const currentUser = auth.currentUser;
+          if(currentUser) {
+              await addDoc(collection(db, 'audit_logs'), {
+                  actorId: currentUser.uid,
+                  actorName: currentUser.displayName || 'Admin',
+                  action: 'badge_deleted',
+                  targetType: 'badge',
+                  targetId: badgeId,
+                  details: { name: badgeName },
+                  timestamp: Timestamp.now()
+              });
+          }
+
           setCreatedBadges(prev => prev.filter(b => b.id !== badgeId));
           toast({
               title: "Badge Deleted",
@@ -473,3 +502,5 @@ export function BadgeManager() {
     </div>
   );
 }
+
+    

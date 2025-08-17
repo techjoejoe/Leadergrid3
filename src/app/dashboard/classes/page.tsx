@@ -23,7 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, query, orderBy } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -67,6 +67,21 @@ export default function ClassesPage() {
     const handleAddClass = async (newClassData: Omit<Class, 'id'>) => {
        try {
             const docRef = await addDoc(collection(db, "classes"), newClassData);
+
+            // Audit Log
+            const currentUser = auth.currentUser;
+            if(currentUser) {
+                await addDoc(collection(db, 'audit_logs'), {
+                    actorId: currentUser.uid,
+                    actorName: currentUser.displayName || 'Admin',
+                    action: 'class_created',
+                    targetType: 'class',
+                    targetId: docRef.id,
+                    details: { name: newClassData.name },
+                    timestamp: Timestamp.now()
+                });
+            }
+
             const newClass: Class = {
                 ...newClassData,
                 id: docRef.id,
@@ -87,6 +102,21 @@ export default function ClassesPage() {
     const handleDeleteClass = async (classToDelete: Class) => {
         try {
             await deleteDoc(doc(db, "classes", classToDelete.id));
+            
+             // Audit Log
+            const currentUser = auth.currentUser;
+            if(currentUser) {
+                await addDoc(collection(db, 'audit_logs'), {
+                    actorId: currentUser.uid,
+                    actorName: currentUser.displayName || 'Admin',
+                    action: 'class_deleted',
+                    targetType: 'class',
+                    targetId: classToDelete.id,
+                    details: { name: classToDelete.name },
+                    timestamp: Timestamp.now()
+                });
+            }
+            
             setClasses(prevClasses => prevClasses.filter(cls => cls.id !== classToDelete.id));
 
             toast({
@@ -251,3 +281,5 @@ export default function ClassesPage() {
         </Card>
     )
 }
+
+    

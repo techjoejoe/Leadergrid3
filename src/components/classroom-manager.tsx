@@ -25,7 +25,7 @@ import { PlusCircle, MinusCircle, Loader2, Download, Check, Play, UserPlus, Tras
 import { format, addMinutes, isToday } from 'date-fns';
 import { Progress } from './ui/progress';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, query, where, onSnapshot, Timestamp, writeBatch, doc, getDocs, updateDoc, increment, addDoc, deleteDoc, getDoc, setDoc, orderBy } from 'firebase/firestore';
 
 interface Student {
@@ -184,6 +184,21 @@ export function ClassroomManager({ classId }: { classId: string }) {
             classPoints: initialClassPoints
         });
         
+        // 4. Audit Log
+        const currentUser = auth.currentUser;
+        if(currentUser) {
+            const auditLogRef = doc(collection(db, 'audit_logs'));
+            batch.set(auditLogRef, {
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || 'Admin',
+                action: 'student_added_to_class',
+                targetType: 'user',
+                targetId: student.id,
+                details: { studentName: student.displayName },
+                timestamp: Timestamp.now()
+            });
+        }
+        
         await batch.commit();
 
         toast({
@@ -210,6 +225,21 @@ export function ClassroomManager({ classId }: { classId: string }) {
         // 2. Remove from class roster
         const rosterDocRef = doc(db, "classes", classId, "roster", student.id);
         batch.delete(rosterDocRef);
+        
+        // 3. Audit Log
+        const currentUser = auth.currentUser;
+        if(currentUser) {
+            const auditLogRef = doc(collection(db, 'audit_logs'));
+            batch.set(auditLogRef, {
+                actorId: currentUser.uid,
+                actorName: currentUser.displayName || 'Admin',
+                action: 'student_removed_from_class',
+                targetType: 'user',
+                targetId: student.id,
+                details: { studentName: student.displayName },
+                timestamp: Timestamp.now()
+            });
+        }
 
         await batch.commit();
 
@@ -257,6 +287,25 @@ export function ClassroomManager({ classId }: { classId: string }) {
         classId: classId,
         timestamp: Timestamp.now()
       });
+      
+      // 4. Audit Log
+      const currentUser = auth.currentUser;
+      if(currentUser) {
+          const auditLogRef = doc(collection(db, 'audit_logs'));
+          batch.set(auditLogRef, {
+              actorId: currentUser.uid,
+              actorName: currentUser.displayName || 'Admin',
+              action: 'point_adjustment',
+              targetType: 'user',
+              targetId: selectedStudent.id,
+              details: { 
+                  studentName: selectedStudent.displayName,
+                  points: pointsToAdjust,
+                  reason: values.reason 
+              },
+              timestamp: Timestamp.now()
+          });
+      }
 
       await batch.commit();
 
@@ -611,3 +660,5 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
+    
