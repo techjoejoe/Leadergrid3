@@ -191,38 +191,48 @@ export function ProfileEditor({
     }
   }
 
-  const getCroppedBlob = (): Promise<Blob | null> => {
-    return new Promise((resolve) => {
-        const cropper = cropperRef.current?.cropper;
-        if (!cropper) {
-            return resolve(null);
-        }
-        cropper.getCroppedCanvas({
-            width: 256,
-            height: 256,
-            minWidth: 128,
-            minHeight: 128,
-            imageSmoothingQuality: 'high',
-        }).toBlob((blob) => {
-            resolve(blob);
-        }, 'image/jpeg', 0.9);
-    });
-  }
-
   const handleSaveCrop = async () => {
-    if (!user) return;
+    if (!user || !cropperRef.current?.cropper) return;
     
     setIsProcessingPhoto(true);
     toast({ title: 'Processing Photo', description: 'Please wait...' });
 
     try {
-        const croppedBlob = await getCroppedBlob();
-        if (!croppedBlob) {
+        const cropper = cropperRef.current.cropper;
+        const cropData = cropper.getData(true);
+        const sourceImage = cropper.getImageData();
+
+        // Use OffscreenCanvas for processing to avoid blocking the main thread
+        const canvas = new OffscreenCanvas(256, 256);
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+            throw new Error('Could not get OffscreenCanvas context');
+        }
+
+        ctx.drawImage(
+            sourceImage.naturalWidth ? cropper.image : sourceImage,
+            cropData.x,
+            cropData.y,
+            cropData.width,
+            cropData.height,
+            0,
+            0,
+            256,
+            256
+        );
+
+        const blob = await canvas.convertToBlob({
+            type: 'image/jpeg',
+            quality: 0.9,
+        });
+
+        if (!blob) {
             throw new Error("Failed to get cropped image.");
         }
 
         const finalStorageRef = storageRef(storage, `avatars/${user.uid}.jpg`);
-        await uploadBytes(finalStorageRef, croppedBlob, { contentType: 'image/jpeg' });
+        await uploadBytes(finalStorageRef, blob, { contentType: 'image/jpeg' });
         const downloadURL = await getDownloadURL(finalStorageRef);
 
         const batch = writeBatch(db);
@@ -234,7 +244,6 @@ export function ProfileEditor({
             hadPhoto = !!userDocSnap.data().photoURL;
         }
 
-        // Update Auth profile and Firestore with the new storage URL
         await updateProfile(user, { photoURL: downloadURL });
         batch.update(userDocRef, { photoURL: downloadURL });
 
@@ -324,8 +333,10 @@ export function ProfileEditor({
                   <AvatarFallback>{currentInitial}</AvatarFallback>
                 </Avatar>
                 <Button variant="outline" onClick={handleAvatarClick} disabled={isProcessingPhoto}>
-                    <UploadCloud className="mr-2" />
-                    {isProcessingPhoto ? "Processing..." : "Upload Photo"}
+                    {isProcessingPhoto ? 
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : 
+                        <><UploadCloud className="mr-2" />Upload Photo</>
+                    }
                 </Button>
                 <input
                   type="file"
