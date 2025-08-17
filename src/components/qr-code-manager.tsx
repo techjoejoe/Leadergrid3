@@ -50,7 +50,7 @@ const formSchema = z.object({
   expirationDate: z.date({
     required_error: "An expiration date is required.",
   }),
-  targetClassId: z.string().optional(), // classId from the select dropdown
+  targetClassId: z.string(), // classId from the select dropdown. Changed to be required.
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -104,8 +104,8 @@ export function QrCodeManager({ classId }: { classId: string }) {
             setGeneratedCodes(fetchedCodes);
 
             // Fetch all classes for the dropdown
-            const classesSnapshot = await getDocs(collection(db, "classes"));
-            const fetchedClasses = classesSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Class));
+            const classesSnapshot = await getDocs(query(collection(db, "classes"), orderBy("name")));
+            const fetchedClasses = classesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Class));
             setAllClasses(fetchedClasses);
 
         } catch (error) {
@@ -139,7 +139,8 @@ export function QrCodeManager({ classId }: { classId: string }) {
     const expirationDate = new Date(values.expirationDate);
     expirationDate.setHours(23, 59, 59, 999); // End of day
     
-    const selectedClass = allClasses.find(c => c.id === values.targetClassId);
+    const isGeneral = values.targetClassId === 'general';
+    const selectedClass = isGeneral ? null : allClasses.find(c => c.id === values.targetClassId);
     
     const qrId = `qr-${Date.now()}`;
     const qrCodeValue = JSON.stringify({
@@ -170,7 +171,7 @@ export function QrCodeManager({ classId }: { classId: string }) {
             ...newCodeForDb,
             expirationDate: expirationDate.toISOString(),
         }
-        setGeneratedCodes(prev => [newCodeForState, ...prev]);
+        setGeneratedCodes(prev => [newCodeForState, ...prev].sort((a,b) => new Date(b.expirationDate).getTime() - new Date(a.expirationDate).getTime()));
         toast({
             title: "QR Code Generated!",
             description: "The new QR code has been added to the list.",
@@ -504,5 +505,7 @@ export function QrCodeManager({ classId }: { classId: string }) {
     </div>
   );
 }
+
+    
 
     
