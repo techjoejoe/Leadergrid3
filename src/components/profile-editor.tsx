@@ -34,7 +34,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
-import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -175,19 +175,13 @@ export function ProfileEditor({
         }
         ctx.drawImage(image, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
         
-        const blob = await new Promise<Blob | null>((resolve) => {
-            canvas.toBlob(resolve, 'image/jpeg');
-        });
-
-        if (!blob) {
-            throw new Error('Failed to create image blob.');
-        }
+        const dataUrl = canvas.toDataURL('image/jpeg');
 
         const filePath = `avatars/${user.uid}.jpg`;
         const fileRef = storageRef(storage, filePath);
         
-        // Use uploadBytes for a simpler, more direct upload
-        const uploadResult = await uploadBytes(fileRef, blob);
+        // Use uploadString with a data URL for a more reliable upload from canvas
+        const uploadResult = await uploadString(fileRef, dataUrl, 'data_url');
         const downloadURL = await getDownloadURL(uploadResult.ref);
         
         // Update user profile
