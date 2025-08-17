@@ -32,10 +32,10 @@ import Cropper, { ReactCropperElement } from 'react-cropper';
 import 'cropperjs/dist/cropper.css';
 
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { auth, db, storage } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, writeBatch, collection, Timestamp, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import Image from 'next/image';
+import { uploadFile } from '@/ai/flows/upload-file-flow';
 
 
 const profileFormSchema = z.object({
@@ -59,6 +59,19 @@ interface ProfileEditorProps {
 }
 
 const PHOTO_UPLOAD_BONUS = 300;
+
+// Helper to convert blob to base64
+const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = reject;
+        reader.onload = () => {
+            resolve(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+    });
+};
+
 
 export function ProfileEditor({ 
     user,
@@ -221,65 +234,53 @@ export function ProfileEditor({
   };
 
   const handleSaveCrop = async () => {
-    if (!user || !cropperRef.current) {
-        toast({ title: 'Error', description: "User or image cropper not available.", variant: 'destructive'});
-        return;
-    }
-
-    const blob = await getCroppedBlob();
-    if (!blob) {
-        toast({ title: "Error", description: "Could not process image.", variant: "destructive" });
-        return;
-    }
-
+    if (!user) return;
     setIsProcessingPhoto(true);
-    toast({ title: "Uploading photo..." });
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-        controller.abort();
-    }, 30000);
-
+    
     try {
-        console.log("handleSaveCrop: 1. Starting upload to Firebase Storage.");
-        const path = `avatars/${user.uid}.jpg`;
-        const photoRef = storageRef(storage, path);
-        const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
-        
-        const task = uploadBytesResumable(photoRef, blob, { ...metadata, signal: controller.signal });
-        await new Promise<void>((resolve, reject) => {
-            task.on("state_changed",
-              () => {}, // Progress handler can be added here
-              (error) => {
-                if (error.code === 'storage/canceled') {
-                  toast({ title: "Upload timed out", description: "Please check your network and try again.", variant: "destructive" });
-                }
-                reject(error);
-              },
-              () => resolve() // Success
-            );
+        console.log("handleSaveCrop: 1. Getting cropped blob.");
+        const blob = await getCroppedBlob();
+        if (!blob) {
+            throw new Error("Could not process image blob.");
+        }
+
+        console.log("handleSaveCrop: 2. Converting blob to Base64.");
+        const fileDataUrl = await blobToBase64(blob);
+
+        toast({ title: 'Uploading photo...' });
+
+        console.log("handleSaveCrop: 3. Calling server-side upload flow.");
+        const { downloadURL } = await uploadFile({
+            fileDataUrl: fileDataUrl,
+            path: `avatars/${user.uid}.jpg`,
+            contentType: 'image/jpeg'
         });
-        console.log("handleSaveCrop: 2. Getting download URL.");
-        const downloadURL = await getDownloadURL(photoRef);
+
+        if (!downloadURL) {
+            throw new Error("Server did not return a download URL.");
+        }
+        
+        console.log("handleSaveCrop: 4. Got download URL:", downloadURL);
         
         const batch = writeBatch(db);
         
-        console.log("handleSaveCrop: 3. Updating Firebase Auth profile.");
+        console.log("handleSaveCrop: 5. Updating Firebase Auth profile.");
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
         }
         
-        console.log("handleSaveCrop: 4. Updating Firestore user document.");
+        console.log("handleSaveCrop: 6. Updating Firestore user document.");
         const userDocRef = doc(db, "users", user.uid);
-        batch.update(userDocRef, { photoURL: downloadURL });
         
-        console.log("handleSaveCrop: 4a. Checking if user had a photo before.");
         const userDocSnap = await getDoc(userDocRef);
         const hadPhoto = !!userDocSnap.data()?.photoURL;
-
+        
+        const updateData: { photoURL: string; lifetimePoints?: any } = { photoURL: downloadURL };
+        
         if (!hadPhoto && storageKey === 'studentAvatar') {
-            console.log("handleSaveCrop: 4b. Awarding bonus points.");
-            batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
+            console.log("handleSaveCrop: 7. Awarding bonus points.");
+            updateData.lifetimePoints = increment(PHOTO_UPLOAD_BONUS);
+            
             const historyRef = doc(collection(db, 'point_history'));
             batch.set(historyRef, {
                 studentId: user.uid,
@@ -289,26 +290,25 @@ export function ProfileEditor({
                 type: 'engagement',
                 timestamp: Timestamp.now()
             });
-             toast({
+            toast({
                 title: 'BONUS!',
                 description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
                 className: 'bg-yellow-500 text-white',
             });
         }
         
+        batch.update(userDocRef, updateData);
         await batch.commit();
 
         toast({ title: "Success!", description: "Profile photo updated." });
         onAvatarChange(downloadURL);
         
+        console.log("handleSaveCrop: 8. Closing dialogs.");
+
     } catch (err) {
         console.error("handleSaveCrop: Photo save failed", err);
-        if ((err as any)?.code !== 'storage/canceled') {
-            toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
-        }
+        toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
     } finally {
-        console.log("handleSaveCrop: 6. Final cleanup.");
-        clearTimeout(timer);
         setIsProcessingPhoto(false);
         setIsCropOpen(false);
         onOpenChange(false);
@@ -431,7 +431,7 @@ export function ProfileEditor({
             <DialogFooter>
                 <Button variant="ghost" onClick={() => setIsCropOpen(false)} disabled={isProcessingPhoto}>
                     <SkipForward className="mr-2 h-4 w-4" />
-                    Skip
+                    Cancel
                 </Button>
                 <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
                     {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
