@@ -28,12 +28,12 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UploadCloud, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
-import { processAvatar } from '@/ai/flows/process-avatar-flow';
 
 
 const profileFormSchema = z.object({
@@ -58,6 +58,47 @@ interface ProfileEditorProps {
 
 const PHOTO_UPLOAD_BONUS = 300;
 
+function getCroppedBlob(image: HTMLImageElement, crop: Crop): Promise<Blob> {
+    const canvas = document.createElement('canvas');
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        return Promise.reject(new Error('Failed to get canvas context'));
+    }
+
+    const cropX = crop.x * scaleX;
+    const cropY = crop.y * scaleY;
+    const cropWidth = crop.width * scaleX;
+    const cropHeight = crop.height * scaleY;
+
+    ctx.drawImage(
+        image,
+        cropX,
+        cropY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+            if (!blob) {
+                reject(new Error('Canvas is empty'));
+                return;
+            }
+            resolve(blob);
+        }, 'image/jpeg', 0.9);
+    });
+}
+
+
 export function ProfileEditor({ 
     user,
     open, 
@@ -76,6 +117,12 @@ export function ProfileEditor({
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [imgSrc, setImgSrc] = useState('');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -92,7 +139,7 @@ export function ProfileEditor({
       });
     }
   }, [open, user, currentDisplayName, currentEmail, form]);
-
+  
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
     setIsLoading(true);
@@ -174,31 +221,41 @@ export function ProfileEditor({
     if (!user || isProcessingPhoto) return;
     fileInputRef.current?.click();
   };
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !user) {
-        return;
+  
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+        setCrop(undefined); // Reset crop when new image is selected
+        const reader = new FileReader();
+        reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
+        reader.readAsDataURL(e.target.files[0]);
+        setIsCropperOpen(true);
+        e.target.value = ''; // Reset file input
     }
-    const file = e.target.files[0];
-    e.target.value = ''; // Reset file input
+  }
 
-    setIsProcessingPhoto(true);
-    
-    try {
-        // 1. Upload raw file to a temporary location
-        const tempPath = `temp_avatars/${user.uid}/${file.name}`;
-        const tempStorageRef = storageRef(storage, tempPath);
-        await uploadBytes(tempStorageRef, file);
-        const tempDownloadURL = await getDownloadURL(tempStorageRef);
-        
-        // 2. Trigger Genkit flow to process the image
-        const finalUrl = await processAvatar({ tempStoragePath: tempPath, tempDownloadURL });
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    const initialCrop = centerCrop(
+        makeAspectCrop({ unit: '%', width: 90 }, 1, width, height),
+        width,
+        height
+    );
+    setCrop(initialCrop);
+    setCompletedCrop(initialCrop); // Set initial completed crop
+  };
 
-        if (!finalUrl) {
-            throw new Error("Image processing failed to return a URL.");
-        }
+  const handleSaveCrop = async () => {
+      if (!completedCrop || !imgRef.current || !user) {
+          return;
+      }
+      setIsProcessingPhoto(true);
 
-        // 3. Update user profile with the final URL
+      try {
+        const croppedBlob = await getCroppedBlob(imgRef.current, completedCrop);
+        const finalStorageRef = storageRef(storage, `avatars/${user.uid}.jpg`);
+        await uploadBytes(finalStorageRef, croppedBlob, { contentType: 'image/jpeg' });
+        const downloadURL = await getDownloadURL(finalStorageRef);
+
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
@@ -209,8 +266,8 @@ export function ProfileEditor({
         }
 
         // Update Auth profile and Firestore with the new storage URL
-        await updateProfile(user, { photoURL: finalUrl });
-        batch.update(userDocRef, { photoURL: finalUrl });
+        await updateProfile(user, { photoURL: downloadURL });
+        batch.update(userDocRef, { photoURL: downloadURL });
 
         const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
         const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
@@ -220,7 +277,7 @@ export function ProfileEditor({
                 const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
                 const rosterSnap = await getDoc(rosterDocRef);
                 if (rosterSnap.exists()) {
-                    batch.update(rosterDocRef, { photoURL: finalUrl });
+                    batch.update(rosterDocRef, { photoURL: downloadURL });
                 }
             }
         }
@@ -246,7 +303,7 @@ export function ProfileEditor({
         }
         
         await batch.commit();
-        onAvatarChange(finalUrl);
+        onAvatarChange(downloadURL);
         
     } catch (error: any) {
         console.error("Error updating photo:", error);
@@ -266,12 +323,14 @@ export function ProfileEditor({
         }
     } finally {
         setIsProcessingPhoto(false);
+        setIsCropperOpen(false);
     }
   }
 
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open && !isCropperOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         {!user ? (
           <DialogHeader>
@@ -291,37 +350,19 @@ export function ProfileEditor({
             <div className="grid gap-6 py-4">
             <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
-                  {isProcessingPhoto ? (
-                      <div className="flex items-center justify-center h-full w-full bg-muted rounded-full">
-                          <Loader2 className="h-8 w-8 animate-spin" />
-                      </div>
-                  ) : (
-                    <>
-                      <AvatarImage src={currentAvatar} />
-                      <AvatarFallback>{currentInitial}</AvatarFallback>
-                    </>
-                  )}
+                  <AvatarImage src={currentAvatar} />
+                  <AvatarFallback>{currentInitial}</AvatarFallback>
                 </Avatar>
                 <Button variant="outline" onClick={handleAvatarClick} disabled={isProcessingPhoto}>
-                  {isProcessingPhoto ? (
-                    <>
-                      <Loader2 className="mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <UploadCloud className="mr-2" />
-                      Upload Photo
-                    </>
-                  )}
+                    <UploadCloud className="mr-2" />
+                    Upload Photo
                 </Button>
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={handleFileSelect}
+                  onChange={onFileSelect}
                   className="hidden"
                   accept="image/png, image/jpeg, image/webp"
-                  disabled={isProcessingPhoto}
                 />
             </div>
 
@@ -356,7 +397,7 @@ export function ProfileEditor({
                     </FormItem>
                     )}
                 />
-                 <Button type="submit" disabled={isLoading || isProcessingPhoto} className="w-full">
+                 <Button type="submit" disabled={isLoading} className="w-full">
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                 </Button>
@@ -378,5 +419,47 @@ export function ProfileEditor({
         )}
       </DialogContent>
     </Dialog>
+     <Dialog open={isCropperOpen} onOpenChange={setIsCropperOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Crop your new photo</DialogTitle>
+            <DialogDescription>
+              Adjust the selection to crop your profile picture.
+            </DialogDescription>
+          </DialogHeader>
+          {imgSrc && (
+            <ReactCrop
+              crop={crop}
+              onChange={(_, percentCrop) => setCrop(percentCrop)}
+              onComplete={(c) => setCompletedCrop(c)}
+              aspect={1}
+              minWidth={100}
+            >
+              <img
+                ref={imgRef}
+                alt="Crop me"
+                src={imgSrc}
+                onLoad={onImageLoad}
+                style={{ maxHeight: "70vh" }}
+              />
+            </ReactCrop>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCropperOpen(false);
+                setImgSrc('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
+                {isProcessingPhoto ? <Loader2 className="mr-2 animate-spin" /> : "Save Crop"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
