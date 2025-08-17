@@ -29,7 +29,7 @@ import { Loader2, UploadCloud, Check, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
+import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 
@@ -78,11 +78,6 @@ export function ProfileEditor({
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const imgRef = useRef<HTMLImageElement>(null);
   const [isCropping, setIsCropping] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -129,7 +124,10 @@ export function ProfileEditor({
             const classId = enrollmentDoc.data().classId;
             if (classId) {
                 const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                batch.update(rosterDocRef, { displayName: values.displayName });
+                const rosterSnap = await getDoc(rosterDocRef);
+                if (rosterSnap.exists()){
+                  batch.update(rosterDocRef, { displayName: values.displayName });
+                }
             }
         }
         
@@ -308,68 +306,56 @@ export function ProfileEditor({
 
     try {
         const croppedImageUrl = getCroppedImg(imgRef.current, completedCrop);
-        const photoUrlIdentifier = `${storageKey}_${user.uid}`;
         
-        if (user.uid !== 'mock-user-id') {
-            const batch = writeBatch(db);
-            const userDocRef = doc(db, "users", user.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            let hadPhoto = false;
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, "users", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        let hadPhoto = false;
 
-            if (!userDocSnap.exists()) {
-                batch.set(userDocRef, {
-                    uid: user.uid,
-                    displayName: user.displayName,
-                    email: user.email,
-                    role: storageKey === 'adminAvatar' ? 'admin' : 'student'
-                });
-            } else {
-                hadPhoto = !!userDocSnap.data().photoURL;
-            }
+        if (!userDocSnap.exists()) {
+            batch.set(userDocRef, {
+                uid: user.uid,
+                displayName: user.displayName,
+                email: user.email,
+                role: storageKey === 'adminAvatar' ? 'admin' : 'student'
+            });
+        } else {
+            hadPhoto = !!userDocSnap.data().photoURL;
+        }
 
-            // Update both Auth and Firestore
-            await updateProfile(user, { photoURL: photoUrlIdentifier });
-            batch.update(userDocRef, { photoURL: photoUrlIdentifier });
+        // Update Auth profile and Firestore with the direct base64 URL
+        await updateProfile(user, { photoURL: croppedImageUrl });
+        batch.update(userDocRef, { photoURL: croppedImageUrl });
+        
+        if (!hadPhoto) {
+            batch.update(userDocRef, {
+                lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
+            });
             
-            if (!hadPhoto) {
-                batch.update(userDocRef, {
-                    lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
-                });
-                
-                const historyRef = doc(collection(db, 'point_history'));
-                batch.set(historyRef, {
-                    studentId: user.uid,
-                    studentName: user.displayName,
-                    points: PHOTO_UPLOAD_BONUS,
-                    reason: 'Profile Photo Bonus',
-                    type: 'engagement',
-                    timestamp: Timestamp.now()
-                });
+            const historyRef = doc(collection(db, 'point_history'));
+            batch.set(historyRef, {
+                studentId: user.uid,
+                studentName: user.displayName,
+                points: PHOTO_UPLOAD_BONUS,
+                reason: 'Profile Photo Bonus',
+                type: 'engagement',
+                timestamp: Timestamp.now()
+            });
 
-                 toast({
-                    title: 'BONUS!',
-                    description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
-                    className: 'bg-yellow-500 text-white',
-                });
-            } else {
-                 toast({
-                    title: 'Profile Photo Updated',
-                    description: 'Your new photo has been set.',
-                });
-            }
-
-            await batch.commit();
-
+             toast({
+                title: 'BONUS!',
+                description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
+                className: 'bg-yellow-500 text-white',
+            });
         } else {
              toast({
                 title: 'Profile Photo Updated',
                 description: 'Your new photo has been set.',
             });
         }
+
+        await batch.commit();
         
-        if (isClient) {
-          window.localStorage.setItem(photoUrlIdentifier, croppedImageUrl);
-        }
         onAvatarChange(croppedImageUrl);
         
         setIsCropping(false);
@@ -567,3 +553,5 @@ export function ProfileEditor({
     </Dialog>
   );
 }
+
+    

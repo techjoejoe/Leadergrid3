@@ -12,18 +12,11 @@ import { ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ProfileEditor } from '@/components/profile-editor';
 import { User, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
-
-const getAvatarFromStorage = (photoURL: string | null) => {
-    if (photoURL && (photoURL.startsWith('adminAvatar_') || photoURL.startsWith('studentAvatar_'))) {
-        const storedAvatar = typeof window !== 'undefined' ? localStorage.getItem(photoURL) : null;
-        return storedAvatar;
-    }
-    return photoURL;
-}
-
 
 // export const metadata: Metadata = {
 //   title: 'LeaderGrid Dashboard',
@@ -40,30 +33,30 @@ export default function DashboardLayout({
     const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
     const [initials, setInitials] = useState("AD");
     const [displayName, setDisplayName] = useState("Admin");
-     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        setIsClient(true);
-    }, []);
-
-    useEffect(() => {
-        if (!isClient) return;
-
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
             if (currentUser) {
-                const newAvatar = getAvatarFromStorage(currentUser.photoURL);
-                setAvatar(newAvatar || DEFAULT_AVATAR);
-                const name = currentUser.displayName || currentUser.email || 'Admin';
-                setDisplayName(name);
-                setInitials(
-                    name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'AD'
-                );
+                const unsub = onSnapshot(doc(db, "users", currentUser.uid), (doc) => {
+                    if (doc.exists()) {
+                        const data = doc.data();
+                        const name = data.displayName || currentUser.email || 'Admin';
+                        setDisplayName(name);
+                        setAvatar(data.photoURL || DEFAULT_AVATAR);
+                        setInitials(name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
+                    }
+                });
+                return () => unsub();
+            } else {
+                setDisplayName("Admin");
+                setAvatar(DEFAULT_AVATAR);
+                setInitials("AD");
             }
         });
 
         return () => unsubscribe();
-    }, [isClient]);
+    }, []);
 
     const handleNameChange = (newName: string) => {
         setDisplayName(newName);
@@ -112,3 +105,5 @@ export default function DashboardLayout({
     </>
   );
 }
+
+    

@@ -90,14 +90,6 @@ interface LeaderboardEntry {
   rank: number;
 }
 
-const getAvatarFromStorage = (photoURL: string | null) => {
-    if (typeof window === 'undefined') return null;
-    if (photoURL && (photoURL.startsWith('studentAvatar_') || photoURL.startsWith('adminAvatar_'))) {
-        return localStorage.getItem(photoURL);
-    }
-    return photoURL;
-}
-
 const formatName = (name: string) => {
     if (!name) return 'Anonymous';
     const parts = name.split(' ');
@@ -223,9 +215,6 @@ export default function StudentDashboardPage() {
             if (currentUser) {
                 setUser(currentUser);
                 setDisplayName(currentUser.displayName || 'Student');
-                
-                // Moved avatar and class loading into a separate client-side effect
-                // to avoid server/client mismatch.
 
                 // Setup listener for user document
                 const userDocRef = doc(db, 'users', currentUser.uid);
@@ -234,7 +223,7 @@ export default function StudentDashboardPage() {
                         const userData = doc.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
                         setDisplayName(userData.displayName || 'Student');
-                        setAvatarUrl(getAvatarFromStorage(userData.photoURL));
+                        setAvatarUrl(userData.photoURL);
                     }
                 });
                 
@@ -283,7 +272,7 @@ export default function StudentDashboardPage() {
                             id: doc.id,
                             name: userData.displayName || 'Anonymous',
                             points: userData.lifetimePoints || 0,
-                            avatar: getAvatarFromStorage(userData.photoURL),
+                            avatar: userData.photoURL,
                             initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         };
@@ -310,8 +299,7 @@ export default function StudentDashboardPage() {
     // New effect to handle client-side only state
     useEffect(() => {
         if (isClient && user) {
-             setAvatarUrl(getAvatarFromStorage(user.photoURL));
-             // Get classes and active class from local storage once on mount
+            // Get classes and active class from local storage once on mount
             try {
                 const storedClasses = localStorage.getItem('joinedClasses');
                 const classes: ClassInfo[] = storedClasses ? JSON.parse(storedClasses) : [];
@@ -391,7 +379,7 @@ export default function StudentDashboardPage() {
                         id: doc.id,
                         name: studentData.displayName || 'Anonymous',
                         points: studentData.classPoints || 0,
-                        avatar: getAvatarFromStorage(studentData.photoURL),
+                        avatar: studentData.photoURL,
                         initial: (studentData.displayName || '??').substring(0, 2).toUpperCase(),
                         rank: index + 1,
                     };
@@ -739,3 +727,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    
