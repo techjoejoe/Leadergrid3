@@ -178,14 +178,10 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
         // 3. Add to class-specific roster subcollection with backfilled points
         const rosterDocRef = doc(db, "classes", classId, "roster", student.id);
-        const rosterDocSnap = await getDoc(rosterDocRef);
-
-        if (!rosterDocSnap.exists()) {
-             batch.set(rosterDocRef, {
-                ...student,
-                classPoints: initialClassPoints
-            });
-        }
+        batch.set(rosterDocRef, {
+            ...student,
+            classPoints: initialClassPoints
+        });
         
         await batch.commit();
 
