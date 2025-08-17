@@ -109,72 +109,23 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
     const isSecond = rank === 2;
     const isThird = rank === 3;
     
-    const [sparkles, setSparkles] = useState<Array<{id: number, x: string, y: string, delay: string}>>([]);
-
-    useEffect(() => {
-        const generateSparkles = () => {
-            const newSparkles = Array.from({ length: 7 }).map((_, i) => ({
-                id: Math.random(),
-                x: `${Math.random() * 100}%`,
-                y: `${Math.random() * 100}%`,
-                delay: `${Math.random() * 1}s`
-            }));
-            setSparkles(newSparkles);
-
-            // Make sparkles disappear after animation
-            setTimeout(() => setSparkles([]), 1500);
-        };
-        
-        // Trigger sparkles at random intervals
-        let timeoutId: NodeJS.Timeout;
-        const scheduleNextSparkle = () => {
-           timeoutId = setTimeout(() => {
-                generateSparkles();
-                scheduleNextSparkle();
-           }, 2000 + Math.random() * 3000); // between 2-5 seconds
-        }
-        
-        scheduleNextSparkle();
-        
-        return () => clearTimeout(timeoutId);
-    }, []);
-
-    const coinStyles = {
-        first: "border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]",
-        second: "border-slate-300 shadow-[0_0_15px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]",
-        third: "border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]"
-    }
-
     return (
          <div className={cn(
-            "relative flex flex-col items-center justify-end p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg",
-            isFirst && "bg-gradient-to-br from-yellow-400 to-amber-600 row-span-2",
-            isSecond && "bg-gradient-to-br from-slate-300 to-slate-500 md:mt-8",
-            isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 md:mt-16"
+            "relative flex flex-col items-center justify-end p-2 sm:p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg w-full",
+            isFirst && "bg-gradient-to-br from-yellow-400 to-amber-600 order-1 md:order-2 h-48 md:h-64",
+            isSecond && "bg-gradient-to-br from-slate-300 to-slate-500 order-2 md:order-1 h-44 md:h-56 md:self-end",
+            isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 order-3 md:order-3 h-44 md:h-56 md:self-end"
         )}>
-            {sparkles.map(s => (
-                <span
-                    key={s.id}
-                    className="absolute text-2xl animate-sparkle"
-                    style={{
-                        top: s.y,
-                        left: s.x,
-                        animationDelay: s.delay,
-                    }}
-                >
-                    ✨
-                </span>
-            ))}
-            {isFirst && <span className="absolute -top-5 text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>}
+            {isFirst && <span className="absolute -top-5 text-6xl sm:text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>}
              <Avatar className={cn("border-4 z-10", 
-                isFirst && `h-40 w-40 ${coinStyles.first}`,
-                isSecond && `h-28 w-28 ${coinStyles.second}`,
-                isThird && `h-28 w-28 ${coinStyles.third}`,
+                isFirst && `h-24 w-24 sm:h-28 sm:w-28 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isSecond && `h-20 w-20 sm:h-24 sm:w-24 border-slate-300 shadow-[0_0_15px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isThird && `h-20 w-20 sm:h-24 sm:w-24 border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
              )}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
             </Avatar>
-            <h3 className="mt-2 font-bold text-lg drop-shadow-sm z-10">{user.name}</h3>
+            <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{user.name}</h3>
             <p className={cn("text-sm font-semibold z-10", 
                 isFirst && "text-amber-100",
                 isSecond && "text-slate-100",
@@ -214,7 +165,7 @@ export default function StudentDashboardPage() {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
                 setUser(currentUser);
-                setDisplayName(currentUser.displayName || 'Student');
+                // setDisplayName(currentUser.displayName || 'Student');
 
                 // Setup listener for user document
                 const userDocRef = doc(db, 'users', currentUser.uid);
@@ -454,7 +405,7 @@ export default function StudentDashboardPage() {
     }
 
     const displayEmail = user?.email || 'student@example.com';
-    const displayAvatar = avatarUrl || `https://placehold.co/100x100.png?text=${displayName.substring(0,2).toUpperCase() || '??'}`;
+    const displayAvatar = avatarUrl;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     const top3 = leaderboardData.slice(0, 3);
@@ -484,7 +435,7 @@ export default function StudentDashboardPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                                     <Avatar>
-                                        <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                        {displayAvatar && <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />}
                                         <AvatarFallback>{displayInitial}</AvatarFallback>
                                     </Avatar>
                                 </Button>
@@ -531,7 +482,7 @@ export default function StudentDashboardPage() {
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 items-center justify-center gap-4 p-6 pt-0">
                                     <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
-                                        <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />
+                                        {displayAvatar && <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />}
                                         <AvatarFallback className="rounded-md text-3xl">{displayInitial}</AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-4">
@@ -640,7 +591,7 @@ export default function StudentDashboardPage() {
                         <CardContent>
                              <div className="space-y-4">
                                 {/* Podium */}
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:col-span-2">
+                                <div className="flex items-end justify-center gap-2 md:gap-4">
                                     {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
                                     {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
                                     {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
@@ -718,7 +669,7 @@ export default function StudentDashboardPage() {
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatarUrl}
             onNameChange={setDisplayName}
-            currentAvatar={displayAvatar}
+            currentAvatar={displayAvatar ?? undefined}
             currentInitial={displayInitial}
             currentDisplayName={displayName}
             currentEmail={displayEmail}
