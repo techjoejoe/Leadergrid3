@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -214,6 +213,7 @@ export function ProfileEditor({
       if (!user) return;
       
       setIsProcessingPhoto(true);
+      toast({ title: 'Processing Photo', description: 'Please wait...' });
 
       try {
         const croppedBlob = await getCroppedBlob();
@@ -430,3 +430,5 @@ export function ProfileEditor({
     </>
   );
 }
+
+    

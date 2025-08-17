@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
         {
             protocol: 'https',
             hostname: 'images.unsplash.com',
+        },
+        {
+            protocol: 'https',
+            hostname: 'firebasestorage.googleapis.com',
         }
     ],
   },
@@ -33,3 +37,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+    
