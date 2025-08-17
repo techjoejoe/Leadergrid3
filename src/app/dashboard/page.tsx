@@ -8,7 +8,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Users, QrCode, Award, Building, ArrowRight, User } from "lucide-react";
+import { Users, Award, Building, ArrowRight, User } from "lucide-react";
 
 const navItems = [
     {
@@ -22,12 +22,6 @@ const navItems = [
         label: "Students",
         description: "View all students and manage their details.",
         icon: User
-    },
-    {
-        href: "/dashboard/qrcodes",
-        label: "QR Codes",
-        description: "Generate and manage QR codes for activities.",
-        icon: QrCode
     },
     {
         href: "/dashboard/badges",

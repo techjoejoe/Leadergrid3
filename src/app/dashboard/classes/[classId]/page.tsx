@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, SearchX } from "lucide-react";
+import { ArrowLeft, Loader2, SearchX, QrCode } from "lucide-react";
 import Link from "next/link";
 import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
@@ -14,6 +14,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Class } from '@/components/create-class-form';
 import { useParams } from 'next/navigation';
+import { QrCodeManager } from '@/components/qr-code-manager';
 
 export default function ClassDetailsPage() {
     const params = useParams();
@@ -91,6 +92,17 @@ export default function ClassDetailsPage() {
                 </CardContent>
             </Card>
             <Separator />
+            <Card>
+                 <CardHeader>
+                    <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                        <QrCode /> QR Code Management
+                    </CardTitle>
+                    <CardDescription>Create and manage QR codes for this class or for general use.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <QrCodeManager classId={classId} />
+                </CardContent>
+            </Card>
              <Card>
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl">Class Analytics</CardTitle>
@@ -106,5 +118,3 @@ export default function ClassDetailsPage() {
         </div>
     )
 }
-
-    

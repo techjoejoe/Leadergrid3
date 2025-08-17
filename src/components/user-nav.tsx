@@ -107,12 +107,6 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile 
               </Link>
             </DropdownMenuItem>
              <DropdownMenuItem asChild>
-               <Link href="/dashboard/qrcodes">
-                    <QrCode className="mr-2 h-4 w-4" />
-                    <span>QR Codes</span>
-                </Link>
-            </DropdownMenuItem>
-             <DropdownMenuItem asChild>
                <Link href="/dashboard/badges">
                     <BadgeIcon className="mr-2 h-4 w-4" />
                     <span>Badges</span>
