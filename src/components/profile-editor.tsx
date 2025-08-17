@@ -221,12 +221,14 @@ export function ProfileEditor({
     setIsProcessingPhoto(true);
     toast({ title: 'Uploading photo...' });
 
+    console.log("handleSaveCrop: Starting photo upload process.");
     try {
         console.log("handleSaveCrop: 1. Starting upload to Firebase Storage.");
         const path = `avatars/${user.uid}.jpg`;
         const photoRef = storageRef(storage, path);
         const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
         await uploadBytes(photoRef, croppedBlob, metadata);
+        console.log("handleSaveCrop: 1a. uploadBytes completed.");
 
         console.log("handleSaveCrop: 2. Getting download URL.");
         const downloadURL = await getDownloadURL(photoRef);
@@ -235,12 +237,15 @@ export function ProfileEditor({
         console.log("handleSaveCrop: 3. Updating Firebase Auth profile.");
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
+            console.log("handleSaveCrop: 3a. updateProfile completed.");
         } else {
+            console.log("handleSaveCrop: 3b. User not authenticated, throwing error.");
             throw new Error("User not authenticated.");
         }
         
         console.log("handleSaveCrop: 4. Updating Firestore user document.");
         const batch = writeBatch(db);
+        console.log("handleSaveCrop: 4a. Created batch and referencing user doc.");
         const userDocRef = doc(db, "users", user.uid);
         batch.update(userDocRef, { photoURL: downloadURL });
         
@@ -248,6 +253,7 @@ export function ProfileEditor({
         const hadPhoto = !!userDocSnap.data()?.photoURL;
         if (!hadPhoto && storageKey === 'studentAvatar') {
              batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
+            console.log(`handleSaveCrop: 4b. User didn't have photo, adding ${PHOTO_UPLOAD_BONUS} points.`);
             const historyRef = doc(collection(db, 'point_history'));
             batch.set(historyRef, {
                 studentId: user.uid,
@@ -265,6 +271,7 @@ export function ProfileEditor({
         }
         
         await batch.commit();
+        console.log("handleSaveCrop: 4d. Batch commit completed.");
 
         toast({ title: "Success!", description: "Profile photo updated." });
         onAvatarChange(downloadURL);
