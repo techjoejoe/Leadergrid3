@@ -9,7 +9,7 @@ const milestoneBadges = [
     name: 'Intern of Incentives',
     description: 'Awarded for earning your first 200 points.',
     points: 200,
-    imageUrl: '/intern-of-incentives.png',
+    imageUrl: 'https://placehold.co/96x96.png',
     hint: 'backpack trophy',
   },
   {
@@ -37,7 +37,7 @@ const milestoneBadges = [
     name: 'Point Pro',
     description: 'Awarded for achieving 25,000 lifetime points.',
     points: 25000,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/PointPro.png',
     hint: 'platinum trophy',
   },
    {
