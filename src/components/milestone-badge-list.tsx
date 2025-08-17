@@ -66,7 +66,7 @@ const milestoneBadges = [
     description: 'Awarded for completing 10 QR code scans.',
     points: 10,
     imageUrl: '/trailblazer.png',
-    hint: 'treasure map',
+    hint: 'explorer statue',
   },
   {
     name: 'Master Scanner',
