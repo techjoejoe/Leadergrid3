@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -404,7 +402,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
                     <TableRow>
                         <TableHead>User</TableHead>
                         <TableHead className="w-[150px] text-center">Class Points</TableHead>
-                        <TableHead className="w-[150px] text-center">Total Points</TableHead>
                         <TableHead className="w-[200px] text-right">Actions</TableHead>
                     </TableRow>
                     </TableHeader>
@@ -421,7 +418,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
                             </div>
                         </TableCell>
                         <TableCell className="text-center font-bold text-lg">{student.classPoints?.toLocaleString() ?? 0}</TableCell>
-                        <TableCell className="text-center font-semibold text-muted-foreground">{student.lifetimePoints.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                                 <Button aria-label="Add points" variant="outline" size="icon" onClick={() => handleOpenPointsDialog(student, 'add')}>
