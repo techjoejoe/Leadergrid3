@@ -11,10 +11,21 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Award, ImagePlus, Loader2 } from 'lucide-react';
+import { Award, ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -123,6 +134,25 @@ export function BadgeManager() {
     } finally {
         setIsLoading(false);
     }
+  }
+
+  const handleDeleteBadge = async (badgeId: string, badgeName: string) => {
+      try {
+          await deleteDoc(doc(db, "badges", badgeId));
+          setCreatedBadges(prev => prev.filter(b => b.id !== badgeId));
+          toast({
+              title: "Badge Deleted",
+              description: `The badge "${badgeName}" has been removed.`,
+              variant: "destructive"
+          });
+      } catch (error) {
+           console.error("Error deleting badge:", error);
+            toast({
+                title: "Error",
+                description: "Failed to delete the badge.",
+                variant: "destructive"
+            });
+      }
   }
 
   return (
@@ -236,7 +266,33 @@ export function BadgeManager() {
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {createdBadges.map((badge) => (
-                           <Card key={badge.id} className="text-center flex flex-col items-center p-4">
+                           <Card key={badge.id} className="text-center flex flex-col items-center p-4 relative group">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button 
+                                            variant="destructive" 
+                                            size="icon" 
+                                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the
+                                            "{badge.name}" badge.
+                                        </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteBadge(badge.id, badge.name)}>
+                                            Delete
+                                        </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                                 <Image 
                                     src={badge.imageUrl} 
                                     alt={badge.name} 
