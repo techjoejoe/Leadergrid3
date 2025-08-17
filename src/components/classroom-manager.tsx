@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -65,7 +66,7 @@ interface CheckInRecord {
 export function ClassroomManager({ classId }: { classId: string }) {
   const [enrolledStudents, setEnrolledStudents] = useState<RosterEntry[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<RosterEntry | null>(null);
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
   const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
   const [isAddStudentDialogOpen, setIsAddStudentDialogOpen] = useState(false);
@@ -105,7 +106,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
     const rosterQuery = query(collection(db, "classes", classId, "roster"), orderBy('classPoints', 'desc'));
     
     const unsubscribeRoster = onSnapshot(rosterQuery, (snapshot) => {
-        const studentRoster = snapshot.docs.map(doc => ({ ...doc.data() } as RosterEntry));
+        const studentRoster = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RosterEntry));
         setEnrolledStudents(studentRoster);
         setIsStudentsLoading(false);
     }, (error) => {
@@ -153,7 +154,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
         },
   })
 
-  const handleOpenPointsDialog = (student: Student, type: 'add' | 'subtract') => {
+  const handleOpenPointsDialog = (student: RosterEntry, type: 'add' | 'subtract') => {
     setSelectedStudent(student);
     setAdjustmentType(type);
     setIsPointsDialogOpen(true);
@@ -195,7 +196,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
     }
   }
 
-  const handleRemoveStudent = async (student: Student) => {
+  const handleRemoveStudent = async (student: RosterEntry) => {
     try {
         const batch = writeBatch(db);
 
@@ -605,5 +606,3 @@ export function ClassroomManager({ classId }: { classId: string }) {
     </div>
   );
 }
-
-    
