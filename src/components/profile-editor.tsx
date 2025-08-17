@@ -183,8 +183,7 @@ export function ProfileEditor({
 
         const filePath = `avatars/${user.uid}.jpg`;
         const fileRef = storageRef(storage, filePath);
-
-        // Use uploadBytes for a simpler, promise-based upload
+        
         await uploadBytes(fileRef, blob);
 
         const downloadURL = await getDownloadURL(fileRef);
