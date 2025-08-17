@@ -11,6 +11,7 @@ const milestoneBadges = [
     points: 200,
     imageUrl: '/intern-of-incentives.png',
     hint: 'smiley face tie',
+    isLocal: true,
   },
   {
     name: 'Point Pioneer',
@@ -62,14 +63,25 @@ export function MilestoneBadgeList() {
       {milestoneBadges.map((badge) => (
         <Card key={badge.name} className="text-center flex flex-col items-center p-4">
           <div className="w-24 h-24 relative mb-2">
-            <Image 
+            {badge.isLocal ? (
+              <img 
                 src={badge.imageUrl} 
                 alt={badge.name} 
-                width={96}
-                height={96}
+                width={96} 
+                height={96} 
                 data-ai-hint={badge.hint}
                 className="mb-2"
-             />
+              />
+            ) : (
+              <Image 
+                  src={badge.imageUrl} 
+                  alt={badge.name} 
+                  width={96}
+                  height={96}
+                  data-ai-hint={badge.hint}
+                  className="mb-2"
+              />
+            )}
            </div>
           <h3 className="font-semibold">{badge.name}</h3>
           <p className="text-sm font-bold text-primary mt-1">{badge.points.toLocaleString()} Points</p>
