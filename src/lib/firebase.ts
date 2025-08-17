@@ -6,13 +6,13 @@ import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth'
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  "projectId": "leadergrid3",
-  "appId": "1:203876925697:web:ae7d331d075cdf31f81b00",
-  "storageBucket": "leadergrid3.appspot.com",
-  "apiKey": "AIzaSyC-lpIVUm3ZEmysGOD_2D6J1ZkAB-sdbn4",
-  "authDomain": "leadergrid3.firebaseapp.com",
-  "measurementId": "G-S33W4V3GZ3",
-  "messagingSenderId": "203876925697"
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

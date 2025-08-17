@@ -8,7 +8,9 @@ import { useState, useEffect } from 'react';
 import { ProfileEditor } from '@/components/profile-editor';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
 
@@ -22,30 +24,40 @@ export default function DashboardLayout({
     const [avatar, setAvatar] = useState(DEFAULT_AVATAR);
     const [initials, setInitials] = useState("AD");
     const [displayName, setDisplayName] = useState("Admin");
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            setUser(currentUser);
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
-                const unsub = onSnapshot(doc(db, "users", currentUser.uid), (doc) => {
-                    if (doc.exists()) {
-                        const data = doc.data();
-                        const name = data.displayName || currentUser.email || 'Admin';
-                        setDisplayName(name);
-                        setAvatar(data.photoURL || DEFAULT_AVATAR);
-                        setInitials(name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
-                    }
-                });
-                return () => unsub();
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+                    setUser(currentUser);
+                    const unsub = onSnapshot(userDocRef, (doc) => {
+                        if (doc.exists()) {
+                            const data = doc.data();
+                            const name = data.displayName || currentUser.email || 'Admin';
+                            setDisplayName(name);
+                            setAvatar(data.photoURL || DEFAULT_AVATAR);
+                            setInitials(name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
+                        }
+                    });
+                    setIsLoading(false);
+                    return () => unsub();
+                } else {
+                    // Not an admin or user doc doesn't exist, redirect
+                    router.push('/student-dashboard');
+                }
             } else {
-                setDisplayName("Admin");
-                setAvatar(DEFAULT_AVATAR);
-                setInitials("AD");
+                // No user logged in
+                router.push('/login');
             }
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [router]);
 
     const handleNameChange = (newName: string) => {
         setDisplayName(newName);
@@ -53,6 +65,14 @@ export default function DashboardLayout({
             const name = newName || user.email || '';
             setInitials(name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
         }
+    }
+    
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
     }
 
   return (

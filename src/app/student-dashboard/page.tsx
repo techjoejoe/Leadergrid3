@@ -165,17 +165,27 @@ export default function StudentDashboardPage() {
 
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser) {
+                const userDocRef = doc(db, 'users', currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+                    router.push('/dashboard');
+                    return;
+                }
+
                 setUser(currentUser);
                 setIsLoading(true);
 
                 // Setup listener for user document
-                const userDocRef = doc(db, 'users', currentUser.uid);
                 const unsubUser = onSnapshot(userDocRef, (doc) => {
                     if (doc.exists()) {
                         const userData = doc.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
                         setDisplayName(userData.displayName || 'Student');
                         setAvatarUrl(userData.photoURL);
+                    } else {
+                        // User exists in Auth, but not in Firestore. Redirect to login to force signup flow.
+                        router.push('/student-login');
                     }
                 });
                 
@@ -400,7 +410,7 @@ export default function StudentDashboardPage() {
         }
     }
 
-    if (!isClient || !user) {
+    if (!isClient || !user || isLoading) {
         return (
              <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900">
                 <Loader2 className="h-8 w-8 animate-spin text-white" />
