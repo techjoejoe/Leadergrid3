@@ -678,6 +678,7 @@ export default function StudentDashboardPage() {
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
             onNameChange={setDisplayName}
+            onPhotoChange={setPhotoURL}
             currentDisplayName={displayName}
             currentEmail={displayEmail}
         />

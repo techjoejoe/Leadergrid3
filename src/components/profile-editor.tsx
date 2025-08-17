@@ -48,6 +48,7 @@ interface ProfileEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onNameChange: (newName: string) => void;
+  onPhotoChange: (newUrl: string) => void;
   currentDisplayName: string;
   currentEmail: string;
 }
@@ -78,6 +79,7 @@ export function ProfileEditor({
     open, 
     onOpenChange, 
     onNameChange,
+    onPhotoChange,
     currentDisplayName,
     currentEmail,
 }: ProfileEditorProps) {
@@ -209,6 +211,7 @@ export function ProfileEditor({
         await batch.commit();
 
         toast({ title: 'Success', description: 'Your profile photo has been updated!' });
+        onPhotoChange(downloadURL);
         onOpenChange(false);
 
     } catch (error) {
