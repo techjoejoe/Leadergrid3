@@ -9,7 +9,7 @@ const milestoneBadges = [
     name: 'Intern of Incentives',
     description: 'Awarded for earning your first 200 points.',
     points: 200,
-    imageUrl: '/intern.png',
+    imageUrl: '/logo.png',
     hint: 'smiley face tie',
   },
   {
@@ -63,11 +63,12 @@ export function MilestoneBadgeList() {
         <Card key={badge.name} className="text-center flex flex-col items-center p-4">
           <div className="w-24 h-24 relative mb-2 flex items-center justify-center">
               {badge.imageUrl.startsWith('/') ? (
-                 <img 
+                 <Image 
                     src={badge.imageUrl}
                     alt={badge.name}
                     width={96}
                     height={96}
+                    unoptimized
                     data-ai-hint={badge.hint}
                     className="mb-2"
                  />
