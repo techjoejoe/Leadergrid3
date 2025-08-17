@@ -345,18 +345,24 @@ export default function StudentDashboardPage() {
                 limit(50)
             );
             const unsubscribe = onSnapshot(classRosterQuery, (snapshot) => {
-                const classLeaderboard = snapshot.docs.map((doc, index) => {
+                const classLeaderboard: LeaderboardEntry[] = [];
+                snapshot.docs.forEach((doc, index) => {
                     const studentData = doc.data();
-                    return {
-                        id: doc.id,
-                        name: studentData.displayName || 'Anonymous',
-                        points: studentData.classPoints || 0,
-                        avatar: studentData.photoURL,
-                        initial: (studentData.displayName || '??').substring(0, 2).toUpperCase(),
-                        rank: index + 1,
-                    };
+                    if (studentData) { // Check if data exists
+                        classLeaderboard.push({
+                            id: doc.id,
+                            name: studentData.displayName || 'Anonymous',
+                            points: studentData.classPoints || 0,
+                            avatar: studentData.photoURL,
+                            initial: (studentData.displayName || '??').substring(0, 2).toUpperCase(),
+                            rank: index + 1,
+                        });
+                    }
                 });
                 setLeaderboardData(classLeaderboard);
+                setIsLoading(false);
+            }, (error) => {
+                console.error("Error fetching class leaderboard:", error);
                 setIsLoading(false);
             });
             return () => unsubscribe();
@@ -606,7 +612,7 @@ export default function StudentDashboardPage() {
                             ) : (
                                 <div className="space-y-4">
                                     {/* Podium */}
-                                    <div className="grid grid-cols-3 items-end gap-2 md:gap-4 h-72">
+                                    <div className="grid grid-cols-3 items-end gap-1 md:gap-2 h-72">
                                         {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
                                         {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
                                         {top3[2] && <PodiumCard user={top3[2]} rank={3} />}

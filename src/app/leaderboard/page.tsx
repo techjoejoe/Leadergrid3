@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Crown, Loader2, Star, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import React, { useEffect, useState, Suspense } from "react";
-import { db } from "@/lib/firebase";
+import React, { useEffect, useState, Suspense, useCallback } from "react";
+import { db, auth } from "@/lib/firebase";
 import { collection, query, orderBy, limit, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { useSearchParams } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { User as AuthUser } from 'firebase/auth';
+import { awardLeaderboardViewPoints } from "@/lib/engagement-service";
 
 interface LeaderboardEntry {
   rank: number;
@@ -85,6 +88,28 @@ function LeaderboardPageContents() {
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
+    const { toast } = useToast();
+    const [user, setUser] = useState<AuthUser | null>(null);
+
+    const stableToast = useCallback(toast, []);
+
+     useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                const toastResult = await awardLeaderboardViewPoints(
+                    currentUser.uid,
+                    currentUser.displayName || 'Anonymous',
+                    classId
+                );
+                if (toastResult) {
+                    stableToast(toastResult);
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, [classId, stableToast]);
+
 
     useEffect(() => {
         setIsLoading(true);
@@ -107,17 +132,20 @@ function LeaderboardPageContents() {
         }
         
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const data = querySnapshot.docs.map((doc, index) => {
+            const data: LeaderboardEntry[] = [];
+            querySnapshot.forEach((doc, index) => {
                 const userData = doc.data();
-                const name = userData.displayName || 'Anonymous';
-                return {
-                    id: doc.id,
-                    name: name,
-                    points: userData[pointField] || 0,
-                    avatar: userData.photoURL || null,
-                    initial: (name).substring(0, 2).toUpperCase(),
-                    rank: index + 1
-                };
+                if (userData) { // Ensure doc data exists
+                    const name = userData.displayName || 'Anonymous';
+                    data.push({
+                        id: doc.id,
+                        name: name,
+                        points: userData[pointField] || 0,
+                        avatar: userData.photoURL || null,
+                        initial: (name).substring(0, 2).toUpperCase(),
+                        rank: index + 1
+                    });
+                }
             });
             setLeaderboardData(data);
             setIsLoading(false);
@@ -175,7 +203,7 @@ function LeaderboardPageContents() {
             </div>
             
             {/* Podium */}
-            <div className="grid grid-cols-3 items-end mb-12 gap-2 md:gap-4 h-72">
+            <div className="grid grid-cols-3 items-end mb-12 gap-1 md:gap-2 h-72">
                {top3[1] && <PodiumPlace user={top3[1]} place={2} />}
                {top3[0] && <PodiumPlace user={top3[0]} place={1} />}
                {top3[2] && <PodiumPlace user={top3[2]} place={3} />}
