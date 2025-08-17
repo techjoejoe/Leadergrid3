@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -90,7 +90,15 @@ export function UserActions({
   const [isLoading, setIsLoading] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const currentUser = auth.currentUser;
+    if (currentUser && currentUser.email === 'joe_o@me.com') {
+      setIsSuperAdmin(true);
+    }
+  }, []);
 
   const pointsForm = useForm<PointsFormValues>({
     resolver: zodResolver(pointsSchema),
@@ -365,7 +373,7 @@ export function UserActions({
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="student">Student</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          {isSuperAdmin && <SelectItem value="admin">Admin</SelectItem>}
                         </SelectContent>
                     </Select>
                   <FormMessage />

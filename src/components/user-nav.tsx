@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge as BadgeIcon, Building } from "lucide-react"
+import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge as BadgeIcon, Building, ShieldCheck } from "lucide-react"
 import { signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -25,11 +25,12 @@ interface UserNavProps {
   displayName: string;
   initials: string;
   onEditProfile: () => void;
+  isSuperAdmin?: boolean;
 }
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
 
-export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile }: UserNavProps) {
+export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile, isSuperAdmin = false }: UserNavProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -77,6 +78,12 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile 
                   {user.email}
                 </p>
               }
+               {isSuperAdmin && (
+                <div className="flex items-center gap-1 text-xs text-yellow-500 pt-1">
+                    <ShieldCheck className="h-3 w-3" />
+                    <span>Super Admin</span>
+                </div>
+              )}
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />

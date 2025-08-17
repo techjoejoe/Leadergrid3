@@ -25,6 +25,7 @@ export default function DashboardLayout({
     const [initials, setInitials] = useState("AD");
     const [displayName, setDisplayName] = useState("Admin");
     const [isLoading, setIsLoading] = useState(true);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -35,6 +36,12 @@ export default function DashboardLayout({
 
                 if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
                     setUser(currentUser);
+                    
+                    // Check for Super Admin
+                    if (currentUser.email === 'joe_o@me.com') {
+                        setIsSuperAdmin(true);
+                    }
+
                     const unsub = onSnapshot(userDocRef, (doc) => {
                         if (doc.exists()) {
                             const data = doc.data();
@@ -108,6 +115,7 @@ export default function DashboardLayout({
                     displayName={displayName}
                     initials={initials}
                     onEditProfile={() => setIsProfileEditorOpen(true)}
+                    isSuperAdmin={isSuperAdmin}
                 />
             </div>
         </header>
