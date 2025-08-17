@@ -69,7 +69,6 @@ export function MilestoneBadgeList() {
                 height={96}
                 data-ai-hint={badge.hint}
                 className="mb-2"
-                unoptimized
              />
            </div>
           <h3 className="font-semibold">{badge.name}</h3>
