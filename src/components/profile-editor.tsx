@@ -310,6 +310,7 @@ export function ProfileEditor({
                 hadPhoto = !!userDocSnap.data().photoURL;
             }
 
+            // Update both Auth and Firestore
             await updateProfile(user, { photoURL: photoUrlIdentifier });
             await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
             
