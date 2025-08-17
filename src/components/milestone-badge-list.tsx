@@ -51,7 +51,7 @@ const milestoneBadges = [
     name: 'CEO of Collection',
     description: 'Awarded for the incredible achievement of 100,000 lifetime points.',
     points: 100000,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/hundredthou.png',
     hint: 'glowing award',
   },
 ];
