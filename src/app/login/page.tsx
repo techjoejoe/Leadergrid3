@@ -4,8 +4,8 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getAuth, sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -25,7 +25,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const auth = getAuth(app);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -30,8 +29,8 @@ import { Loader2, UploadCloud, Check, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
-import { getAuth, sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
-import { app, db } from '@/lib/firebase';
+import { sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, setDoc } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
@@ -70,7 +69,6 @@ export function ProfileEditor({
     storageKey,
 }: ProfileEditorProps) {
   const { toast } = useToast();
-  const auth = getAuth(app);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
@@ -537,5 +535,3 @@ export function ProfileEditor({
     </Dialog>
   );
 }
-
-    

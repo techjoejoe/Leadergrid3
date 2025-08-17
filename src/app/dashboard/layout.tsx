@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ProfileEditor } from '@/components/profile-editor';
-import { getAuth, User, onAuthStateChanged } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { User, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
 
@@ -35,7 +35,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-    const auth = getAuth(app);
     const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
     const [user, setUser] = useState<User | null>(null);
     const [avatar, setAvatar] = useState(DEFAULT_AVATAR);

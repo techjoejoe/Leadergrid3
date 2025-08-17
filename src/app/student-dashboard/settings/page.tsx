@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
-import { app, db } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +27,6 @@ import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/fire
 export default function StudentSettingsPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const auth = getAuth(app);
 
     const [user, setUser] = useState<User | null>(null);
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);

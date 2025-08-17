@@ -14,9 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge, Building } from "lucide-react"
-import { getAuth, signOut, User } from "firebase/auth";
-import { app } from "@/lib/firebase";
+import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge as BadgeIcon, Building } from "lucide-react"
+import { signOut, User } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 
@@ -31,7 +31,6 @@ interface UserNavProps {
 const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
 
 export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile }: UserNavProps) {
-  const auth = getAuth(app);
   const router = useRouter();
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
@@ -129,7 +128,7 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile 
             </DropdownMenuItem>
              <DropdownMenuItem asChild>
                <Link href="/dashboard/badges">
-                    <Badge className="mr-2 h-4 w-4" />
+                    <BadgeIcon className="mr-2 h-4 w-4" />
                     <span>Badges</span>
                 </Link>
             </DropdownMenuItem>

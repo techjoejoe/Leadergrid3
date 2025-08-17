@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2, Rss } from 'lucide-react';
 import Link from 'next/link';
 import { isBefore, parseISO } from 'date-fns';
-import { db, app } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, addDoc, Timestamp, writeBatch, doc, increment, getDoc, setDoc } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 
 const createMockUser = (): User => ({
     uid: 'mock-user-id',
@@ -38,7 +37,6 @@ export default function ScanPage() {
     const searchParams = useSearchParams();
     const isMock = searchParams.get('mock') === 'true';
     const { toast } = useToast();
-    const auth = getAuth(app);
 
     const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);

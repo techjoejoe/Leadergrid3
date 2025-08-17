@@ -9,21 +9,19 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false)
 
   React.useEffect(() => {
-    const checkDevice = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    
     // Check on initial mount only on the client
     if (typeof window !== 'undefined') {
+        const checkDevice = () => {
+            setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+        }
         checkDevice();
-    }
+        // Add listener for window resize
+        window.addEventListener("resize", checkDevice)
 
-    // Add listener for window resize
-    window.addEventListener("resize", checkDevice)
-
-    // Cleanup listener on component unmount
-    return () => {
-      window.removeEventListener("resize", checkDevice)
+        // Cleanup listener on component unmount
+        return () => {
+            window.removeEventListener("resize", checkDevice)
+        }
     }
   }, [])
 

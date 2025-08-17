@@ -4,8 +4,8 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { app, db } from "@/lib/firebase";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 
 
@@ -28,7 +28,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function StudentLoginPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const auth = getAuth(app);
 
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');

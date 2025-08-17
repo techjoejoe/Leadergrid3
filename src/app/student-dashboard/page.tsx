@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import {
@@ -41,12 +40,12 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Badge as UiBadge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { app, db } from '@/lib/firebase';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, Timestamp, getDocs } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
@@ -207,7 +206,6 @@ export default function StudentDashboardPage() {
     const [companyLeaderboard, setCompanyLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
     const { toast } = useToast();
-    const auth = getAuth(app);
     const router = useRouter();
 
     const stableSetActiveClass = useCallback((cls: ClassInfo | null) => {
@@ -632,7 +630,7 @@ export default function StudentDashboardPage() {
                                     {activeClass ? (
                                         <div className='flex items-center gap-3'>
                                             {activeClass.name}
-                                            <UiBadge variant="secondary">{activeClass.code}</UiBadge>
+                                            <Badge variant="secondary">{activeClass.code}</Badge>
                                         </div>
                                     ) : 'Live Leaderboard'}
                                 </CardTitle>
@@ -702,9 +700,9 @@ export default function StudentDashboardPage() {
                                             <div className="flex items-center justify-between">
                                                 <p className="font-medium">{item.reason}</p>
                                                 <div className="flex items-center gap-4">
-                                                    <UiBadge variant={item.points > 0 ? 'secondary' : 'destructive'} className={cn(item.points > 0 ? "text-green-400" : "text-red-400")}>
+                                                    <Badge variant={item.points > 0 ? 'secondary' : 'destructive'} className={cn(item.points > 0 ? "text-green-400" : "text-red-400")}>
                                                         {item.points > 0 ? '+' : ''}{item.points} pts
-                                                    </UiBadge>
+                                                    </Badge>
                                                     <span className="text-sm text-muted-foreground hidden sm:block">{item.date}</span>
                                                 </div>
                                             </div>
