@@ -26,14 +26,14 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud, Check, User as UserIcon } from 'lucide-react';
+import { Loader2, UploadCloud, User as UserIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { processAvatar } from '@/ai/flows/process-avatar-flow';
 
 
 const profileFormSchema = z.object({
@@ -58,44 +58,6 @@ interface ProfileEditorProps {
 
 const PHOTO_UPLOAD_BONUS = 300;
 
-function getCroppedBlob(image: HTMLImageElement, crop: Crop): Promise<Blob | null> {
-    return new Promise((resolve) => {
-        const canvas = document.createElement("canvas");
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
-        
-        canvas.width = 128;
-        canvas.height = 128;
-
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          throw new Error("No 2d context");
-        }
-
-        const cropX = crop.x * scaleX;
-        const cropY = crop.y * scaleY;
-        const cropWidth = crop.width * scaleX;
-        const cropHeight = crop.height * scaleY;
-
-        ctx.drawImage(
-          image,
-          cropX,
-          cropY,
-          cropWidth,
-          cropHeight,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-        
-        canvas.toBlob((blob) => {
-            resolve(blob);
-        }, 'image/jpeg', 0.9);
-    });
-}
-
-
 export function ProfileEditor({ 
     user,
     open, 
@@ -113,11 +75,6 @@ export function ProfileEditor({
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imgSrc, setImgSrc] = useState('');
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<Crop>();
-  const imgRef = useRef<HTMLImageElement>(null);
-  const [isCropping, setIsCropping] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -218,96 +175,58 @@ export function ProfileEditor({
     fileInputRef.current?.click();
   };
 
-  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setCrop(undefined); // Makes crop preview update between images.
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        setImgSrc(reader.result?.toString() || '');
-        setIsCropping(true);
-      });
-      reader.readAsDataURL(e.target.files[0]);
-    }
-  };
-
-  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-    const { width, height } = e.currentTarget;
-    const newCrop = centerCrop(
-      makeAspectCrop(
-        {
-          unit: '%',
-          width: 90,
-        },
-        1,
-        width,
-        height
-      ),
-      width,
-      height
-    );
-    setCrop(newCrop);
-    setCompletedCrop(newCrop);
-  }
-
-  const handleCropComplete = async () => {
-    if (!completedCrop || !imgRef.current || !user) {
-        toast({
-            title: "Error",
-            description: "Could not save photo. Crop data is missing.",
-            variant: "destructive",
-        });
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !user) {
         return;
     }
+    const file = e.target.files[0];
+    e.target.value = ''; // Reset file input
 
     setIsProcessingPhoto(true);
-
+    
     try {
-        const imageBlob = await getCroppedBlob(imgRef.current, completedCrop);
-        if (!imageBlob) {
-            throw new Error('Could not create image blob.');
+        // 1. Upload raw file to a temporary location
+        const tempPath = `temp_avatars/${user.uid}/${file.name}`;
+        const tempStorageRef = storageRef(storage, tempPath);
+        await uploadBytes(tempStorageRef, file);
+        const tempDownloadURL = await getDownloadURL(tempStorageRef);
+        
+        // 2. Trigger Genkit flow to process the image
+        const finalUrl = await processAvatar({ tempStoragePath: tempPath, tempDownloadURL });
+
+        if (!finalUrl) {
+            throw new Error("Image processing failed to return a URL.");
         }
 
-        // Upload to Firebase Storage
-        const avatarRef = storageRef(storage, `avatars/${user.uid}.jpg`);
-        const uploadResult = await uploadBytes(avatarRef, imageBlob);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-        
+        // 3. Update user profile with the final URL
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         let hadPhoto = false;
 
         if (userDocSnap.exists()) {
-             hadPhoto = !!userDocSnap.data().photoURL;
+            hadPhoto = !!userDocSnap.data().photoURL;
         }
 
         // Update Auth profile and Firestore with the new storage URL
-        await updateProfile(user, { photoURL: downloadURL });
-        batch.update(userDocRef, { photoURL: downloadURL });
-        
-        // Find all classes the user is enrolled in and update their roster photo
+        await updateProfile(user, { photoURL: finalUrl });
+        batch.update(userDocRef, { photoURL: finalUrl });
+
         const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
         const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-        
         for (const enrollmentDoc of enrollmentsSnapshot.docs) {
             const classId = enrollmentDoc.data().classId;
             if (classId) {
                 const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                 const rosterSnap = await getDoc(rosterDocRef);
-                if (rosterSnap.exists()){
-                  batch.update(rosterDocRef, { photoURL: downloadURL });
-                  if (!hadPhoto && storageKey === 'studentAvatar') {
-                      batch.update(rosterDocRef, { classPoints: increment(PHOTO_UPLOAD_BONUS) });
-                  }
+                const rosterSnap = await getDoc(rosterDocRef);
+                if (rosterSnap.exists()) {
+                    batch.update(rosterDocRef, { photoURL: finalUrl });
                 }
             }
         }
-
+        
         if (!hadPhoto && storageKey === 'studentAvatar') {
-            batch.update(userDocRef, {
-                lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
-            });
-            
+            batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
             const historyRef = doc(collection(db, 'point_history'));
             batch.set(historyRef, {
                 studentId: user.uid,
@@ -317,28 +236,21 @@ export function ProfileEditor({
                 type: 'engagement',
                 timestamp: Timestamp.now()
             });
-
-             toast({
+            toast({
                 title: 'BONUS!',
                 description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
                 className: 'bg-yellow-500 text-white',
             });
         } else {
-             toast({
-                title: 'Profile Photo Updated',
-                description: 'Your new photo has been set.',
-            });
+            toast({ title: 'Profile Photo Updated', description: 'Your new photo has been set.' });
         }
-
-        await batch.commit();
-        onAvatarChange(downloadURL);
         
-        setIsCropping(false);
-        setImgSrc('');
-        onOpenChange(false);
+        await batch.commit();
+        onAvatarChange(finalUrl);
         
     } catch (error: any) {
-        if (error.code === 'auth/requires-recent-login') {
+        console.error("Error updating photo:", error);
+         if (error.code === 'auth/requires-recent-login') {
             toast({
                 title: 'Authentication Required',
                 description: 'This is a sensitive action. Please log out and log back in to update your profile.',
@@ -346,7 +258,6 @@ export function ProfileEditor({
                 duration: 8000,
             });
         } else {
-            console.error("Error saving photo:", error);
             toast({
                 title: "Error",
                 description: 'Could not save your new photo. Please try again.',
@@ -356,16 +267,11 @@ export function ProfileEditor({
     } finally {
         setIsProcessingPhoto(false);
     }
-  };
+  }
+
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        if(!isOpen) {
-            setIsCropping(false);
-            setImgSrc('');
-        }
-        onOpenChange(isOpen);
-    }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         {!user ? (
           <DialogHeader>
@@ -374,7 +280,7 @@ export function ProfileEditor({
                 <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           </DialogHeader>
-        ) : !isCropping ? (
+        ) : (
             <>
             <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
@@ -412,7 +318,7 @@ export function ProfileEditor({
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={onSelectFile}
+                  onChange={handleFileSelect}
                   className="hidden"
                   accept="image/png, image/jpeg, image/webp"
                   disabled={isProcessingPhoto}
@@ -468,35 +374,6 @@ export function ProfileEditor({
                 </Button>
             </div>
             </div>
-            </>
-        ) : (
-             <>
-                <DialogHeader>
-                    <DialogTitle>Crop your new profile picture</DialogTitle>
-                    <DialogDescription>
-                        Adjust the selection to crop the perfect avatar.
-                    </DialogDescription>
-                </DialogHeader>
-                    {imgSrc && (
-                        <div className='flex justify-center'>
-                        <ReactCrop
-                            crop={crop}
-                            onChange={c => setCrop(c)}
-                            onComplete={c => setCompletedCrop(c)}
-                            aspect={1}
-                            circularCrop
-                        >
-                            <img ref={imgRef} alt="Crop me" src={imgSrc} onLoad={onImageLoad} style={{ maxHeight: '70vh' }}/>
-                        </ReactCrop>
-                        </div>
-                    )}
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => {setIsCropping(false); setImgSrc('');}}>Cancel</Button>
-                    <Button onClick={handleCropComplete} disabled={isProcessingPhoto || !completedCrop}>
-                         {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                        Save Crop
-                    </Button>
-                </DialogFooter>
             </>
         )}
       </DialogContent>
