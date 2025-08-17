@@ -31,7 +31,7 @@ import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css';
 import { sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, updateDoc, increment, getDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -294,13 +294,13 @@ export function ProfileEditor({
         const photoUrlIdentifier = `${storageKey}_${user.uid}`;
         
         if (user.uid !== 'mock-user-id') {
+            const batch = writeBatch(db);
             const userDocRef = doc(db, "users", user.uid);
-            
             const userDocSnap = await getDoc(userDocRef);
             let hadPhoto = false;
 
             if (!userDocSnap.exists()) {
-                await setDoc(userDocRef, {
+                batch.set(userDocRef, {
                     uid: user.uid,
                     displayName: user.displayName,
                     email: user.email,
@@ -312,12 +312,23 @@ export function ProfileEditor({
 
             // Update both Auth and Firestore
             await updateProfile(user, { photoURL: photoUrlIdentifier });
-            await updateDoc(userDocRef, { photoURL: photoUrlIdentifier });
+            batch.update(userDocRef, { photoURL: photoUrlIdentifier });
             
             if (!hadPhoto) {
-                await updateDoc(userDocRef, {
+                batch.update(userDocRef, {
                     lifetimePoints: increment(PHOTO_UPLOAD_BONUS)
                 });
+                
+                const historyRef = doc(collection(db, 'point_history'));
+                batch.set(historyRef, {
+                    studentId: user.uid,
+                    studentName: user.displayName,
+                    points: PHOTO_UPLOAD_BONUS,
+                    reason: 'Profile Photo Bonus',
+                    type: 'engagement',
+                    timestamp: Timestamp.now()
+                });
+
                  toast({
                     title: 'BONUS!',
                     description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
@@ -329,6 +340,9 @@ export function ProfileEditor({
                     description: 'Your new photo has been set.',
                 });
             }
+
+            await batch.commit();
+
         } else {
              toast({
                 title: 'Profile Photo Updated',

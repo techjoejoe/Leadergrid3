@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
-import { doc, setDoc, Timestamp } from "firebase/firestore";
+import { doc, setDoc, Timestamp, writeBatch } from "firebase/firestore";
 
 
 import { Button } from "@/components/ui/button"
@@ -70,15 +70,32 @@ export default function StudentLoginPage() {
                 displayName: signupName
             });
 
+            const batch = writeBatch(db);
             const userDocRef = doc(db, "users", user.uid);
-            await setDoc(userDocRef, {
+            const now = Timestamp.fromDate(new Date());
+
+            // Set initial user data
+            batch.set(userDocRef, {
                 uid: user.uid,
                 displayName: signupName,
                 email: signupEmail,
                 role: 'student',
                 lifetimePoints: 100,
-                createdAt: Timestamp.fromDate(new Date()),
+                createdAt: now,
             });
+
+            // Create point history record for the sign-up bonus
+            const historyRef = doc(db, 'point_history', `${user.uid}_signup`);
+            batch.set(historyRef, {
+                studentId: user.uid,
+                studentName: signupName,
+                points: 100,
+                reason: 'Sign-up Bonus',
+                type: 'engagement',
+                timestamp: now
+            });
+            
+            await batch.commit();
             
             toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid! You've earned 100 points." });
             router.push('/student-dashboard');
