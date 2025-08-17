@@ -9,7 +9,7 @@ const milestoneBadges = [
     name: 'Intern of Incentives',
     description: 'Awarded for earning your first 200 points.',
     points: 200,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/intern-of-incentives.png',
     hint: 'smiley face tie',
   },
   {
@@ -69,6 +69,7 @@ export function MilestoneBadgeList() {
                   height={96}
                   data-ai-hint={badge.hint}
                   className="mb-2"
+                  unoptimized={badge.imageUrl.startsWith('/')}
               />
            </div>
           <h3 className="font-semibold">{badge.name}</h3>
