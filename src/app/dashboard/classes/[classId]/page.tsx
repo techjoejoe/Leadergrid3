@@ -11,7 +11,7 @@ import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
 import { Separator } from "@/components/ui/separator";
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import type { Class } from '@/components/create-class-form';
 import { useParams } from 'next/navigation';
 import { QrCodeManager } from '@/components/qr-code-manager';
@@ -65,14 +65,26 @@ export default function ClassDetailsPage() {
         }
         setIsRenaming(true);
         try {
+            const batch = writeBatch(db);
+
+            // 1. Update the main class document
             const classDocRef = doc(db, 'classes', classId);
-            await updateDoc(classDocRef, {
-                name: newClassName
+            batch.update(classDocRef, { name: newClassName });
+            
+            // 2. Find and update all associated QR codes
+            const qrCodesQuery = query(collection(db, 'qrcodes'), where('classId', '==', classId));
+            const qrCodesSnapshot = await getDocs(qrCodesQuery);
+            qrCodesSnapshot.forEach((qrDoc) => {
+                const qrCodeRef = doc(db, 'qrcodes', qrDoc.id);
+                batch.update(qrCodeRef, { className: newClassName });
             });
+
+            await batch.commit();
+
             setClassDetails(prev => prev ? { ...prev, name: newClassName } : null);
             toast({
                 title: "Class Renamed",
-                description: `The class has been renamed to "${newClassName}".`
+                description: `The class has been renamed to "${newClassName}". All associated records have been updated.`
             });
         } catch (error) {
             console.error("Error renaming class:", error);
