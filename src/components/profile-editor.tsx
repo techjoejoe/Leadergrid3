@@ -327,16 +327,21 @@ export function ProfileEditor({
         await updateProfile(user, { photoURL: croppedImageUrl });
         batch.update(userDocRef, { photoURL: croppedImageUrl });
         
-        // Update photoURL in all class rosters
+        // Find all classes the user is enrolled in.
         const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
         const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+        
         for (const enrollmentDoc of enrollmentsSnapshot.docs) {
             const classId = enrollmentDoc.data().classId;
             if (classId) {
                 const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                 const rosterSnap = await getDoc(rosterDocRef);
+                const rosterSnap = await getDoc(rosterDocRef);
                 if (rosterSnap.exists()){
                   batch.update(rosterDocRef, { photoURL: croppedImageUrl });
+                   // Also give them class points for the photo upload if it's their first time
+                  if (!hadPhoto) {
+                      batch.update(rosterDocRef, { classPoints: increment(PHOTO_UPLOAD_BONUS) });
+                  }
                 }
             }
         }
