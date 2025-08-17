@@ -428,10 +428,10 @@ const SidebarMenuButton = React.forwardRef<
       </Comp>
     )
 
-    if (!tooltip) {
+    if (!tooltip || !asChild) {
       return button
     }
-
+    
     if (typeof tooltip === "string") {
       tooltip = {
         children: tooltip,
@@ -440,7 +440,9 @@ const SidebarMenuButton = React.forwardRef<
 
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipTrigger asChild>
+          {button}
+        </TooltipTrigger>
         <TooltipContent
           side="right"
           align="center"
