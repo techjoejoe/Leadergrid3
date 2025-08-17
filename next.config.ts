@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
         }
     ],
   },
+  experimental: {
+    allowedDevOrigins: [
+      'https://6000-firebase-studio-1755027599040.cluster-2xid2zxbenc4ixa74rpk7q7fyk.cloudworkstations.dev',
+    ],
+  },
   async headers() {
     // In a production environment, you would want to be more restrictive than this
     return [
