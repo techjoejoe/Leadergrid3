@@ -400,7 +400,7 @@ export function UserActions({
 
       <Button variant="outline" size="sm" onClick={handleGenerateReport} disabled={isReporting} className="flex-1">
         {isReporting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <FileDown className="mr-2 h-3 w-3" />}
-        Run Report
+        User Report
       </Button>
       
        <AlertDialog>
@@ -428,5 +428,3 @@ export function UserActions({
     </div>
   );
 }
-
-    
