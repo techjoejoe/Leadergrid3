@@ -16,7 +16,7 @@ const milestoneBadges = [
     name: 'Point Pioneer',
     description: 'Awarded for earning your first 1,000 points.',
     points: 1000,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: 'https://images.unsplash.com/photo-1602449007785-f4093ad2a80b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxHcmlkfGVufDB8fHx8MTc1NTQ0MTgxMXww&ixlib=rb-4.1.0&q=80&w=1080',
     hint: 'bronze medal',
   },
   {
