@@ -23,7 +23,7 @@ const milestoneBadges = [
     name: 'Five-Star Finisher',
     description: 'Awarded for earning a total of 5,000 points.',
     points: 5000,
-    imageUrl: 'https://placehold.co/96x96.png',
+    imageUrl: '/five-star-finisher.png',
     hint: 'silver medal',
   },
   {
