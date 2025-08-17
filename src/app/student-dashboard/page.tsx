@@ -111,9 +111,9 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
     
     return (
         <div className={cn("relative flex flex-col items-center justify-end text-white text-center w-full transition-transform hover:scale-105 group",
-            isFirst && "order-1 md:order-2 h-48 md:h-64",
-            isSecond && "order-2 md:order-1 h-44 md:h-56 self-end",
-            isThird && "order-3 md:order-3 h-40 md:h-48 self-end"
+            isFirst && "order-1 md:order-2 h-60 md:h-72",
+            isSecond && "order-2 md:order-1 h-56 md:h-64 self-end",
+            isThird && "order-3 md:order-3 h-52 md:h-56 self-end"
         )}>
             {isFirst && (
                  <>
@@ -124,9 +124,9 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                 </>
             )}
             <Avatar className={cn("z-10 rounded-full",
-                isFirst && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-gold border-8 border-yellow-400 shadow-[0_0_25px_rgba(252,211,77,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
-                isSecond && `h-28 w-28 sm:h-32 sm:w-32 animate-glow-silver border-8 border-slate-300 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
-                isThird && `h-24 w-24 sm:h-28 sm:w-28 animate-glow-bronze border-8 border-amber-600 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isFirst && `h-40 w-40 sm:h-48 sm:w-48 animate-glow-gold border-8 border-yellow-400 shadow-[0_0_25px_rgba(252,211,77,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isSecond && `h-36 w-36 sm:h-40 sm:w-40 animate-glow-silver border-8 border-slate-300 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isThird && `h-32 w-32 sm:h-36 sm:w-36 animate-glow-bronze border-8 border-amber-600 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
             )}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
@@ -612,7 +612,7 @@ export default function StudentDashboardPage() {
                             ) : (
                                 <div className="space-y-4">
                                     {/* Podium */}
-                                    <div className="grid grid-cols-3 items-end gap-1 md:gap-2 h-72">
+                                    <div className="grid grid-cols-3 items-end gap-0 h-80">
                                         {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
                                         {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
                                         {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
