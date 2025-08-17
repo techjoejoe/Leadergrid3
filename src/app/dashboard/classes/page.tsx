@@ -25,6 +25,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, deleteDoc, doc, Timestamp, query, orderBy } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ClassesPage() {
     const [classes, setClasses] = useState<Class[]>([]);
@@ -110,6 +111,21 @@ export default function ClassesPage() {
         return "Active";
     }
 
+    const TableSkeleton = () => (
+        <TableBody>
+            {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-1/2" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+            ))}
+        </TableBody>
+    )
+
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -131,73 +147,72 @@ export default function ClassesPage() {
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    
                         {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                                </TableCell>
-                            </TableRow>
-                        ) : classes.length > 0 ? (
-                            classes.map((cls) => (
-                                <TableRow key={cls.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => router.push(`/dashboard/classes/${cls.id}`)}>
-                                    <TableCell className="font-medium">{cls.name}</TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary">{cls.joinCode}</Badge>
-                                    </TableCell>
-                                    <TableCell>{format(cls.startDate, "PPP")}</TableCell>
-                                    <TableCell>{format(cls.endDate, "PPP")}</TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant={
-                                                getStatus(cls.startDate, cls.endDate) === "Active" ? "default"
-                                                : getStatus(cls.startDate, cls.endDate) === "Scheduled" ? "outline"
-                                                : "destructive"
-                                            }
-                                            className={getStatus(cls.startDate, cls.endDate) === 'Active' ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}
-                                        >
-                                            {getStatus(cls.startDate, cls.endDate)}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" asChild onClick={(e) => e.stopPropagation()}>
-                                            <Link href={`/dashboard/classes/${cls.id}`}>
-                                                <Wrench className="h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                <Button variant="ghost" size="icon">
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action cannot be undone. This will permanently delete the
-                                                    class "{cls.name}".
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteClass(cls)}>
-                                                    Delete
-                                                </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                            <TableSkeleton />
+                        ) : (
+                            <TableBody>
+                            {classes.length > 0 ? (
+                                classes.map((cls) => (
+                                    <TableRow key={cls.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => router.push(`/dashboard/classes/${cls.id}`)}>
+                                        <TableCell className="font-medium">{cls.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="secondary">{cls.joinCode}</Badge>
+                                        </TableCell>
+                                        <TableCell>{format(cls.startDate, "PPP")}</TableCell>
+                                        <TableCell>{format(cls.endDate, "PPP")}</TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant={
+                                                    getStatus(cls.startDate, cls.endDate) === "Active" ? "default"
+                                                    : getStatus(cls.startDate, cls.endDate) === "Scheduled" ? "outline"
+                                                    : "destructive"
+                                                }
+                                                className={getStatus(cls.startDate, cls.endDate) === 'Active' ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}
+                                            >
+                                                {getStatus(cls.startDate, cls.endDate)}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" asChild onClick={(e) => e.stopPropagation()}>
+                                                <Link href={`/dashboard/classes/${cls.id}`}>
+                                                    <Wrench className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                    <Button variant="ghost" size="icon" aria-label={`Delete class ${cls.name}`}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action cannot be undone. This will permanently delete the
+                                                        class "{cls.name}".
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteClass(cls)}>
+                                                        Delete
+                                                    </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        No classes found. Create one to get started!
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    No classes found. Create one to get started!
-                                </TableCell>
-                            </TableRow>
+                            )}
+                            </TableBody>
                         )}
-                    </TableBody>
                 </Table>
             </CardContent>
         </Card>

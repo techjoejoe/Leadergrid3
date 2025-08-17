@@ -4,7 +4,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, Timestamp, writeBatch } from "firebase/firestore";
 
@@ -35,6 +35,7 @@ export default function StudentLoginPage() {
     const [signupEmail, setSignupEmail] = useState('');
     const [signupPassword, setSignupPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -111,6 +112,31 @@ export default function StudentLoginPage() {
             setIsLoading(false);
         }
     };
+    
+    const handlePasswordReset = async () => {
+        if (!loginEmail) {
+            setError("Please enter your email address to reset your password.");
+            return;
+        }
+        setIsResettingPassword(true);
+        setError(null);
+        try {
+            await sendPasswordResetEmail(auth, loginEmail);
+            toast({
+                title: "Password Reset Email Sent",
+                description: "Check your inbox for a link to reset your password.",
+            });
+        } catch (error: any) {
+            setError("Could not send reset email. Make sure the email is correct.");
+            toast({
+                title: "Error",
+                description: "Could not send reset email. Make sure the email is registered.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsResettingPassword(false);
+        }
+    }
 
 
   return (
@@ -166,10 +192,15 @@ export default function StudentLoginPage() {
                                 </Link>
                             </Button>
                              <div className="mt-4 text-center text-sm">
-                                Forgot your password?{" "}
-                                <Link href="#" className="underline">
-                                    Reset it here
-                                </Link>
+                                <Button 
+                                    type="button"
+                                    variant="link" 
+                                    onClick={handlePasswordReset} 
+                                    disabled={isResettingPassword}
+                                    className="p-0 h-auto font-normal"
+                                >
+                                    {isResettingPassword ? "Sending..." : "Forgot your password?"}
+                                </Button>
                             </div>
                         </CardContent>
                     </form>

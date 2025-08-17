@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Student {
     id: string;
@@ -51,6 +52,25 @@ export default function StudentsPage() {
         }
         fetchStudents();
     }, [toast]);
+    
+    const TableSkeleton = () => (
+        <TableBody>
+             {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell>
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <Skeleton className="h-5 w-32" />
+                        </div>
+                    </TableCell>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell className="text-right">
+                       {/* Action skeletons can go here if needed */}
+                    </TableCell>
+                </TableRow>
+            ))}
+        </TableBody>
+    )
 
 
     return (
@@ -68,41 +88,40 @@ export default function StudentsPage() {
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    
                         {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center">
-                                    <Loader2 className="mx-auto h-8 w-8 animate-spin" />
-                                </TableCell>
-                            </TableRow>
-                        ) : students.length > 0 ? (
-                            students.map((student) => (
-                                <TableRow key={student.id} className="hover:bg-muted/50">
-                                    <TableCell className="font-medium">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar>
-                                                {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
-                                                <AvatarFallback>{student.displayName?.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
-                                            </Avatar>
-                                            {student.displayName}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {student.email}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {/* Future actions can go here */}
+                           <TableSkeleton />
+                        ) : (
+                            <TableBody>
+                            {students.length > 0 ? (
+                                students.map((student) => (
+                                    <TableRow key={student.id} className="hover:bg-muted/50">
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    {student.photoURL && <AvatarImage src={student.photoURL} alt={student.displayName || ''} data-ai-hint="student portrait" />}
+                                                    <AvatarFallback>{student.displayName?.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
+                                                </Avatar>
+                                                {student.displayName}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {student.email}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {/* Future actions can go here */}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="h-24 text-center">
+                                        No users found.
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center">
-                                    No users found.
-                                </TableCell>
-                            </TableRow>
+                            )}
+                            </TableBody>
                         )}
-                    </TableBody>
                 </Table>
             </CardContent>
         </Card>
