@@ -449,53 +449,6 @@ export function ClassroomManager({ classId }: { classId: string }) {
             )}
             </CardContent>
         </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-headline"><Award className="text-primary"/> Class Leaderboard</CardTitle>
-                <CardDescription>Ranking based on points earned within this class.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isStudentsLoading ? (
-                     <div className="flex justify-center items-center h-48">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                    </div>
-                ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px]">Rank</TableHead>
-                                <TableHead>User</TableHead>
-                                <TableHead className="text-right">Class Points</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredRoster.slice(0,10).map((student, index) => (
-                                <TableRow key={student.id}>
-                                    <TableCell className="font-bold text-lg">{index + 1}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar>
-                                                {student.photoURL && <AvatarImage src={student.photoURL} data-ai-hint="student portrait" />}
-                                                <AvatarFallback>{(student.displayName || '??').substring(0,2).toUpperCase()}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">{student.displayName || 'Unnamed User'}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-bold text-lg">{student.classPoints?.toLocaleString() ?? 0}</TableCell>
-                                </TableRow>
-                            ))}
-                            {filteredRoster.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
-                                        No one has earned points in this class yet.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                )}
-            </CardContent>
-        </Card>
       </div>
       <div className="lg:col-span-1 space-y-6">
         <Card>
