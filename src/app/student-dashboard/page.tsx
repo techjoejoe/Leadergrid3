@@ -114,7 +114,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="h-48 w-48 lg:h-64 lg:w-64 bg-gradient-to-tr from-yellow-400 via-amber-200 to-yellow-500 rounded-full animate-sunburst-spin opacity-30 blur-2xl"></div>
                     </div>
-                    <span className="absolute -top-5 text-6xl sm:text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>
+                    <span className="absolute -top-8 text-8xl sm:text-9xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>
                 </>
             )}
             <Avatar className={cn("z-10 rounded-full p-1.5",

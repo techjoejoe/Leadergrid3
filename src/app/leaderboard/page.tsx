@@ -61,7 +61,7 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="h-48 w-48 lg:h-64 lg:w-64 bg-gradient-to-tr from-yellow-400 via-amber-200 to-yellow-500 rounded-full animate-sunburst-spin opacity-30 blur-2xl"></div>
                     </div>
-                    <span className="absolute -top-5 text-6xl sm:text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>
+                    <span className="absolute -top-8 text-8xl sm:text-9xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>
                 </>
             )}
              <Avatar className={cn("z-10 rounded-full p-1.5", 
@@ -72,7 +72,7 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
                 <AvatarImage asChild src={finalAvatarUrl} className="rounded-full">
                     <Image src={finalAvatarUrl} alt={user.name} width={224} height={224} unoptimized />
                 </AvatarImage>
-                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full">{user.initial}</AvatarFallback>
+                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full"><User className="h-24 w-24" /></AvatarFallback>
             </Avatar>
             <div className="relative w-full">
                 <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
