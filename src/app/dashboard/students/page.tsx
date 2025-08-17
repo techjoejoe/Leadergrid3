@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Users, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy, deleteDoc, doc, writeBatch } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, deleteDoc, doc, writeBatch, where } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserActions } from "@/components/user-actions";
@@ -105,7 +105,7 @@ export default function StudentsPage() {
                     <TableHead>User</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Points</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,7 +123,7 @@ export default function StudentsPage() {
                         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell className="text-right">
-                           <div className="flex gap-2 justify-end">
+                           <div className="flex gap-2 justify-center">
                              <Skeleton className="h-8 w-8 inline-block" />
                              <Skeleton className="h-8 w-8 inline-block" />
                            </div>
@@ -174,7 +174,7 @@ export default function StudentsPage() {
                             <TableHead>User</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Points</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="text-center">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -196,7 +196,7 @@ export default function StudentsPage() {
                                  <TableCell>
                                     {student.lifetimePoints.toLocaleString()}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-center">
                                     <UserActions 
                                         mode="manage" 
                                         selectedUser={student}

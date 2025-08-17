@@ -42,11 +42,16 @@ import {
   doc,
   increment,
   writeBatch,
-  Timestamp
+  Timestamp,
+  query,
+  where,
+  getDocs,
+  orderBy
 } from 'firebase/firestore';
-import { Loader2, PlusCircle, MinusCircle, Trash2, UserPlus } from 'lucide-react';
+import { Loader2, PlusCircle, MinusCircle, Trash2, FileDown, UserPlus } from 'lucide-react';
 import type { Student } from '@/app/dashboard/students/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { format } from 'date-fns';
 
 const pointsSchema = z.object({
   points: z.coerce.number().int().min(1, 'Points must be a positive number.'),
@@ -81,6 +86,7 @@ export function UserActions({
   const [isPointsDialogOpen, setIsPointsDialogOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
   const [adjustmentType, setAdjustmentType] = useState<'add' | 'subtract'>('add');
   const { toast } = useToast();
 
@@ -98,6 +104,87 @@ export function UserActions({
     setAdjustmentType(type);
     setIsPointsDialogOpen(true);
   };
+  
+  const escapeCSV = (str: string | undefined | null) => {
+    if (str === undefined || str === null) return '""';
+    const escaped = `"${String(str).replace(/"/g, '""')}"`;
+    return escaped;
+  };
+  
+  const handleGenerateReport = async () => {
+      if (!selectedUser) return;
+      setIsReporting(true);
+      
+      try {
+        const userId = selectedUser.id;
+
+        // Fetch all data in parallel
+        const pointsQuery = query(collection(db, 'point_history'), where('studentId', '==', userId), orderBy('timestamp', 'desc'));
+        const badgesQuery = query(collection(db, 'user_badges'), where('userId', '==', userId));
+        const scansQuery = query(collection(db, 'scans'), where('studentId', '==', userId), orderBy('scanDate', 'desc'));
+
+        const [pointsSnapshot, badgesSnapshot, scansSnapshot] = await Promise.all([
+            getDocs(pointsQuery),
+            getDocs(badgesQuery),
+            getDocs(scansQuery)
+        ]);
+        
+        if (pointsSnapshot.empty && badgesSnapshot.empty && scansSnapshot.empty) {
+             toast({ title: 'No Data', description: `${selectedUser.displayName} has no activity to report.`, variant: 'default' });
+             return;
+        }
+
+        let csvContent = `User Report for ${selectedUser.displayName} (${selectedUser.email})\n`;
+        csvContent += `Generated on,${format(new Date(), 'yyyy-MM-dd p')}\n\n`;
+
+        // Points History
+        csvContent += "Point History\n";
+        csvContent += "Date,Reason,Type,Points\n";
+        pointsSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const date = format(data.timestamp.toDate(), 'yyyy-MM-dd p');
+            csvContent += `${escapeCSV(date)},${escapeCSV(data.reason)},${escapeCSV(data.type)},${data.points}\n`;
+        });
+        csvContent += "\n";
+        
+        // Badges
+        csvContent += "Earned Badges\n";
+        csvContent += "Badge Name,Earned Date\n";
+        badgesSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const date = format(data.awardedAt.toDate(), 'yyyy-MM-dd p');
+            csvContent += `${escapeCSV(data.badgeName)},${escapeCSV(date)}\n`;
+        });
+        csvContent += "\n";
+
+        // Scan History
+        csvContent += "Scan History\n";
+        csvContent += "Scan Date,Activity,Description,Class,Points\n";
+        scansSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const date = format(data.scanDate.toDate(), 'yyyy-MM-dd p');
+            csvContent += `${escapeCSV(date)},${escapeCSV(data.activityName)},${escapeCSV(data.activityDescription)},${escapeCSV(data.className || 'N/A')},${data.pointsAwarded}\n`;
+        });
+
+        // Download logic
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        const filename = `report_${selectedUser.displayName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.csv`;
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+      } catch (error) {
+        console.error("Error generating report:", error);
+        toast({ title: 'Report Failed', description: 'An error occurred while generating the report.', variant: 'destructive' });
+      } finally {
+        setIsReporting(false);
+      }
+  }
 
   const onPointsSubmit = async (values: PointsFormValues) => {
     if (!selectedUser) return;
@@ -241,7 +328,7 @@ export function UserActions({
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex justify-center gap-2">
       <Dialog open={isPointsDialogOpen} onOpenChange={setIsPointsDialogOpen}>
         <DialogTrigger asChild>
           <div className="flex gap-2">
@@ -275,6 +362,10 @@ export function UserActions({
           </Form>
         </DialogContent>
       </Dialog>
+
+      <Button variant="outline" size="icon" onClick={handleGenerateReport} disabled={isReporting}>
+        {isReporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+      </Button>
       
        <AlertDialog>
           <AlertDialogTrigger asChild>
