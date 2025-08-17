@@ -399,7 +399,7 @@ export function UserActions({
       </Dialog>
 
       <Button variant="outline" size="sm" onClick={handleGenerateReport} disabled={isReporting} className="flex-1">
-        {isReporting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <FileDown className="mr-2 h-3 w-3" />}
+        <FileDown className="mr-2 h-3 w-3" />
         User Report
       </Button>
       
