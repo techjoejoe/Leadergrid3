@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
     ],
   },
   allowedDevOrigins: [
-    "https://*.cloudworkstations.dev",
+    "*://*.cloudworkstations.dev",
   ]
 };
 
