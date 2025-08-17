@@ -11,10 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Award, ImagePlus, Loader2, Trash2 } from 'lucide-react';
+import { Award, ImagePlus, Loader2, Trash2, Pencil } from 'lucide-react';
 import Image from 'next/image';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +26,20 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/png"];
 
-const formSchema = z.object({
+const createFormSchema = z.object({
   name: z.string().min(1, 'Badge name is required.'),
   description: z.string().min(1, 'A description is required.'),
   criteria: z.string().min(1, 'Achievement criteria are required.'),
@@ -45,7 +53,12 @@ const formSchema = z.object({
     ),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+const editFormSchema = createFormSchema.extend({
+    image: createFormSchema.shape.image.optional(), // Make image optional for editing
+});
+
+type CreateFormValues = z.infer<typeof createFormSchema>;
+type EditFormValues = z.infer<typeof editFormSchema>;
 
 interface Badge {
   id: string;
@@ -68,6 +81,8 @@ export function BadgeManager() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [createdBadges, setCreatedBadges] = useState<Badge[]>([]);
+  const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,8 +100,8 @@ export function BadgeManager() {
     fetchBadges();
   }, []);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const createForm = useForm<CreateFormValues>({
+    resolver: zodResolver(createFormSchema),
     defaultValues: {
       name: '',
       description: '',
@@ -95,7 +110,22 @@ export function BadgeManager() {
     },
   });
 
-  async function onSubmit(values: FormValues) {
+  const editForm = useForm<EditFormValues>({
+    resolver: zodResolver(editFormSchema),
+  });
+
+  useEffect(() => {
+    if (editingBadge) {
+        editForm.reset({
+            name: editingBadge.name,
+            description: editingBadge.description,
+            criteria: editingBadge.criteria,
+            image: undefined,
+        });
+    }
+  }, [editingBadge, editForm]);
+
+  async function handleCreateSubmit(values: CreateFormValues) {
     setIsLoading(true);
     
     try {
@@ -123,7 +153,7 @@ export function BadgeManager() {
             description: `The "${values.name}" badge is now available.`,
         })
         
-        form.reset();
+        createForm.reset();
         // Manually reset the file input
         const fileInput = document.getElementById('image-upload') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
@@ -135,6 +165,49 @@ export function BadgeManager() {
             description: "Failed to create the badge.",
             variant: "destructive",
         })
+    } finally {
+        setIsLoading(false);
+    }
+  }
+
+  async function handleEditSubmit(values: EditFormValues) {
+    if (!editingBadge) return;
+    setIsLoading(true);
+
+    try {
+        let imageUrl = editingBadge.imageUrl;
+        if (values.image && values.image.length > 0) {
+            const file = values.image[0];
+            imageUrl = await toBase64(file);
+        }
+
+        const updatedBadgeData = {
+            name: values.name,
+            description: values.description,
+            criteria: values.criteria,
+            imageUrl: imageUrl,
+        };
+
+        const badgeRef = doc(db, 'badges', editingBadge.id);
+        await updateDoc(badgeRef, updatedBadgeData);
+        
+        setCreatedBadges(prev => prev.map(b => b.id === editingBadge.id ? { ...b, ...updatedBadgeData } : b));
+        
+        toast({
+            title: "Badge Updated!",
+            description: `The "${values.name}" badge has been successfully updated.`,
+        });
+
+        setIsEditDialogOpen(false);
+        setEditingBadge(null);
+
+    } catch (error) {
+        console.error("Error updating badge:", error);
+        toast({
+            title: "Error",
+            description: "Failed to update the badge.",
+            variant: "destructive",
+        });
     } finally {
         setIsLoading(false);
     }
@@ -158,6 +231,11 @@ export function BadgeManager() {
             });
       }
   }
+  
+  const openEditDialog = (badge: Badge) => {
+    setEditingBadge(badge);
+    setIsEditDialogOpen(true);
+  }
 
   return (
     <div className="grid gap-8 md:grid-cols-3">
@@ -167,11 +245,11 @@ export function BadgeManager() {
             <CardTitle className="font-headline text-2xl">Create Custom Badge</CardTitle>
             <CardDescription>Upload a PNG and set the details for a new achievement badge that you can award manually.</CardDescription>
           </CardHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Form {...createForm}>
+            <form onSubmit={createForm.handleSubmit(handleCreateSubmit)}>
               <CardContent className="space-y-4">
                 <FormField
-                  control={form.control}
+                  control={createForm.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
@@ -184,7 +262,7 @@ export function BadgeManager() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={createForm.control}
                   name="description"
                   render={({ field }) => (
                     <FormItem>
@@ -197,7 +275,7 @@ export function BadgeManager() {
                   )}
                 />
                  <FormField
-                  control={form.control}
+                  control={createForm.control}
                   name="criteria"
                   render={({ field }) => (
                     <FormItem>
@@ -210,7 +288,7 @@ export function BadgeManager() {
                   )}
                 />
                 <FormField
-                  control={form.control}
+                  control={createForm.control}
                   name="image"
                   render={({ field: { onChange, value, ...rest } }) => (
                     <FormItem>
@@ -272,32 +350,37 @@ export function BadgeManager() {
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {createdBadges.map((badge) => (
                            <Card key={badge.id} className="text-center flex flex-col items-center p-4 relative group">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button 
-                                            variant="destructive" 
-                                            size="icon" 
-                                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This action cannot be undone. This will permanently delete the
-                                            "{badge.name}" badge.
-                                        </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDeleteBadge(badge.id, badge.name)}>
-                                            Delete
-                                        </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => openEditDialog(badge)}>
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button 
+                                                variant="destructive" 
+                                                size="icon" 
+                                                className="h-7 w-7"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the
+                                                "{badge.name}" badge.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteBadge(badge.id, badge.name)}>
+                                                Delete
+                                            </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                                 <Image 
                                     src={badge.imageUrl} 
                                     alt={badge.name} 
@@ -314,6 +397,78 @@ export function BadgeManager() {
             </CardContent>
         </Card>
       </div>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent>
+                 <DialogHeader>
+                    <DialogTitle>Edit Badge</DialogTitle>
+                    <DialogDescription>
+                        Update the details for the "{editingBadge?.name}" badge.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...editForm}>
+                    <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+                        <FormField
+                            control={editForm.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Badge Name</FormLabel>
+                                    <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={editForm.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description</FormLabel>
+                                    <FormControl><Textarea {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={editForm.control}
+                            name="criteria"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Achievement Criteria</FormLabel>
+                                    <FormControl><Textarea {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={editForm.control}
+                            name="image"
+                            render={({ field: { onChange, value, ...rest } }) => (
+                                <FormItem>
+                                <FormLabel>New Badge Image (Optional)</FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        type="file"
+                                        accept="image/png"
+                                        onChange={(e) => onChange(e.target.files)}
+                                        {...rest}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={isLoading}>
+                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
