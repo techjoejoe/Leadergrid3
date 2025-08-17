@@ -47,7 +47,8 @@ import {
   where,
   getDocs,
   orderBy,
-  addDoc
+  addDoc,
+  DocumentData
 } from 'firebase/firestore';
 import { Loader2, PlusCircle, Trash2, FileDown, Edit, Pencil } from 'lucide-react';
 import type { Student } from '@/app/dashboard/students/page';
@@ -114,27 +115,42 @@ export function UserActions({
   };
   
   const handleGenerateReport = async () => {
-      if (!selectedUser) return;
-      setIsReporting(true);
-      
-      try {
+    if (!selectedUser) return;
+    setIsReporting(true);
+
+    let pointsData: DocumentData[] = [];
+    let badgesData: DocumentData[] = [];
+    let scansData: DocumentData[] = [];
+
+    try {
         const userId = selectedUser.id;
 
-        // Fetch all data in parallel
-        const pointsQuery = query(collection(db, 'point_history'), where('studentId', '==', userId), orderBy('timestamp', 'desc'));
-        const badgesQuery = query(collection(db, 'user_badges'), where('userId', '==', userId));
-        const scansQuery = query(collection(db, 'scans'), where('studentId', '==', userId), orderBy('scanDate', 'desc'));
+        // Fetch points history
+        try {
+            const pointsQuery = query(collection(db, 'point_history'), where('studentId', '==', userId), orderBy('timestamp', 'desc'));
+            const pointsSnapshot = await getDocs(pointsQuery);
+            pointsData = pointsSnapshot.docs.map(doc => doc.data());
+        } catch (e) { console.error("Could not fetch point history:", e); }
 
-        const [pointsSnapshot, badgesSnapshot, scansSnapshot] = await Promise.all([
-            getDocs(pointsQuery),
-            getDocs(badgesQuery),
-            getDocs(scansQuery)
-        ]);
-        
-        if (pointsSnapshot.empty && badgesSnapshot.empty && scansSnapshot.empty) {
-             toast({ title: 'No Data', description: `${selectedUser.displayName} has no activity to report.`, variant: 'default' });
-             setIsReporting(false);
-             return;
+        // Fetch badges
+        try {
+            const badgesQuery = query(collection(db, 'user_badges'), where('userId', '==', userId));
+            const badgesSnapshot = await getDocs(badgesQuery);
+            badgesData = badgesSnapshot.docs.map(doc => doc.data());
+        } catch (e) { console.error("Could not fetch user badges:", e); }
+
+        // Fetch scans
+        try {
+            const scansQuery = query(collection(db, 'scans'), where('studentId', '==', userId), orderBy('scanDate', 'desc'));
+            const scansSnapshot = await getDocs(scansQuery);
+            scansData = scansSnapshot.docs.map(doc => doc.data());
+        } catch (e) { console.error("Could not fetch scan history:", e); }
+
+
+        if (pointsData.length === 0 && badgesData.length === 0 && scansData.length === 0) {
+            toast({ title: 'No Data', description: `${selectedUser.displayName} has no activity to report.`, variant: 'default' });
+            setIsReporting(false);
+            return;
         }
 
         let csvContent = `User Report for ${selectedUser.displayName} (${selectedUser.email})\n`;
@@ -143,31 +159,40 @@ export function UserActions({
         // Points History
         csvContent += "Point History\n";
         csvContent += "Date,Reason,Type,Points\n";
-        pointsSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            const date = format(data.timestamp.toDate(), 'yyyy-MM-dd p');
-            csvContent += `${escapeCSV(date)},${escapeCSV(data.reason)},${escapeCSV(data.type)},${data.points}\n`;
-        });
+        if (pointsData.length > 0) {
+            pointsData.forEach(data => {
+                const date = format(data.timestamp.toDate(), 'yyyy-MM-dd p');
+                csvContent += `${escapeCSV(date)},${escapeCSV(data.reason)},${escapeCSV(data.type)},${data.points}\n`;
+            });
+        } else {
+            csvContent += "No point history found.\n";
+        }
         csvContent += "\n";
         
         // Badges
         csvContent += "Earned Badges\n";
         csvContent += "Badge Name,Earned Date\n";
-        badgesSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            const date = format(data.awardedAt.toDate(), 'yyyy-MM-dd p');
-            csvContent += `${escapeCSV(data.badgeName)},${escapeCSV(date)}\n`;
-        });
+         if (badgesData.length > 0) {
+            badgesData.forEach(data => {
+                const date = format(data.awardedAt.toDate(), 'yyyy-MM-dd p');
+                csvContent += `${escapeCSV(data.badgeName)},${escapeCSV(date)}\n`;
+            });
+        } else {
+            csvContent += "No badges earned.\n";
+        }
         csvContent += "\n";
 
         // Scan History
         csvContent += "Scan History\n";
         csvContent += "Scan Date,Activity,Description,Class,Points\n";
-        scansSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            const date = format(data.scanDate.toDate(), 'yyyy-MM-dd p');
-            csvContent += `${escapeCSV(date)},${escapeCSV(data.activityName)},${escapeCSV(data.activityDescription)},${escapeCSV(data.className || 'N/A')},${data.pointsAwarded}\n`;
-        });
+        if (scansData.length > 0) {
+            scansData.forEach(data => {
+                const date = format(data.scanDate.toDate(), 'yyyy-MM-dd p');
+                csvContent += `${escapeCSV(date)},${escapeCSV(data.activityName)},${escapeCSV(data.activityDescription)},${escapeCSV(data.className || 'N/A')},${data.pointsAwarded}\n`;
+            });
+        } else {
+            csvContent += "No scan history found.\n";
+        }
 
         // Download logic
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -181,13 +206,13 @@ export function UserActions({
         link.click();
         document.body.removeChild(link);
 
-      } catch (error) {
+    } catch (error) {
         console.error("Error generating report:", error);
         toast({ title: 'Report Failed', description: 'An error occurred while generating the report.', variant: 'destructive' });
-      } finally {
+    } finally {
         setIsReporting(false);
-      }
-  }
+    }
+}
 
   const onPointsSubmit = async (values: PointsFormValues) => {
     if (!selectedUser) return;
