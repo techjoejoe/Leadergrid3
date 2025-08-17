@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -118,6 +119,10 @@ export default {
             '0%, 100%': { boxShadow: '0 0 20px 5px rgba(202, 138, 4, 0.4)' },
             '50%': { boxShadow: '0 0 30px 10px rgba(202, 138, 4, 0.7)' },
         },
+        'sunburst-spin': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -128,6 +133,7 @@ export default {
         'glow-gold': 'glow-gold 4s ease-in-out infinite',
         'glow-silver': 'glow-silver 4s ease-in-out infinite',
         'glow-bronze': 'glow-bronze 4s ease-in-out infinite',
+        'sunburst-spin': 'sunburst-spin 20s linear infinite',
       },
       boxShadow: {
         'inner-strong': 'inset 0 4px 10px rgba(0, 0, 0, 0.4)',

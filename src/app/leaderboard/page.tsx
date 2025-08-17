@@ -50,16 +50,23 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
             isSecond && "order-2 md:order-1 h-44 md:h-56 self-end",
             isThird && "order-3 md:order-3 h-44 md:h-56 self-end"
         )}>
-            {isFirst && <span className="absolute -top-5 text-6xl sm:text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>}
+            {isFirst && (
+                <>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-48 w-48 lg:h-64 lg:w-64 bg-gradient-to-tr from-yellow-400 via-amber-200 to-yellow-500 rounded-full animate-sunburst-spin opacity-30 blur-2xl"></div>
+                    </div>
+                    <span className="absolute -top-5 text-6xl sm:text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>
+                </>
+            )}
              <Avatar className={cn("z-10 rounded-full", 
-                isFirst && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-gold shadow-[0_0_25px_rgba(252,211,77,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
-                isSecond && `h-28 w-28 sm:h-32 sm:w-32 animate-glow-silver shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
-                isThird && `h-28 w-28 sm:h-32 sm:w-32 animate-glow-bronze shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isFirst && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-gold border-8 border-yellow-400 shadow-[0_0_25px_rgba(252,211,77,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isSecond && `h-28 w-28 sm:h-32 sm:w-32 animate-glow-silver border-8 border-slate-300 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isThird && `h-28 w-28 sm:h-32 sm:w-32 animate-glow-bronze border-8 border-amber-600 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
              )}>
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
             </Avatar>
-            <div className="absolute bottom-0 w-full">
+            <div className="relative w-full">
                 <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
                 <p className={cn("text-sm font-semibold z-10 drop-shadow-sm", 
                     isFirst && "text-amber-100",
