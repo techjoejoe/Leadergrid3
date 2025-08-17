@@ -5,22 +5,30 @@ import { useState, useEffect } from 'react';
 import { ClassroomManager } from "@/components/classroom-manager";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, SearchX, QrCode, Crown } from "lucide-react";
+import { ArrowLeft, Loader2, SearchX, QrCode, Crown, Pencil } from "lucide-react";
 import Link from "next/link";
 import { ReportCharts } from "@/components/report-charts";
 import { ScanHistoryReport } from "@/components/scan-history-report";
 import { Separator } from "@/components/ui/separator";
 import { db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { Class } from '@/components/create-class-form';
 import { useParams } from 'next/navigation';
 import { QrCodeManager } from '@/components/qr-code-manager';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ClassDetailsPage() {
     const params = useParams();
     const classId = params.classId as string;
     const [classDetails, setClassDetails] = useState<Class | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+    const [newClassName, setNewClassName] = useState("");
+    const [isRenaming, setIsRenaming] = useState(false);
+    const { toast } = useToast();
     
     useEffect(() => {
         async function fetchClassDetails() {
@@ -33,7 +41,9 @@ export default function ClassDetailsPage() {
                 const classDocRef = doc(db, 'classes', classId);
                 const classDocSnap = await getDoc(classDocRef);
                 if (classDocSnap.exists()) {
-                    setClassDetails({ id: classDocSnap.id, ...classDocSnap.data() } as Class);
+                    const data = { id: classDocSnap.id, ...classDocSnap.data() } as Class;
+                    setClassDetails(data);
+                    setNewClassName(data.name);
                 } else {
                     console.error("No such class document!");
                     setClassDetails(null);
@@ -47,6 +57,32 @@ export default function ClassDetailsPage() {
         }
         fetchClassDetails();
     }, [classId]);
+    
+    const handleRenameClass = async () => {
+        if (!classDetails || !newClassName || newClassName === classDetails.name) {
+            setIsRenameDialogOpen(false);
+            return;
+        }
+        setIsRenaming(true);
+        try {
+            const classDocRef = doc(db, 'classes', classId);
+            await updateDoc(classDocRef, {
+                name: newClassName
+            });
+            setClassDetails(prev => prev ? { ...prev, name: newClassName } : null);
+            toast({
+                title: "Class Renamed",
+                description: `The class has been renamed to "${newClassName}".`
+            });
+        } catch (error) {
+            console.error("Error renaming class:", error);
+            toast({ title: 'Error', description: 'Could not rename the class.', variant: 'destructive'});
+        } finally {
+            setIsRenaming(false);
+            setIsRenameDialogOpen(false);
+        }
+    }
+
 
     if (isLoading) {
         return (
@@ -86,6 +122,9 @@ export default function ClassDetailsPage() {
                     </Link>
                 </Button>
                 <h1 className="font-headline text-3xl font-bold">{classDetails.name}</h1>
+                 <Button variant="outline" size="icon" onClick={() => setIsRenameDialogOpen(true)}>
+                    <Pencil className="h-4 w-4" />
+                </Button>
             </div>
             <Card>
                 <CardHeader>
@@ -120,6 +159,37 @@ export default function ClassDetailsPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Rename Class</DialogTitle>
+                        <DialogDescription>
+                            Enter a new name for the class "{classDetails.name}".
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="class-name" className="text-right">
+                                Name
+                            </Label>
+                            <Input
+                                id="class-name"
+                                value={newClassName}
+                                onChange={(e) => setNewClassName(e.target.value)}
+                                className="col-span-3"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleRenameClass} disabled={isRenaming}>
+                             {isRenaming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
