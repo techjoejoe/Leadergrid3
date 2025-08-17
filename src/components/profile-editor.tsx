@@ -140,11 +140,20 @@ export function ProfileEditor({
       });
       onOpenChange(false);
     } catch (error: any) {
-       toast({
-        title: 'Error updating profile',
-        description: 'This operation is sensitive and requires recent authentication. Log in again before retrying this request.',
-        variant: 'destructive',
-      });
+        if (error.code === 'auth/requires-recent-login') {
+            toast({
+                title: 'Authentication Required',
+                description: 'This is a sensitive action. Please log out and log back in to update your profile.',
+                variant: 'destructive',
+                duration: 8000,
+            });
+        } else {
+            toast({
+                title: 'Error updating profile',
+                description: 'Could not update your profile. Please try again.',
+                variant: 'destructive',
+            });
+        }
     } finally {
         setIsLoading(false);
     }
@@ -297,12 +306,21 @@ export function ProfileEditor({
         setImgSrc('');
         onOpenChange(false);
         
-    } catch (error) {
-         toast({
-            title: "Error",
-            description: `Could not save your new photo. ${(error as Error).message}`,
-            variant: "destructive",
-        });
+    } catch (error: any) {
+        if (error.code === 'auth/requires-recent-login') {
+            toast({
+                title: 'Authentication Required',
+                description: 'This is a sensitive action. Please log out and log back in to update your profile.',
+                variant: 'destructive',
+                duration: 8000,
+            });
+        } else {
+            toast({
+                title: "Error",
+                description: 'Could not save your new photo. Please try again.',
+                variant: "destructive",
+            });
+        }
     }
   };
   
@@ -493,5 +511,3 @@ export function ProfileEditor({
     </Dialog>
   );
 }
-
-    
