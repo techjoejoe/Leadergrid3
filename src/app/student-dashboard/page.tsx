@@ -125,7 +125,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                 {user.avatar && <AvatarImage src={user.avatar} />}
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
             </Avatar>
-            <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{user.name}</h3>
+            <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
             <p className={cn("text-sm font-semibold z-10", 
                 isFirst && "text-amber-100",
                 isSecond && "text-slate-100",
@@ -519,63 +519,47 @@ export default function StudentDashboardPage() {
                             </Card>
                         </div>
                         <div className="lg:col-span-2">
-                             <Card className="transition-shadow duration-300 ease-in-out hover:shadow-lg h-full flex flex-col">
-                                <CardHeader className="flex flex-row items-center justify-between">
+                             <Card className="h-full flex flex-col bg-[#3a2e27] border-[#5c4a3e] shadow-inner-strong relative overflow-hidden">
+                                <div className="absolute inset-0 bg-[url(https://www.transparenttextures.com/patterns/wood-pattern.png)] opacity-10"></div>
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-gradient-to-b from-white/10 to-transparent blur-2xl rounded-full"></div>
+                                
+                                <CardHeader className="flex flex-row items-center justify-between z-10">
                                     <div className="space-y-1.5">
-                                        <CardTitle className="font-headline flex items-center">
-                                        <Award className="mr-2" /> My Badges
+                                        <CardTitle className="font-headline flex items-center text-amber-300">
+                                        <Award className="mr-2" /> My Trophy Case
                                         </CardTitle>
-                                        <CardDescription>Your collection of earned achievement badges.</CardDescription>
+                                        <CardDescription className="text-amber-100/60">Your collection of earned achievement badges.</CardDescription>
                                     </div>
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button variant="outline" size="sm">See All</Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                            <DialogHeader>
-                                                <DialogTitle>All My Badges ({userBadges.length})</DialogTitle>
-                                                <DialogDescription>
-                                                   Here is your complete collection of earned badges. Keep up the great work!
-                                                </DialogDescription>
-                                            </DialogHeader>
-                                            <ScrollArea className="max-h-[60vh]">
-                                                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 text-center p-4">
-                                                    {userBadges.map((badge, index) => (
-                                                        <div key={index} className="flex flex-col items-center gap-2">
-                                                            <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                                {badge.imageUrl && <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />}
-                                                                <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
-                                                            </Avatar>
-                                                            <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </ScrollArea>
-                                        </DialogContent>
-                                    </Dialog>
                                 </CardHeader>
-                                <CardContent className="flex-1">
+                                <CardContent className="flex-1 z-10">
                                     {isLoading ? (
                                         <div className="flex justify-center items-center h-full">
-                                            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                            <Loader2 className="w-8 h-8 animate-spin text-amber-200/80" />
                                         </div>
                                     ) : userBadges.length > 0 ? (
-                                        <ScrollArea className="h-full max-h-[220px] pr-4">
-                                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-4">
-                                                {userBadges.map((badge, index) => (
-                                                    <div key={index} className="flex flex-col items-center gap-2 text-center">
-                                                        <Avatar className="h-20 w-20 border-2 border-primary/50">
-                                                            {badge.imageUrl && <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />}
-                                                            <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
-                                                        </Avatar>
-                                                        <span className="text-xs font-medium text-muted-foreground">{badge.name}</span>
+                                        <div className="space-y-4">
+                                            {[...Array(Math.ceil(userBadges.length / 5))].map((_, shelfIndex) => (
+                                                <div key={shelfIndex} className="relative">
+                                                    <div className="flex justify-center gap-4">
+                                                        {userBadges.slice(shelfIndex * 5, shelfIndex * 5 + 5).map((badge) => (
+                                                            <div key={badge.id} className="flex flex-col items-center gap-2 text-center group">
+                                                                <Avatar className="h-16 w-16 bg-black/20 p-1 border-2 border-amber-800/50 shadow-lg transform transition-transform group-hover:-translate-y-1 group-hover:scale-110">
+                                                                    {badge.imageUrl && <AvatarImage src={badge.imageUrl} data-ai-hint={badge.hint} />}
+                                                                    <AvatarFallback>{badge.name.substring(0,2)}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-8 bg-black/70 text-white text-xs px-2 py-1 rounded-md">
+                                                                    {badge.name}
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
+                                                    <div className="h-2 bg-gradient-to-b from-[#5c4a3e] to-[#4b3c31] mt-2 rounded-md shadow-inner"></div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     ): (
-                                        <div className="text-center text-muted-foreground flex flex-col items-center justify-center h-full">
-                                            <p>No badges earned yet. Keep participating!</p>
+                                        <div className="text-center text-amber-100/50 flex flex-col items-center justify-center h-full">
+                                            <p>Your trophy case is empty. Start earning badges!</p>
                                         </div>
                                     )}
                                 </CardContent>
