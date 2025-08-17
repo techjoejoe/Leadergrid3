@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserActions } from "@/components/user-actions";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 export interface Student {
     id: string;
@@ -21,6 +22,8 @@ export interface Student {
     lifetimePoints: number;
     role: 'student' | 'admin';
 }
+
+const DEFAULT_AVATAR = "/default-avatar.png";
 
 export default function StudentsPage() {
     const [students, setStudents] = useState<Student[]>([]);
@@ -200,7 +203,9 @@ export default function StudentsPage() {
                                 <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
-                                            {student.photoURL && <AvatarImage src={student.photoURL} alt={student.displayName || ''} data-ai-hint="student portrait" />}
+                                            <AvatarImage asChild>
+                                                <Image src={student.photoURL ?? DEFAULT_AVATAR} alt={student.displayName || ''} width={40} height={40} unoptimized />
+                                            </AvatarImage>
                                             <AvatarFallback>{student.displayName?.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
                                         </Avatar>
                                         {student.displayName}

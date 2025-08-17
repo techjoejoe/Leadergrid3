@@ -28,6 +28,8 @@ interface ClassDetails {
     name: string;
 }
 
+const DEFAULT_AVATAR = "/default-avatar.png";
+
 const formatName = (name: string) => {
     if (!name) return 'Anonymous';
     const parts = name.split(' ');
@@ -46,6 +48,7 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
     const isFirst = place === 1;
     const isSecond = place === 2;
     const isThird = place === 3;
+    const finalAvatarUrl = user.avatar ?? DEFAULT_AVATAR;
 
     return (
          <div className={cn("relative flex flex-col items-center justify-end text-white text-center w-full transition-transform hover:scale-105 group",
@@ -66,7 +69,10 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
                 isSecond && `h-40 w-40 sm:h-48 sm:w-48 animate-glow-silver bg-gradient-to-br from-slate-200 via-slate-400 to-gray-500 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
                 isThird && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-bronze bg-gradient-to-br from-amber-500 via-amber-700 to-orange-900 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
              )}>
-                {user.avatar ? <AvatarImage src={user.avatar} className="rounded-full" /> : <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full">{user.initial}</AvatarFallback>}
+                <AvatarImage asChild src={finalAvatarUrl} className="rounded-full">
+                    <Image src={finalAvatarUrl} alt={user.name} width={224} height={224} unoptimized />
+                </AvatarImage>
+                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full">{user.initial}</AvatarFallback>
             </Avatar>
             <div className="relative w-full">
                 <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
@@ -212,19 +218,13 @@ function LeaderboardPageContents() {
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {rest.map((user) => (
                     <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
-                        {user.avatar ? (
-                            <Image
-                                src={user.avatar}
-                                alt={user.name}
-                                fill
-                                className="object-cover transition-transform duration-300 group-hover:scale-110"
-                                unoptimized
-                            />
-                        ) : (
-                            <div className="w-full h-full bg-secondary flex items-center justify-center">
-                                <span className="text-4xl font-bold text-secondary-foreground">{user.initial}</span>
-                            </div>
-                        )}
+                        <Image
+                            src={user.avatar ?? DEFAULT_AVATAR}
+                            alt={user.name}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-110"
+                            unoptimized
+                        />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                         <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
                         <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
@@ -250,3 +250,5 @@ export default function LeaderboardPage() {
         </Suspense>
     )
 }
+
+    

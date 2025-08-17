@@ -18,6 +18,7 @@ import { LogOut, Settings, User as UserIcon, Users, QrCode, Badge as BadgeIcon, 
 import { signOut, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
 
 interface UserNavProps {
   user: User | null;
@@ -28,7 +29,7 @@ interface UserNavProps {
   isSuperAdmin?: boolean;
 }
 
-const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
+const DEFAULT_AVATAR = "/default-avatar.png";
 
 export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile, isSuperAdmin = false }: UserNavProps) {
   const router = useRouter();
@@ -58,13 +59,17 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile,
         </Button>
     )
   }
+  
+  const finalAvatarUrl = avatarUrl || DEFAULT_AVATAR;
 
   return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={avatarUrl || DEFAULT_AVATAR} alt={displayName} data-ai-hint="person portrait" />
+              <AvatarImage asChild src={finalAvatarUrl} alt={displayName}>
+                <Image src={finalAvatarUrl} alt={displayName} width={32} height={32} unoptimized />
+              </AvatarImage>
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
           </Button>
@@ -135,3 +140,5 @@ export function UserNav({ user, avatarUrl, displayName, initials, onEditProfile,
       </DropdownMenu>
   )
 }
+
+    

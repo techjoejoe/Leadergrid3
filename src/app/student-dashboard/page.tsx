@@ -32,26 +32,17 @@ import {
   DropdownMenuGroup,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, orderBy, limit, onSnapshot, Timestamp, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -90,6 +81,8 @@ interface LeaderboardEntry {
   rank: number;
 }
 
+const DEFAULT_AVATAR = "/default-avatar.png";
+
 const formatName = (name: string) => {
     if (!name) return 'Anonymous';
     const parts = name.split(' ');
@@ -108,6 +101,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
     const isFirst = rank === 1;
     const isSecond = rank === 2;
     const isThird = rank === 3;
+    const finalAvatarUrl = user.avatar ?? DEFAULT_AVATAR;
     
     return (
         <div className={cn("relative flex flex-col items-center justify-end text-white text-center w-full transition-transform hover:scale-105 group",
@@ -128,7 +122,10 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                 isSecond && `h-40 w-40 sm:h-48 sm:w-48 animate-glow-silver bg-gradient-to-br from-slate-200 via-slate-400 to-gray-500 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
                 isThird && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-bronze bg-gradient-to-br from-amber-500 via-amber-700 to-orange-900 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
             )}>
-                 {user.avatar ? <AvatarImage src={user.avatar} className="rounded-full" /> : <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full">{user.initial}</AvatarFallback>}
+                <AvatarImage asChild src={finalAvatarUrl} className="rounded-full">
+                    <Image src={finalAvatarUrl} alt={user.name} width={224} height={224} unoptimized />
+                </AvatarImage>
+                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full">{user.initial}</AvatarFallback>
             </Avatar>
             <div className="relative w-full">
                 <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
@@ -147,7 +144,7 @@ export default function StudentDashboardPage() {
     const [userBadges, setUserBadges] = useState<Badge[]>([]);
     const [pointHistory, setPointHistory] = useState<PointHistoryRecord[]>([]);
     const [user, setUser] = useState<User | null>(null);
-    const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+    const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
     const [displayName, setDisplayName] = useState('Student');
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
@@ -189,7 +186,7 @@ export default function StudentDashboardPage() {
                         const userData = doc.data();
                         setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
                         setDisplayName(userData.displayName || 'Student');
-                        setAvatarUrl(userData.photoURL);
+                        setAvatarUrl(userData.photoURL || DEFAULT_AVATAR);
                     } else {
                         // User exists in Auth, but not in Firestore. Redirect to login to force signup flow.
                         router.push('/student-login');
@@ -233,7 +230,7 @@ export default function StudentDashboardPage() {
 
                 // Fetch top 50 students for company leaderboard
                 const usersRef = collection(db, 'users');
-                const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'), limit(50));
+                const leaderboardQuery = query(usersRef, orderBy('lifetimePoints', 'desc'));
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
                      const data = snapshot.docs.map((doc, index) => {
                         const userData = doc.data();
@@ -241,7 +238,7 @@ export default function StudentDashboardPage() {
                             id: doc.id,
                             name: userData.displayName || 'Anonymous',
                             points: userData.lifetimePoints || 0,
-                            avatar: userData.photoURL,
+                            avatar: userData.photoURL || null,
                             initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         };
@@ -336,12 +333,10 @@ export default function StudentDashboardPage() {
             setLeaderboardData(companyLeaderboard);
         } else {
             setIsLoading(true);
-            // Show class leaderboard, only including students with points > 0
+            // Show class leaderboard
             const classRosterQuery = query(
                 collection(db, 'classes', activeClass.id, 'roster'), 
-                where('classPoints', '>', 0), 
-                orderBy('classPoints', 'desc'), 
-                limit(50)
+                orderBy('classPoints', 'desc')
             );
             const unsubscribe = onSnapshot(classRosterQuery, (snapshot) => {
                 const classLeaderboard: LeaderboardEntry[] = [];
@@ -432,11 +427,10 @@ export default function StudentDashboardPage() {
     }
 
     const displayEmail = user?.email || 'student@example.com';
-    const displayAvatar = avatarUrl;
     const displayInitial = displayName.substring(0,2).toUpperCase() || '??';
 
     const top3 = leaderboardData.slice(0, 3);
-    const rest = leaderboardData.slice(3);
+    const rest = leaderboardData.slice(3, 8); // Only show up to 5 more people
 
     return (
         <>
@@ -462,7 +456,9 @@ export default function StudentDashboardPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                                     <Avatar>
-                                        {displayAvatar && <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />}
+                                        <AvatarImage asChild>
+                                            <Image src={avatarUrl} alt={displayName} width={40} height={40} unoptimized />
+                                        </AvatarImage>
                                         <AvatarFallback>{displayInitial}</AvatarFallback>
                                     </Avatar>
                                 </Button>
@@ -509,7 +505,9 @@ export default function StudentDashboardPage() {
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 items-center justify-center gap-4 p-6 pt-0">
                                     <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
-                                        {displayAvatar && <AvatarImage src={displayAvatar} data-ai-hint="student smiling" />}
+                                        <AvatarImage asChild>
+                                            <Image src={avatarUrl} alt={displayName} width={144} height={144} unoptimized />
+                                        </AvatarImage>
                                         <AvatarFallback className="rounded-md text-3xl">{displayInitial}</AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-4">
@@ -608,6 +606,10 @@ export default function StudentDashboardPage() {
                                 <div className="flex justify-center items-center h-48">
                                     <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                                 </div>
+                            ) : leaderboardData.length === 0 ? (
+                                <div className="text-center text-muted-foreground py-8">
+                                    <p>No one has earned points yet. Be the first!</p>
+                                </div>
                             ) : (
                                 <div className="space-y-4">
                                     {/* Podium */}
@@ -617,34 +619,30 @@ export default function StudentDashboardPage() {
                                         {top3[2] && <PodiumCard user={top3[2]} rank={3} />}
                                     </div>
                                     {/* Rest of Leaderboard */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
-                                        {rest.map((user) => (
-                                            <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
-                                                {user.avatar ? (
+                                    {rest.length > 0 && 
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
+                                            {rest.map((user) => (
+                                                <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
                                                     <Image
-                                                        src={user.avatar}
+                                                        src={user.avatar ?? DEFAULT_AVATAR}
                                                         alt={user.name}
                                                         fill
                                                         className="object-cover transition-transform duration-300 group-hover:scale-110"
                                                         unoptimized
                                                     />
-                                                ) : (
-                                                    <div className="w-full h-full bg-secondary flex items-center justify-center">
-                                                        <span className="text-4xl font-bold text-secondary-foreground">{user.initial}</span>
-                                                    </div>
-                                                )}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                                                <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
-                                                <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                                                    <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
-                                                    <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
-                                                        <Star className="h-3 w-3" />
-                                                        <span>{user.points.toLocaleString()} pts</span>
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                                                    <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
+                                                    <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                                                        <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
+                                                        <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
+                                                            <Star className="h-3 w-3" />
+                                                            <span>{user.points.toLocaleString()} pts</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    }
                                 </div>
                             )}
                         </CardContent>
@@ -694,7 +692,7 @@ export default function StudentDashboardPage() {
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatarUrl}
             onNameChange={setDisplayName}
-            currentAvatar={displayAvatar}
+            currentAvatar={avatarUrl}
             currentInitial={displayInitial}
             currentDisplayName={displayName}
             currentEmail={displayEmail}
@@ -703,3 +701,5 @@ export default function StudentDashboardPage() {
         </>
     );
 }
+
+    

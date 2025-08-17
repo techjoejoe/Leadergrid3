@@ -12,8 +12,9 @@ import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
-const DEFAULT_AVATAR = "https://placehold.co/100x100.png";
+const DEFAULT_AVATAR = "/default-avatar.png";
 
 export default function DashboardLayout({
   children,
@@ -140,3 +141,5 @@ export default function DashboardLayout({
     </div>
   );
 }
+
+    

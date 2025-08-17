@@ -25,14 +25,15 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UploadCloud } from 'lucide-react';
+import { Loader2, UploadCloud, Save } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { processAvatar } from '@/ai/flows/process-avatar-flow';
+import Cropper, { ReactCropperElement } from 'react-cropper';
+import 'cropperjs/dist/cropper.css';
 
 import { sendPasswordResetEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 
 const profileFormSchema = z.object({
@@ -73,6 +74,9 @@ export function ProfileEditor({
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const cropperRef = useRef<ReactCropperElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<ProfileFormValues>({
@@ -84,14 +88,14 @@ export function ProfileEditor({
   });
 
   useEffect(() => {
-    if (open && user) {
+    if (open) {
       form.reset({
         displayName: currentDisplayName,
         email: currentEmail,
       });
     }
-  }, [open, user, currentDisplayName, currentEmail, form]);
-  
+  }, [open, currentDisplayName, currentEmail, form]);
+
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
     setIsLoading(true);
@@ -171,60 +175,116 @@ export function ProfileEditor({
   }
 
   const handleAvatarClick = () => {
-    if (!user || isProcessingPhoto) return;
+    if (isProcessingPhoto) return;
     fileInputRef.current?.click();
   };
   
-  const onFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !user) {
+  const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        setImageToCrop(reader.result as string);
+        setIsCropOpen(true);
+      });
+      reader.readAsDataURL(e.target.files[0]);
+    }
+    e.target.value = ''; // Reset file input
+  };
+  
+  const getCroppedBlob = (): Promise<Blob | null> => {
+      return new Promise((resolve) => {
+          const cropper = cropperRef.current?.cropper;
+          if (!cropper) {
+              resolve(null);
+              return;
+          }
+          const canvas = cropper.getCroppedCanvas({
+              width: 256,
+              height: 256,
+              imageSmoothingQuality: 'high',
+          });
+          canvas.toBlob((blob) => {
+              resolve(blob);
+          }, 'image/jpeg', 0.9);
+      });
+  };
+
+  const handleSaveCrop = async () => {
+    console.log("handleSaveCrop: Initiating save.");
+    const croppedBlob = await getCroppedBlob();
+    if (!user || !croppedBlob) {
+        toast({ title: "Error", description: "Could not process image. Please try again.", variant: "destructive" });
         return;
     }
 
-    const file = e.target.files[0];
-    e.target.value = ''; // Reset file input
-
     setIsProcessingPhoto(true);
-    toast({ title: 'Uploading...', description: 'Your photo is being uploaded and processed.' });
+    toast({ title: 'Uploading photo...' });
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+        console.error("handleSaveCrop: Upload timed out after 30 seconds.");
+        controller.abort();
+        toast({ title: "Upload timed out", description: "Please check your connection and try again.", variant: "destructive" });
+    }, 30000);
 
     try {
-        // 1. Upload raw image to a temporary path
-        const tempPath = `temp_avatars/${user.uid}/${file.name}`;
-        const tempStorageRef = storageRef(storage, tempPath);
-        await uploadBytes(tempStorageRef, file);
-        const tempUrl = await getDownloadURL(tempStorageRef);
+        // 1. Upload to Storage
+        console.log("handleSaveCrop: 1. Starting upload to Firebase Storage.");
+        const path = `avatars/${user.uid}.jpg`;
+        const photoRef = storageRef(storage, path);
+        const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
+        
+        const task = uploadBytesResumable(photoRef, croppedBlob, { ...metadata, signal: controller.signal });
+        await new Promise<void>((resolve, reject) => {
+          task.on("state_changed",
+            () => {},
+            (error) => {
+              // A full list of error codes is available at
+              // https://firebase.google.com/docs/storage/web/handle-errors
+              switch (error.code) {
+                case 'storage/unauthorized':
+                  console.error("Storage unauthorized");
+                  break;
+                case 'storage/canceled':
+                  console.error("Storage canceled");
+                  break;
+                case 'storage/unknown':
+                  console.error("Storage unknown error");
+                  break;
+              }
+              reject(error);
+            },
+            () => {
+              console.log("handleSaveCrop: Upload task completed.");
+              resolve();
+            }
+          );
+        });
 
-        // 2. Call the Genkit flow to process the image
-        const result = await processAvatar({ tempPath, tempUrl, userId: user.uid });
-        const downloadURL = result.finalUrl;
+        // 2. Get download URL
+        console.log("handleSaveCrop: 2. Getting download URL.");
+        const downloadURL = await getDownloadURL(photoRef);
+        console.log(`handleSaveCrop: Got URL: ${downloadURL}`);
 
-        // 3. Update user profiles with final URL
         const batch = writeBatch(db);
         const userDocRef = doc(db, "users", user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        let hadPhoto = false;
 
-        if (userDocSnap.exists()) {
-            hadPhoto = !!userDocSnap.data().photoURL;
+        // 3. Update Auth profile
+        console.log("handleSaveCrop: 3. Updating Firebase Auth profile.");
+        if (auth.currentUser) {
+            await updateProfile(auth.currentUser, { photoURL: downloadURL });
+        } else {
+            throw new Error("User not authenticated.");
         }
 
-        await updateProfile(user, { photoURL: downloadURL });
+        // 4. Update Firestore user doc
+        console.log("handleSaveCrop: 4. Updating Firestore user document.");
         batch.update(userDocRef, { photoURL: downloadURL });
-
-        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
-        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
-            const classId = enrollmentDoc.data().classId;
-            if (classId) {
-                const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                const rosterSnap = await getDoc(rosterDocRef);
-                if (rosterSnap.exists()) {
-                    batch.update(rosterDocRef, { photoURL: downloadURL });
-                }
-            }
-        }
         
+        const userDocSnap = await getDoc(userDocRef);
+        const hadPhoto = !!userDocSnap.data()?.photoURL;
         if (!hadPhoto && storageKey === 'studentAvatar') {
-            batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
+             batch.update(userDocRef, { lifetimePoints: increment(PHOTO_UPLOAD_BONUS) });
             const historyRef = doc(collection(db, 'point_history'));
             batch.set(historyRef, {
                 studentId: user.uid,
@@ -234,32 +294,33 @@ export function ProfileEditor({
                 type: 'engagement',
                 timestamp: Timestamp.now()
             });
-            toast({
+             toast({
                 title: 'BONUS!',
                 description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
                 className: 'bg-yellow-500 text-white',
             });
-        } else {
-            toast({ title: 'Profile Photo Updated', description: 'Your new photo has been set.' });
         }
         
         await batch.commit();
-        onAvatarChange(downloadURL);
 
-    } catch (error) {
-        console.error("Error processing photo:", error);
-        toast({
-            title: "Upload Failed",
-            description: "There was an error processing your photo. Please try again.",
-            variant: "destructive"
-        });
+        toast({ title: "Success!", description: "Profile photo updated." });
+        onAvatarChange(downloadURL);
+        console.log("handleSaveCrop: 5. Closing dialogs.");
+        setIsCropOpen(false);
+        onOpenChange(false);
+    } catch (err) {
+        console.error("handleSaveCrop: Photo save failed", err);
+        toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
     } finally {
+        console.log("handleSaveCrop: 6. Final cleanup.");
+        clearTimeout(timer);
         setIsProcessingPhoto(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open && !isCropOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         {!user ? (
           <DialogHeader>
@@ -329,8 +390,7 @@ export function ProfileEditor({
                     )}
                 />
                  <Button type="submit" disabled={isLoading} className="w-full">
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Save Changes'}
                 </Button>
                 </form>
             </Form>
@@ -350,5 +410,37 @@ export function ProfileEditor({
         )}
       </DialogContent>
     </Dialog>
+    
+    <Dialog open={isCropOpen} onOpenChange={setIsCropOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Crop your new photo</DialogTitle>
+                <DialogDescription>Adjust the image below to crop your avatar.</DialogDescription>
+            </DialogHeader>
+            {imageToCrop && (
+                 <Cropper
+                    ref={cropperRef}
+                    src={imageToCrop}
+                    style={{ height: 400, width: "100%" }}
+                    aspectRatio={1}
+                    viewMode={1}
+                    guides={false}
+                    background={false}
+                    responsive={true}
+                    checkOrientation={false}
+                 />
+            )}
+            <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsCropOpen(false)} disabled={isProcessingPhoto}>Cancel</Button>
+                <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
+                    {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
+
+    
