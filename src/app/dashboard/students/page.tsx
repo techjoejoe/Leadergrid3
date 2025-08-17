@@ -4,61 +4,107 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, User, Users } from "lucide-react";
+import { Loader2, Users, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, deleteDoc, doc, writeBatch } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UserActions } from "@/components/user-actions";
+import { Button } from "@/components/ui/button";
 
-interface Student {
+export interface Student {
     id: string;
-    displayName: string | null;
-    email: string | null;
+    displayName: string;
+    email: string;
     photoURL?: string;
+    lifetimePoints: number;
+    role: 'student' | 'admin';
 }
 
 export default function StudentsPage() {
     const [students, setStudents] = useState<Student[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isAddUserOpen, setIsAddUserOpen] = useState(false);
     const { toast } = useToast();
 
-    useEffect(() => {
-        async function fetchStudents() {
-            try {
-                // Fetch all users, regardless of role
-                const q = query(collection(db, "users"), orderBy("displayName", "asc"));
-                const querySnapshot = await getDocs(q);
-                const fetchedStudents = querySnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        displayName: data.displayName || 'Unnamed User',
-                        email: data.email || 'No email provided',
-                        photoURL: data.photoURL,
-                    } as Student;
-                });
-                setStudents(fetchedStudents);
-            } catch (error) {
-                console.error("Error fetching students: ", error);
-                toast({
-                    title: "Error",
-                    description: "Could not fetch students from the database.",
-                    variant: "destructive"
-                });
-            } finally {
-                setIsLoading(false);
-            }
+    async function fetchStudents() {
+        setIsLoading(true);
+        try {
+            const q = query(collection(db, "users"), orderBy("displayName", "asc"));
+            const querySnapshot = await getDocs(q);
+            const fetchedStudents = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    displayName: data.displayName || 'Unnamed User',
+                    email: data.email || 'No email provided',
+                    photoURL: data.photoURL,
+                    lifetimePoints: data.lifetimePoints || 0,
+                    role: data.role || 'student',
+                } as Student;
+            });
+            setStudents(fetchedStudents);
+        } catch (error) {
+            console.error("Error fetching students: ", error);
+            toast({
+                title: "Error",
+                description: "Could not fetch students from the database.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
         }
+    }
+
+    useEffect(() => {
         fetchStudents();
     }, [toast]);
+
+    const handleUserAdded = (newUser: Student) => {
+        setStudents(prev => [...prev, newUser].sort((a,b) => a.displayName.localeCompare(b.displayName)));
+    }
     
+    const handleUserDeleted = async (userId: string) => {
+        try {
+            const batch = writeBatch(db);
+
+            // 1. Delete user document
+            const userRef = doc(db, 'users', userId);
+            batch.delete(userRef);
+
+            // 2. Delete from all class rosters
+            const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', userId));
+            const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+            for (const enrollmentDoc of enrollmentsSnapshot.docs) {
+                const classId = enrollmentDoc.data().classId;
+                const rosterRef = doc(db, 'classes', classId, 'roster', userId);
+                batch.delete(rosterRef);
+                batch.delete(enrollmentDoc.ref); // Delete the enrollment record itself
+            }
+            
+            // Note: Deleting from Firebase Auth is a sensitive operation not done here.
+            // This removes them from the application's view.
+
+            await batch.commit();
+
+            setStudents(prev => prev.filter(s => s.id !== userId));
+            toast({ title: 'User Deleted', description: 'The user has been removed from the system.', variant: 'destructive'});
+
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            toast({ title: "Deletion Failed", description: "An error occurred while trying to delete the user.", variant: 'destructive'})
+        }
+    };
+
+
     const TableSkeleton = () => (
         <Table>
             <TableHeader>
                 <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Points</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -75,8 +121,12 @@ export default function StudentsPage() {
                             </div>
                         </TableCell>
                         <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell className="text-right">
-                        {/* Action skeletons can go here if needed */}
+                           <div className="flex gap-2 justify-end">
+                             <Skeleton className="h-8 w-8 inline-block" />
+                             <Skeleton className="h-8 w-8 inline-block" />
+                           </div>
                         </TableCell>
                     </TableRow>
                 ))}
@@ -101,9 +151,21 @@ export default function StudentsPage() {
 
     return (
         <Card>
-            <CardHeader>
-                <CardTitle className="font-headline text-3xl flex items-center gap-2"><Users /> User Roster</CardTitle>
-                <CardDescription>A list of all users (students and admins) in the system.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="font-headline text-3xl flex items-center gap-2"><Users /> User Roster</CardTitle>
+                    <CardDescription>A list of all users in the system. Manage points, add, or remove users.</CardDescription>
+                </div>
+                <UserActions 
+                    mode="add" 
+                    onUserAdded={handleUserAdded}
+                    onUserDeleted={handleUserDeleted}
+                >
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add New User
+                    </Button>
+                </UserActions>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -111,6 +173,7 @@ export default function StudentsPage() {
                         <TableRow>
                             <TableHead>User</TableHead>
                             <TableHead>Email</TableHead>
+                            <TableHead>Points</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -130,14 +193,21 @@ export default function StudentsPage() {
                                 <TableCell>
                                     {student.email}
                                 </TableCell>
+                                 <TableCell>
+                                    {student.lifetimePoints.toLocaleString()}
+                                </TableCell>
                                 <TableCell className="text-right">
-                                    {/* Future actions can go here */}
+                                    <UserActions 
+                                        mode="manage" 
+                                        selectedUser={student}
+                                        onUserDeleted={handleUserDeleted}
+                                     />
                                 </TableCell>
                             </TableRow>
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={3} className="h-24 text-center">
+                            <TableCell colSpan={4} className="h-24 text-center">
                                 No users found.
                             </TableCell>
                         </TableRow>
