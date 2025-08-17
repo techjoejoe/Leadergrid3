@@ -48,7 +48,7 @@ const milestoneBadges = [
     hint: 'diamond trophy',
   },
   {
-    name: 'Conquerer of Collection',
+    name: 'CEO of Collection',
     description: 'Awarded for the incredible achievement of 100,000 lifetime points.',
     points: 100000,
     imageUrl: 'https://placehold.co/96x96.png',
