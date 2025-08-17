@@ -394,13 +394,15 @@ export function ProfileEditor({
     const canvas = document.createElement("canvas");
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    
+    const targetWidth = 256; // Max width for avatar
+    const targetHeight = 256; // Max height for avatar
+
     if (typeof crop.width === 'undefined' || typeof crop.height === 'undefined' || typeof crop.x === 'undefined' || typeof crop.y === 'undefined') {
         throw new Error("Crop dimensions are not valid");
     }
 
-    canvas.width = Math.floor(crop.width * scaleX);
-    canvas.height = Math.floor(crop.height * scaleY);
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
     
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -420,11 +422,12 @@ export function ProfileEditor({
       cropHeight,
       0,
       0,
-      cropWidth,
-      cropHeight
+      targetWidth,
+      targetHeight
     );
     
-    return canvas.toDataURL("image/jpeg");
+    // Use a specific quality setting for JPEG to control file size
+    return canvas.toDataURL("image/jpeg", 0.9);
   }
 
   return (
