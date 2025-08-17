@@ -32,8 +32,9 @@ import 'react-image-crop/dist/ReactCrop.css';
 
 
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
+import { getDownloadURL, ref as storageRef, uploadBytesResumable } from 'firebase/storage';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -146,10 +147,90 @@ export function ProfileEditor({
   }
 
   async function handleSaveCrop() {
-    // This is where the upload logic will go in the next step.
-    console.log("Saving cropped image...");
-    // For now, just close the dialog.
-    onOpenChange(false);
+    if (!user || !completedCrop || !imgRef.current || !previewCanvasRef.current) {
+      toast({ title: 'Error', description: 'Cannot process image. Please try again.', variant: 'destructive' });
+      return;
+    }
+    
+    setIsProcessingPhoto(true);
+
+    const canvas = previewCanvasRef.current;
+    const image = imgRef.current;
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    const cropX = completedCrop.x * scaleX;
+    const cropY = completedCrop.y * scaleY;
+    const cropWidth = completedCrop.width * scaleX;
+    const cropHeight = completedCrop.height * scaleY;
+
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      toast({ title: 'Error', description: 'Failed to get canvas context.', variant: 'destructive' });
+      setIsProcessingPhoto(false);
+      return;
+    }
+    ctx.drawImage(
+      image,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      0,
+      0,
+      cropWidth,
+      cropHeight
+    );
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        toast({ title: 'Error', description: 'Failed to create image blob.', variant: 'destructive' });
+        setIsProcessingPhoto(false);
+        return;
+      }
+
+      const filePath = `avatars/${user.uid}.jpg`;
+      const fileRef = storageRef(storage, filePath);
+
+      try {
+        const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: 'image/jpeg' });
+        
+        await uploadTask;
+
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+        if (auth.currentUser) {
+          await updateProfile(auth.currentUser, { photoURL: downloadURL });
+        }
+        
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, 'users', user.uid);
+        batch.update(userDocRef, { photoURL: downloadURL });
+
+        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
+        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
+          const classId = enrollmentDoc.data().classId;
+          const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+          const rosterSnap = await getDoc(rosterDocRef);
+          if (rosterSnap.exists()) {
+            batch.update(rosterDocRef, { photoURL: downloadURL });
+          }
+        }
+        await batch.commit();
+
+        toast({ title: 'Success', description: 'Your profile photo has been updated!' });
+        onOpenChange(false);
+
+      } catch (error) {
+        console.error('Photo upload error:', error);
+        toast({ title: 'Upload Failed', description: 'Could not upload your photo. Please try again.', variant: 'destructive' });
+      } finally {
+        setIsProcessingPhoto(false);
+      }
+    }, 'image/jpeg');
   }
 
   const handleUpdateProfile = async (values: ProfileFormValues) => {
@@ -337,6 +418,12 @@ export function ProfileEditor({
                                         className="max-h-[40vh]"
                                     />
                                 </ReactCrop>
+                                {completedCrop && (
+                                  <canvas
+                                    ref={previewCanvasRef}
+                                    className="hidden"
+                                  />
+                                )}
                                 <div className="flex flex-col items-center gap-4">
                                     <Button 
                                         type="button"
