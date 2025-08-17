@@ -146,6 +146,7 @@ export function ProfileEditor({
                 duration: 8000,
             });
         } else {
+            console.error("Error updating profile:", error);
             toast({
                 title: 'Error updating profile',
                 description: 'Could not update your profile. Please try again.',
@@ -324,7 +325,7 @@ export function ProfileEditor({
                 </Avatar>
                 <Button variant="outline" onClick={handleAvatarClick} disabled={isProcessingPhoto}>
                     <UploadCloud className="mr-2" />
-                    Upload Photo
+                    {isProcessingPhoto ? "Processing..." : "Upload Photo"}
                 </Button>
                 <input
                   type="file"

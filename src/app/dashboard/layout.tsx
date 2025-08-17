@@ -134,7 +134,7 @@ export default function DashboardLayout({
                 currentInitial={initials}
                 currentDisplayName={displayName}
                 currentEmail={user.email || ""}
-                storageKey={`adminAvatar`}
+                storageKey="adminAvatar"
             />
         )}
     </div>
