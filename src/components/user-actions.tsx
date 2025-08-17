@@ -132,6 +132,7 @@ export function UserActions({
         
         if (pointsSnapshot.empty && badgesSnapshot.empty && scansSnapshot.empty) {
              toast({ title: 'No Data', description: `${selectedUser.displayName} has no activity to report.`, variant: 'default' });
+             setIsReporting(false);
              return;
         }
 
@@ -329,10 +330,10 @@ export function UserActions({
   }
 
   return (
-    <div className="flex items-center justify-center gap-4">
-      <Dialog open={isPointsDialogOpen} onOpenChange={setIsPointsDialogOpen}>
+    <div className="flex items-center justify-center gap-2">
+       <Dialog open={isPointsDialogOpen} onOpenChange={setIsPointsDialogOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="flex-1">
             <Pencil className="mr-2 h-3 w-3" />
             Adjust Points
           </Button>
@@ -364,14 +365,14 @@ export function UserActions({
         </DialogContent>
       </Dialog>
 
-      <Button variant="outline" size="sm" onClick={handleGenerateReport} disabled={isReporting}>
+      <Button variant="outline" size="sm" onClick={handleGenerateReport} disabled={isReporting} className="flex-1">
         {isReporting ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <FileDown className="mr-2 h-3 w-3" />}
-        Report
+        Run Report
       </Button>
       
        <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={selectedUser?.role === 'admin'}>
+            <Button variant="destructive" size="sm" disabled={selectedUser?.role === 'admin'} className="flex-1">
                 <Trash2 className="mr-2 h-3 w-3" />
                 Delete
             </Button>

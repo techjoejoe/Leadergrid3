@@ -175,7 +175,7 @@ export default function StudentsPage() {
                             <TableHead>User</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Points</TableHead>
-                            <TableHead className="text-center w-[300px]">Actions</TableHead>
+                            <TableHead className="text-center w-[350px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
