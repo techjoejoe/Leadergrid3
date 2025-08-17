@@ -226,7 +226,7 @@ function LeaderboardPageContents() {
                             unoptimized
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-                        <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{user.rank}</div>
+                        <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{!isNaN(user.rank) && user.rank}</div>
                         <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
                              <h4 className="font-semibold truncate">{formatName(user.name)}</h4>
                             <div className="flex items-center gap-1.5 text-sm text-yellow-300/90">
@@ -250,5 +250,4 @@ export default function LeaderboardPage() {
         </Suspense>
     )
 }
-
     
