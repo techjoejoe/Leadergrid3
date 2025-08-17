@@ -124,6 +124,10 @@ export function BadgeManager() {
         })
         
         form.reset();
+        // Manually reset the file input
+        const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+
     } catch (error) {
         console.error("Error creating badge:", error);
         toast({
@@ -160,8 +164,8 @@ export function BadgeManager() {
       <div className="md:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle className="font-headline text-2xl">Create Badge</CardTitle>
-            <CardDescription>Upload a PNG and set the details for a new badge.</CardDescription>
+            <CardTitle className="font-headline text-2xl">Create Custom Badge</CardTitle>
+            <CardDescription>Upload a PNG and set the details for a new achievement badge that you can award manually.</CardDescription>
           </CardHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -213,6 +217,7 @@ export function BadgeManager() {
                       <FormLabel>Badge Image (PNG)</FormLabel>
                       <FormControl>
                          <Input 
+                           id="image-upload"
                            type="file"
                            accept="image/png"
                            onChange={(e) => {
@@ -249,7 +254,7 @@ export function BadgeManager() {
       <div className="md:col-span-2">
         <Card className='h-full'>
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">Available Badges</CardTitle>
+                <CardTitle className="font-headline text-2xl">Available Custom Badges</CardTitle>
                 <CardDescription>The list of all achievement badges you've created.</CardDescription>
             </CardHeader>
             <CardContent>
