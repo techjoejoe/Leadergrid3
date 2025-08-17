@@ -46,7 +46,7 @@ interface ProfileEditorProps {
   onOpenChange: (open: boolean) => void;
   onAvatarChange: (newAvatar: string) => void;
   onNameChange: (newName: string) => void;
-  currentAvatar: string;
+  currentAvatar?: string;
   currentInitial: string;
   currentDisplayName: string;
   currentEmail: string;
@@ -327,6 +327,20 @@ export function ProfileEditor({
         await updateProfile(user, { photoURL: croppedImageUrl });
         batch.update(userDocRef, { photoURL: croppedImageUrl });
         
+        // Update photoURL in all class rosters
+        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
+        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
+            const classId = enrollmentDoc.data().classId;
+            if (classId) {
+                const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+                 const rosterSnap = await getDoc(rosterDocRef);
+                if (rosterSnap.exists()){
+                  batch.update(rosterDocRef, { photoURL: croppedImageUrl });
+                }
+            }
+        }
+
         if (!hadPhoto) {
             batch.update(userDocRef, {
                 lifetimePoints: increment(PHOTO_UPLOAD_BONUS)

@@ -140,7 +140,7 @@ export default function StudentDashboardPage() {
     const [userBadges, setUserBadges] = useState<Badge[]>([]);
     const [pointHistory, setPointHistory] = useState<PointHistoryRecord[]>([]);
     const [user, setUser] = useState<User | null>(null);
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
     const [displayName, setDisplayName] = useState('Student');
     const [joinedClasses, setJoinedClasses] = useState<ClassInfo[]>([]);
     const [activeClass, setActiveClass] = useState<ClassInfo | null>(null);
@@ -669,7 +669,7 @@ export default function StudentDashboardPage() {
             onOpenChange={setIsProfileEditorOpen}
             onAvatarChange={setAvatarUrl}
             onNameChange={setDisplayName}
-            currentAvatar={displayAvatar ?? undefined}
+            currentAvatar={displayAvatar}
             currentInitial={displayInitial}
             currentDisplayName={displayName}
             currentEmail={displayEmail}
