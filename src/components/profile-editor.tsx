@@ -31,7 +31,7 @@ import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-cr
 import 'react-image-crop/dist/ReactCrop.css';
 import { sendPasswordResetEmail, updateEmail, updateProfile, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc, setDoc, writeBatch, collection, Timestamp, query, where, getDocs } from 'firebase/firestore';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -112,11 +112,28 @@ export function ProfileEditor({
     setIsLoading(true);
     try {
       if (values.displayName !== currentDisplayName) {
-        if (user.uid !== 'mock-user-id') {
-            await updateProfile(user, { displayName: values.displayName });
-            const userDocRef = doc(db, "users", user.uid);
-            await updateDoc(userDocRef, { displayName: values.displayName });
+        const batch = writeBatch(db);
+
+        // Update Firebase Auth profile
+        await updateProfile(user, { displayName: values.displayName });
+
+        // Update user document in 'users' collection
+        const userDocRef = doc(db, "users", user.uid);
+        batch.update(userDocRef, { displayName: values.displayName });
+
+        // Update user's name in all class rosters they are enrolled in
+        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
+        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+
+        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
+            const classId = enrollmentDoc.data().classId;
+            if (classId) {
+                const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+                batch.update(rosterDocRef, { displayName: values.displayName });
+            }
         }
+        
+        await batch.commit();
         onNameChange(values.displayName);
       }
       
