@@ -148,61 +148,61 @@ export function ProfileEditor({
 
   async function handleSaveCrop() {
     if (!user || !completedCrop || !imgRef.current || !previewCanvasRef.current) {
-      toast({ title: 'Error', description: 'Cannot process image. Please try again.', variant: 'destructive' });
-      return;
+        toast({ title: 'Error', description: 'Cannot process image. Please select and crop an image first.', variant: 'destructive' });
+        return;
     }
     
     setIsProcessingPhoto(true);
 
-    const canvas = previewCanvasRef.current;
-    const image = imgRef.current;
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    const cropX = completedCrop.x * scaleX;
-    const cropY = completedCrop.y * scaleY;
-    const cropWidth = completedCrop.width * scaleX;
-    const cropHeight = completedCrop.height * scaleY;
+    try {
+        const canvas = previewCanvasRef.current;
+        const image = imgRef.current;
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+        const cropX = completedCrop.x * scaleX;
+        const cropY = completedCrop.y * scaleY;
+        const cropWidth = completedCrop.width * scaleX;
+        const cropHeight = completedCrop.height * scaleY;
 
-    canvas.width = cropWidth;
-    canvas.height = cropHeight;
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      toast({ title: 'Error', description: 'Failed to get canvas context.', variant: 'destructive' });
-      setIsProcessingPhoto(false);
-      return;
-    }
-    ctx.drawImage(
-      image,
-      cropX,
-      cropY,
-      cropWidth,
-      cropHeight,
-      0,
-      0,
-      cropWidth,
-      cropHeight
-    );
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        toast({ title: 'Error', description: 'Failed to create image blob.', variant: 'destructive' });
-        setIsProcessingPhoto(false);
-        return;
-      }
-
-      const filePath = `avatars/${user.uid}.jpg`;
-      const fileRef = storageRef(storage, filePath);
-
-      try {
-        const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: 'image/jpeg' });
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Failed to get canvas context.');
+        }
+        ctx.drawImage(image, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
         
-        await uploadTask;
+        const blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob(resolve, 'image/jpeg');
+        });
+
+        if (!blob) {
+            throw new Error('Failed to create image blob.');
+        }
+
+        const filePath = `avatars/${user.uid}.jpg`;
+        const fileRef = storageRef(storage, filePath);
+        const uploadTask = uploadBytesResumable(fileRef, blob, { contentType: 'image/jpeg' });
+
+        await new Promise<void>((resolve, reject) => {
+            uploadTask.on(
+                'state_changed',
+                (snapshot) => { /* Optional: Handle progress updates */ },
+                (error) => {
+                    console.error("Upload failed:", error);
+                    reject(error);
+                },
+                () => {
+                    resolve();
+                }
+            );
+        });
 
         const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
         if (auth.currentUser) {
-          await updateProfile(auth.currentUser, { photoURL: downloadURL });
+            await updateProfile(auth.currentUser, { photoURL: downloadURL });
         }
         
         const batch = writeBatch(db);
@@ -212,26 +212,26 @@ export function ProfileEditor({
         const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
         const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
         for (const enrollmentDoc of enrollmentsSnapshot.docs) {
-          const classId = enrollmentDoc.data().classId;
-          const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-          const rosterSnap = await getDoc(rosterDocRef);
-          if (rosterSnap.exists()) {
-            batch.update(rosterDocRef, { photoURL: downloadURL });
-          }
+            const classId = enrollmentDoc.data().classId;
+            const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+            const rosterSnap = await getDoc(rosterDocRef);
+            if (rosterSnap.exists()) {
+                batch.update(rosterDocRef, { photoURL: downloadURL });
+            }
         }
         await batch.commit();
 
         toast({ title: 'Success', description: 'Your profile photo has been updated!' });
         onOpenChange(false);
 
-      } catch (error) {
+    } catch (error) {
         console.error('Photo upload error:', error);
         toast({ title: 'Upload Failed', description: 'Could not upload your photo. Please try again.', variant: 'destructive' });
-      } finally {
+    } finally {
         setIsProcessingPhoto(false);
-      }
-    }, 'image/jpeg');
-  }
+    }
+}
+
 
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
