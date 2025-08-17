@@ -54,7 +54,7 @@ interface ProfileEditorProps {
 }
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-const PHOTO_UPLOAD_BONUS = 500;
+const PHOTO_UPLOAD_BONUS = 300;
 
 export function ProfileEditor({ 
     user,
@@ -567,5 +567,3 @@ export function ProfileEditor({
     </Dialog>
   );
 }
-
-    
