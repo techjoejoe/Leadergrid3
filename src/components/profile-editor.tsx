@@ -59,39 +59,41 @@ interface ProfileEditorProps {
 const PHOTO_UPLOAD_BONUS = 300;
 
 function getCroppedBlob(image: HTMLImageElement, crop: Crop): Promise<Blob> {
-    const canvas = document.createElement('canvas');
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    canvas.width = 128;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-        return Promise.reject(new Error('Failed to get canvas context'));
-    }
-
-    const cropX = crop.x * scaleX;
-    const cropY = crop.y * scaleY;
-    const cropWidth = crop.width * scaleX;
-    const cropHeight = crop.height * scaleY;
-
-    ctx.drawImage(
-        image,
-        cropX,
-        cropY,
-        cropWidth,
-        cropHeight,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
     return new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas');
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+        
+        const targetWidth = 128;
+        const targetHeight = 128;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return reject(new Error('Failed to get canvas context'));
+        }
+
+        const cropX = crop.x * scaleX;
+        const cropY = crop.y * scaleY;
+        const cropWidth = crop.width * scaleX;
+        const cropHeight = crop.height * scaleY;
+
+        ctx.drawImage(
+            image,
+            cropX,
+            cropY,
+            cropWidth,
+            cropHeight,
+            0,
+            0,
+            targetWidth,
+            targetHeight
+        );
+
         canvas.toBlob(blob => {
             if (!blob) {
-                reject(new Error('Canvas is empty'));
-                return;
+                return reject(new Error('Canvas is empty'));
             }
             resolve(blob);
         }, 'image/jpeg', 0.9);
@@ -452,10 +454,10 @@ export function ProfileEditor({
                 setImgSrc('');
               }}
             >
-              Cancel
+              Skip
             </Button>
             <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
-                {isProcessingPhoto ? <Loader2 className="mr-2 animate-spin" /> : "Save Crop"}
+                {isProcessingPhoto ? <Loader2 className="mr-2 animate-spin" /> : "Next"}
             </Button>
           </DialogFooter>
         </DialogContent>
