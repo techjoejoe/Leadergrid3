@@ -61,19 +61,40 @@ const milestoneBadges = [
     imageUrl: '/photogenic.png',
     hint: 'camera shutter',
   },
+  {
+    name: 'Trailblazer',
+    description: 'Awarded for completing 10 QR code scans.',
+    points: 10,
+    imageUrl: '/trailblazer.png',
+    hint: 'treasure map',
+  },
+  {
+    name: 'Master Scanner',
+    description: 'Awarded for completing 75 QR code scans.',
+    points: 75,
+    imageUrl: '/master-scanner.png',
+    hint: 'magnifying glass',
+  },
+  {
+    name: 'QR Royalty',
+    description: 'Awarded for completing 100 QR code scans.',
+    points: 50,
+    imageUrl: '/qr-royalty.png',
+    hint: 'royal crown',
+  },
 ];
 
 export function MilestoneBadgeList() {
   return (
-    <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    <div className="grid gap-2 grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
       {milestoneBadges.map((badge) => (
         <Card key={badge.name} className="text-center flex flex-col items-center p-2">
-          <div className="w-16 h-16 relative mb-1 flex items-center justify-center">
+          <div className="w-12 h-12 relative mb-1 flex items-center justify-center">
               <Image 
                   src={badge.imageUrl} 
                   alt={badge.name} 
-                  width={64}
-                  height={64}
+                  width={48}
+                  height={48}
                   data-ai-hint={badge.hint}
                   unoptimized={badge.imageUrl.startsWith('/')}
               />
