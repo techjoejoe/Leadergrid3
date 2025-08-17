@@ -54,6 +54,13 @@ const milestoneBadges = [
     imageUrl: '/hundredthou.png',
     hint: 'glowing award',
   },
+  {
+    name: 'Photogenic',
+    description: 'Awarded for uploading a profile picture.',
+    points: 500,
+    imageUrl: '/photogenic.png',
+    hint: 'camera shutter',
+  },
 ];
 
 export function MilestoneBadgeList() {
