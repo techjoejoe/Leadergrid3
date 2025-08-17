@@ -22,10 +22,10 @@ let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
 
-if (getApps().length) {
-  app = getApp();
-} else {
+if (!getApps().length) {
   app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
 }
 
 auth = getAuth(app);
