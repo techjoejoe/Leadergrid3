@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -34,7 +33,7 @@ import 'cropperjs/dist/cropper.css';
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, increment, getDoc, writeBatch, collection, Timestamp, query, where, getDocs, setDoc } from 'firebase/firestore';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 
 
 const profileFormSchema = z.object({
@@ -194,7 +193,6 @@ export function ProfileEditor({
     e.target.value = ''; // Reset file input to allow re-selection of the same file
   };
   
-  
   const getCroppedBlob = (): Promise<Blob | null> => {
       return new Promise((resolve) => {
           const cropper = cropperRef.current?.cropper;
@@ -219,7 +217,7 @@ export function ProfileEditor({
         toast({ title: "Error", description: "Could not process image. Please try again.", variant: "destructive" });
         return;
     }
-
+    
     setIsProcessingPhoto(true);
     toast({ title: 'Uploading photo...' });
 
@@ -228,37 +226,22 @@ export function ProfileEditor({
         const path = `avatars/${user.uid}.jpg`;
         const photoRef = storageRef(storage, path);
         const metadata = { contentType: "image/jpeg", cacheControl: "public,max-age=31536000" };
-        const task = uploadBytesResumable(photoRef, croppedBlob, metadata);
-
-        await new Promise<void>((resolve, reject) => {
-            task.on("state_changed",
-                () => {}, // We can add progress logic here in the future
-                (error) => {
-                    console.error("Upload error:", error);
-                    reject(error);
-                },
-                () => {
-                    console.log("handleSaveCrop: Upload task completed.");
-                    resolve();
-                }
-            );
-        });
+        await uploadBytes(photoRef, croppedBlob, metadata);
 
         console.log("handleSaveCrop: 2. Getting download URL.");
         const downloadURL = await getDownloadURL(photoRef);
         console.log(`handleSaveCrop: Got URL: ${downloadURL}`);
         
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, "users", user.uid);
-
         console.log("handleSaveCrop: 3. Updating Firebase Auth profile.");
         if (auth.currentUser) {
             await updateProfile(auth.currentUser, { photoURL: downloadURL });
         } else {
             throw new Error("User not authenticated.");
         }
-
+        
         console.log("handleSaveCrop: 4. Updating Firestore user document.");
+        const batch = writeBatch(db);
+        const userDocRef = doc(db, "users", user.uid);
         batch.update(userDocRef, { photoURL: downloadURL });
         
         const userDocSnap = await getDoc(userDocRef);
@@ -286,14 +269,15 @@ export function ProfileEditor({
         toast({ title: "Success!", description: "Profile photo updated." });
         onAvatarChange(downloadURL);
         console.log("handleSaveCrop: 5. Closing dialogs.");
-        setIsCropOpen(false);
-        onOpenChange(false);
+        
     } catch (err) {
         console.error("handleSaveCrop: Photo save failed", err);
         toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
     } finally {
         console.log("handleSaveCrop: 6. Final cleanup.");
         setIsProcessingPhoto(false);
+        setIsCropOpen(false);
+        onOpenChange(false);
     }
   }
 
@@ -415,8 +399,8 @@ export function ProfileEditor({
                     Skip
                 </Button>
                 <Button onClick={handleSaveCrop} disabled={isProcessingPhoto}>
-                    {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                    Next
+                    {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Crop
                 </Button>
             </DialogFooter>
         </DialogContent>
