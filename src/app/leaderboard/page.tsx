@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import React, { useEffect, useState, Suspense } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, limit, getDocs, where, doc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { useSearchParams } from "next/navigation";
 
 interface LeaderboardEntry {
@@ -87,48 +87,46 @@ function LeaderboardPageContents() {
     const [classDetails, setClassDetails] = useState<ClassDetails | null>(null);
 
     useEffect(() => {
-        async function fetchLeaderboard() {
-            setIsLoading(true);
-            try {
-                let q;
-                let pointField = 'lifetimePoints';
+        setIsLoading(true);
+        let q;
+        let pointField = 'lifetimePoints';
 
-                if (classId) {
-                    const classDocRef = doc(db, 'classes', classId);
-                    const classDocSnap = await getDoc(classDocRef);
-                    if (classDocSnap.exists()) {
-                        setClassDetails(classDocSnap.data() as ClassDetails);
-                    }
-                    q = query(collection(db, `classes/${classId}/roster`), orderBy("classPoints", "desc"), limit(50));
-                    pointField = 'classPoints';
-                } else {
-                    const usersRef = collection(db, 'users');
-                    q = query(usersRef, orderBy("lifetimePoints", "desc"), limit(50));
+        // Fetch class details if classId is present
+        if (classId) {
+            const classDocRef = doc(db, 'classes', classId);
+            getDoc(classDocRef).then(classDocSnap => {
+                if (classDocSnap.exists()) {
+                    setClassDetails(classDocSnap.data() as ClassDetails);
                 }
-                
-                const querySnapshot = await getDocs(q);
-
-                const data = querySnapshot.docs.map((doc, index) => {
-                    const userData = doc.data();
-                    const name = userData.displayName || 'Anonymous';
-                    return {
-                        id: doc.id,
-                        name: name,
-                        points: userData[pointField] || 0,
-                        avatar: userData.photoURL || null,
-                        initial: (name).substring(0, 2).toUpperCase(),
-                        rank: index + 1
-                    };
-                });
-
-                setLeaderboardData(data);
-            } catch (error) {
-                console.error("Error fetching leaderboard:", error);
-            } finally {
-                setIsLoading(false);
-            }
+            });
+            q = query(collection(db, `classes/${classId}/roster`), orderBy("classPoints", "desc"), limit(50));
+            pointField = 'classPoints';
+        } else {
+            const usersRef = collection(db, 'users');
+            q = query(usersRef, orderBy("lifetimePoints", "desc"), limit(50));
         }
-        fetchLeaderboard();
+        
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const data = querySnapshot.docs.map((doc, index) => {
+                const userData = doc.data();
+                const name = userData.displayName || 'Anonymous';
+                return {
+                    id: doc.id,
+                    name: name,
+                    points: userData[pointField] || 0,
+                    avatar: userData.photoURL || null,
+                    initial: (name).substring(0, 2).toUpperCase(),
+                    rank: index + 1
+                };
+            });
+            setLeaderboardData(data);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching leaderboard:", error);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
     }, [classId]);
 
     if (isLoading) {

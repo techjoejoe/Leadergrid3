@@ -97,11 +97,10 @@ function ScanPageContents() {
                 const userRef = doc(db, "users", studentInfo.id);
 
                 // Handle Class Check-in QR Codes
-                if (data && data.type === 'class-check-in') {
+                if (data?.type === 'class-check-in') {
                     const rosterRef = doc(db, "classes", data.classId, "roster", studentInfo.id);
                     const rosterSnap = await getDoc(rosterRef);
 
-                    // Ensure user is actually enrolled in the class before proceeding
                     if (!rosterSnap.exists()) {
                          toast({
                             title: 'Not Enrolled',
@@ -116,7 +115,6 @@ function ScanPageContents() {
                     const isOnTime = isBefore(now, onTimeDeadline);
                     const pointsAwarded = isOnTime ? (data.points || 0) : 0;
                     
-                    // 1. Create check-in record
                     const checkInRef = doc(collection(db, "checkIns"));
                     batch.set(checkInRef, {
                         studentId: studentInfo.id,
@@ -128,7 +126,6 @@ function ScanPageContents() {
                         pointsAwarded: pointsAwarded
                     });
                     
-                    // 2. Create a unified scan log
                     const scanLogRef = doc(collection(db, "scans"));
                     batch.set(scanLogRef, {
                         studentId: studentInfo.id,
@@ -143,13 +140,9 @@ function ScanPageContents() {
                     });
                     
                     if (pointsAwarded > 0) {
-                        // 3. Increment lifetime points 
                         batch.update(userRef, { lifetimePoints: increment(pointsAwarded) });
-                        
-                        // 4. Increment class-specific points
                         batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
 
-                        // 5. Create point history record
                         const historyRef = doc(collection(db, 'point_history'));
                         batch.set(historyRef, {
                             studentId: studentInfo.id,
@@ -181,7 +174,7 @@ function ScanPageContents() {
                     setTimeout(() => router.push('/student-dashboard'), 1500);
 
                 // Handle General Activity QR Codes
-                } else if (data && data.type === 'Activity' && data.expires) {
+                } else if (data?.type === 'Activity' && data.expires) {
                     const expires = new Date(data.expires);
                     if (expires < new Date()) {
                          toast({
@@ -193,7 +186,6 @@ function ScanPageContents() {
                         return;
                     }
 
-                    // If the QR code is for a specific class, check enrollment first
                     if (data.classId) {
                         const rosterRef = doc(db, "classes", data.classId, "roster", user.uid);
                         const rosterSnap = await getDoc(rosterRef);
@@ -210,7 +202,6 @@ function ScanPageContents() {
                     
                     const pointsAwarded = data.points || 0;
 
-                    // 1. Create a unified scan log
                     const scanLogRef = doc(collection(db, "scans"));
                     batch.set(scanLogRef, {
                         studentId: studentInfo.id,
@@ -224,18 +215,14 @@ function ScanPageContents() {
                         className: data.className || null,
                     });
 
-                    // 2. Increment lifetime points
                     if (pointsAwarded > 0) {
                         batch.update(userRef, { lifetimePoints: increment(pointsAwarded) });
                         
-                        // 3. Increment class points if a classId is present
                         if(data.classId) {
                            const rosterRef = doc(db, "classes", data.classId, "roster", studentInfo.id);
-                           // No need for a second getDoc, we already confirmed existence
                            batch.update(rosterRef, { classPoints: increment(pointsAwarded) });
                         }
 
-                        // 4. Create point history record
                         const historyRef = doc(collection(db, 'point_history'));
                         batch.set(historyRef, {
                             studentId: studentInfo.id,
