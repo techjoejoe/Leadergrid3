@@ -37,7 +37,7 @@ const milestoneBadges = [
     name: 'Point Pro',
     description: 'Awarded for achieving 25,000 lifetime points.',
     points: 25000,
-    imageUrl: '/PointPro.png',
+    imageUrl: '/point_pro.png',
     hint: 'platinum trophy',
   },
    {
