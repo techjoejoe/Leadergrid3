@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { QrReader } from 'react-qr-reader';
 import { useToast } from '@/hooks/use-toast';
@@ -31,8 +31,7 @@ const createMockUser = (): User => ({
     toJSON: () => ({}),
 });
 
-
-export default function ScanPage() {
+function ScanPageContents() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const isMock = searchParams.get('mock') === 'true';
@@ -313,4 +312,16 @@ export default function ScanPage() {
             )}
         </div>
     );
+}
+
+export default function ScanPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen w-full items-center justify-center bg-slate-900">
+                <Loader2 className="h-8 w-8 animate-spin text-white" />
+            </div>
+        }>
+            <ScanPageContents />
+        </Suspense>
+    )
 }
