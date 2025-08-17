@@ -34,7 +34,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { auth, db, storage } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
-import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { getDownloadURL, ref as storageRef, uploadBytesResumable } from 'firebase/storage';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -186,33 +186,50 @@ export function ProfileEditor({
         const filePath = `avatars/${user.uid}.jpg`;
         const fileRef = storageRef(storage, filePath);
         
-        await uploadBytes(fileRef, blob);
+        const uploadTask = uploadBytesResumable(fileRef, blob);
 
-        const downloadURL = await getDownloadURL(fileRef);
+        await new Promise<void>((resolve, reject) => {
+            uploadTask.on(
+                'state_changed',
+                null, // We don't need to observe progress for this simple upload
+                (error) => {
+                    console.error('Upload failed:', error);
+                    reject(error);
+                },
+                async () => {
+                    try {
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
 
-        if (auth.currentUser) {
-            await updateProfile(auth.currentUser, { photoURL: downloadURL });
-        }
-        
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, 'users', user.uid);
-        batch.update(userDocRef, { photoURL: downloadURL });
-
-        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
-        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
-            const classId = enrollmentDoc.data().classId;
-            const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-            const rosterSnap = await getDoc(rosterDocRef);
-            if (rosterSnap.exists()) {
-                batch.update(rosterDocRef, { photoURL: downloadURL });
-            }
-        }
-        await batch.commit();
-
-        toast({ title: 'Success', description: 'Your profile photo has been updated!' });
-        onPhotoChange(downloadURL);
-        onOpenChange(false);
+                        if (auth.currentUser) {
+                            await updateProfile(auth.currentUser, { photoURL: downloadURL });
+                        }
+                        
+                        const batch = writeBatch(db);
+                        const userDocRef = doc(db, 'users', user.uid);
+                        batch.update(userDocRef, { photoURL: downloadURL });
+                
+                        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
+                        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+                        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
+                            const classId = enrollmentDoc.data().classId;
+                            const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+                            const rosterSnap = await getDoc(rosterDocRef);
+                            if (rosterSnap.exists()) {
+                                batch.update(rosterDocRef, { photoURL: downloadURL });
+                            }
+                        }
+                        await batch.commit();
+                
+                        toast({ title: 'Success', description: 'Your profile photo has been updated!' });
+                        onPhotoChange(downloadURL);
+                        onOpenChange(false);
+                        resolve();
+                    } catch (dbError) {
+                        reject(dbError);
+                    }
+                }
+            );
+        });
 
     } catch (error) {
         console.error('Photo upload error:', error);
