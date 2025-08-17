@@ -114,6 +114,9 @@ export default {
         'sparkle': 'sparkle 1s ease-in-out forwards',
         'float': 'float 3s ease-in-out infinite',
       },
+      boxShadow: {
+        'inner-strong': 'inset 0 4px 10px rgba(0, 0, 0, 0.4)',
+      }
     },
   },
   plugins: [require('tailwindcss-animate')],

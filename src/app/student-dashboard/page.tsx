@@ -598,7 +598,7 @@ export default function StudentDashboardPage() {
                             ) : (
                                 <div className="space-y-4">
                                     {/* Podium */}
-                                    <div className="flex items-end justify-center gap-2 md:gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 items-end gap-4">
                                         {top3[1] && <PodiumCard user={top3[1]} rank={2} />}
                                         {top3[0] && <PodiumCard user={top3[0]} rank={1} />}
                                         {top3[2] && <PodiumCard user={top3[2]} rank={3} />}

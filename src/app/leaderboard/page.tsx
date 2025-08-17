@@ -45,34 +45,26 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
     const isThird = place === 3;
 
     return (
-        <div className={cn("flex flex-col items-center",
-            isFirst && "order-2",
-            isSecond && "order-1",
-            isThird && "order-3"
+         <div className={cn("relative flex flex-col items-center justify-end p-2 sm:p-4 rounded-lg text-white text-center transform transition-transform hover:scale-105 shadow-lg w-full",
+            isFirst && "bg-gradient-to-br from-yellow-400 to-amber-600 order-1 md:order-2 h-48 md:h-64",
+            isSecond && "bg-gradient-to-br from-slate-300 to-slate-500 order-2 md:order-1 h-44 md:h-56 md:self-end",
+            isThird && "bg-gradient-to-br from-amber-600 to-yellow-800 order-3 md:order-3 h-44 md:h-56 md:self-end"
         )}>
-            <div className="relative">
-                <Avatar className={cn("border-4 border-white/50 shadow-lg",
-                    isFirst ? "w-24 h-24" : "w-20 h-20"
-                )}>
-                    {user.avatar && <AvatarImage src={user.avatar} data-ai-hint="student portrait" />}
-                    <AvatarFallback>{user.initial}</AvatarFallback>
-                </Avatar>
-                {isFirst && <Crown className="absolute -top-5 -right-3 h-8 w-8 text-yellow-400 rotate-12 z-10" />}
-            </div>
-            <h3 className="mt-2 text-lg font-bold text-white">{formatName(user.name)}</h3>
-            <div className="relative mt-2 flex items-center justify-center h-20 bg-white/20 backdrop-blur-sm rounded-t-lg shadow-inner-strong"
-                style={{
-                    width: isFirst ? "140px" : "120px",
-                    height: isFirst ? "120px" : "80px",
-                    clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0% 100%)'
-                }}
-            >
-                <span className={cn("absolute text-5xl font-extrabold opacity-20", isFirst && "text-7xl -bottom-2")}>{place}</span>
-                <div className="z-10 flex items-center gap-1.5 px-3 py-1.5 bg-primary/80 rounded-full text-white font-bold shadow-lg">
-                    <Star className="w-4 h-4" />
-                    <span>{user.points.toLocaleString()}</span>
-                </div>
-            </div>
+            {isFirst && <span className="absolute -top-5 text-6xl sm:text-7xl drop-shadow-lg animate-float z-20" role="img" aria-label="crown">👑</span>}
+             <Avatar className={cn("border-4 z-10", 
+                isFirst && `h-24 w-24 sm:h-28 sm:w-28 border-yellow-400 shadow-[0_0_15px_rgba(250,204,21,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isSecond && `h-20 w-20 sm:h-24 sm:w-24 border-slate-300 shadow-[0_0_15px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+                isThird && `h-20 w-20 sm:h-24 sm:w-24 border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
+             )}>
+                {user.avatar && <AvatarImage src={user.avatar} />}
+                <AvatarFallback className="text-3xl bg-secondary/50 text-white">{user.initial}</AvatarFallback>
+            </Avatar>
+            <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
+            <p className={cn("text-sm font-semibold z-10", 
+                isFirst && "text-amber-100",
+                isSecond && "text-slate-100",
+                isThird && "text-yellow-100"
+            )}>{user.points.toLocaleString()} pts</p>
         </div>
     )
 }
@@ -132,7 +124,7 @@ function LeaderboardPageContents() {
 
     if (isLoading) {
         return (
-            <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600">
+            <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900">
                 <Loader2 className="h-10 w-10 animate-spin text-white" />
             </div>
         );
@@ -140,7 +132,7 @@ function LeaderboardPageContents() {
     
     if (leaderboardData.length === 0) {
         return (
-             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600 text-white p-4">
+             <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 text-white p-4">
                  <div className="text-center">
                     <User className="h-16 w-16 mx-auto text-white/50 mb-4" />
                     <h1 className="text-4xl font-headline font-bold mb-2">Leaderboard is Empty</h1>
@@ -160,7 +152,7 @@ function LeaderboardPageContents() {
     const rest = leaderboardData.slice(3);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600 text-white p-4 sm:p-6 md:p-8">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 text-white p-4 sm:p-6 md:p-8">
         <div className="absolute inset-0 bg-[url(https://www.transparenttextures.com/patterns/gplay.png)] opacity-10"></div>
         <div className="relative z-10 w-full max-w-5xl mx-auto">
             <div className="flex items-center justify-start mb-6">
@@ -176,10 +168,10 @@ function LeaderboardPageContents() {
             </div>
             
             {/* Podium */}
-            <div className="flex justify-around items-end mb-12">
-               {top3.map(user => (
-                   <PodiumPlace key={user.rank} user={user} place={user.rank} />
-               ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 items-end mb-12 gap-4">
+               {top3[1] && <PodiumPlace user={top3[1]} place={2} />}
+               {top3[0] && <PodiumPlace user={top3[0]} place={1} />}
+               {top3[2] && <PodiumPlace user={top3[2]} place={3} />}
             </div>
 
             {/* Rest of the list */}
@@ -219,10 +211,8 @@ function LeaderboardPageContents() {
 
 export default function LeaderboardPage() {
     return (
-        <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-green-400 via-cyan-500 to-blue-600"><Loader2 className="h-10 w-10 animate-spin text-white" /></div>}>
+        <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900"><Loader2 className="h-10 w-10 animate-spin text-white" /></div>}>
             <LeaderboardPageContents />
         </Suspense>
     )
 }
-
-    
