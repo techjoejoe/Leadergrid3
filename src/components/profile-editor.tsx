@@ -95,12 +95,6 @@ export function ProfileEditor({
     }
   }, [open, user, currentDisplayName, currentEmail, form]);
 
-  useEffect(() => {
-    if (imgSrc) {
-      setIsCropping(true);
-    }
-  }, [imgSrc]);
-
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
     setIsLoading(true);
@@ -187,9 +181,10 @@ export function ProfileEditor({
     if (e.target.files && e.target.files.length > 0) {
       setCrop(undefined) // Makes crop preview update between images.
       const reader = new FileReader()
-      reader.addEventListener('load', () =>
-        setImgSrc(reader.result?.toString() || '')
-      )
+      reader.addEventListener('load', () => {
+        setImgSrc(reader.result?.toString() || '');
+        setIsCropping(true);
+      });
       reader.readAsDataURL(e.target.files[0])
     }
   }
@@ -210,7 +205,7 @@ export function ProfileEditor({
       height
     );
     setCrop(newCrop);
-    setCompletedCrop(newCrop); // Set initial crop as completed
+    setCompletedCrop(newCrop); // Guarantee completedCrop is set
   }
 
   const handleCropComplete = async () => {
@@ -325,18 +320,16 @@ export function ProfileEditor({
   
   function getCroppedImg(image: HTMLImageElement, crop: Crop): string {
     const canvas = document.createElement("canvas");
+    
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
     
-    const targetWidth = 128;
-    const targetHeight = 128;
-
     if (typeof crop.width === 'undefined' || typeof crop.height === 'undefined' || typeof crop.x === 'undefined' || typeof crop.y === 'undefined') {
         throw new Error("Crop dimensions are not valid");
     }
 
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
+    canvas.width = 128;
+    canvas.height = 128;
     
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -356,8 +349,8 @@ export function ProfileEditor({
       cropHeight,
       0,
       0,
-      targetWidth,
-      targetHeight
+      128,
+      128
     );
     
     return canvas.toDataURL("image/jpeg", 0.85);
@@ -508,5 +501,3 @@ export function ProfileEditor({
     </Dialog>
   );
 }
-
-    
