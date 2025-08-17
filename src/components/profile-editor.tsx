@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -220,106 +219,94 @@ export function ProfileEditor({
   };
 
   const handleSaveCrop = async () => {
-      if (!user) return;
-      const blob = await getCroppedBlob();
-      if (!blob) {
-          toast({ title: "Error", description: "Could not process image crop.", variant: "destructive" });
-          return;
-      }
-      
-      let timer: NodeJS.Timeout;
-      setIsProcessingPhoto(true);
-
-      try {
-        toast({ title: 'Uploading photo...' });
-        console.log("handleSaveCrop: 1. Starting upload.");
-
-        const controller = new AbortController();
-        timer = setTimeout(() => {
-          controller.abort();
-        }, 30000);
-
-        const storageRef = ref(storage, `avatars/${user.uid}.jpg`);
-        const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
-        
-        await new Promise<void>((resolve, reject) => {
-            uploadTask.on('state_changed', 
-                () => {}, // We can add progress logic here later if needed
-                (error) => {
-                    // Handle unsuccessful uploads & timeout
-                    if (error.code === 'storage/canceled') {
-                        console.log("Upload timed out and was canceled.");
-                        toast({ title: "Upload Timeout", description: "The upload took too long, please try again.", variant: "destructive" });
-                    } else {
-                         console.error("Upload failed:", error);
-                        toast({ title: "Upload Failed", description: "Could not upload photo. Please check your connection and try again.", variant: "destructive" });
-                    }
-                    reject(error);
-                },
-                async () => {
-                    // Handle successful uploads on complete
-                    try {
-                        console.log("handleSaveCrop: 2. Upload complete, getting URL.");
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-
-                        console.log("handleSaveCrop: 3. Got URL, updating Auth and Firestore.");
-                        if (auth.currentUser) {
-                            await updateProfile(auth.currentUser, { photoURL: downloadURL });
-                        }
-
-                        const batch = writeBatch(db);
-                        const userDocRef = doc(db, "users", user.uid);
-                        const userDocSnap = await getDoc(userDocRef);
-                        const hadPhoto = !!userDocSnap.data()?.photoURL;
-                        const updateData: { photoURL: string; lifetimePoints?: any } = { photoURL: downloadURL };
-
-                        if (!hadPhoto && storageKey === 'studentAvatar') {
-                            console.log("handleSaveCrop: 4. Awarding bonus points.");
-                            updateData.lifetimePoints = increment(PHOTO_UPLOAD_BONUS);
-                            const historyRef = doc(collection(db, 'point_history'));
-                            batch.set(historyRef, {
-                                studentId: user.uid,
-                                studentName: user.displayName,
-                                points: PHOTO_UPLOAD_BONUS,
-                                reason: 'Profile Photo Bonus',
-                                type: 'engagement',
-                                timestamp: Timestamp.now()
-                            });
-                            toast({
-                                title: 'BONUS!',
-                                description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
-                                className: 'bg-yellow-500 text-white',
-                            });
-                        }
-                        
-                        batch.update(userDocRef, updateData);
-                        await batch.commit();
-
-                        onAvatarChange(downloadURL);
-                        toast({ title: "Success!", description: "Profile photo updated." });
-                        console.log("handleSaveCrop: 5. Done.");
-                        resolve();
-                    } catch (error) {
-                        console.error("Error during finalization:", error);
-                        toast({ title: "Update Failed", description: "Photo uploaded, but profile update failed.", variant: "destructive" });
-                        reject(error);
-                    }
-                }
-            );
-        });
-
-      } catch (err) {
-          // This catch block handles errors from the setup or promise creation, not from the upload itself
-          console.error("handleSaveCrop: Photo save failed", err);
-          toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
-      } finally {
-          console.log("handleSaveCrop: 6. In finally block.");
-          clearTimeout(timer);
-          setIsProcessingPhoto(false);
-          setIsCropOpen(false);
-          onOpenChange(false);
-          setIsEditorOpen(false);
-      }
+    if (!user) return;
+    const blob = await getCroppedBlob();
+    if (!blob) {
+      toast({ title: "Error", description: "Could not process image crop.", variant: "destructive" });
+      return;
+    }
+  
+    setIsProcessingPhoto(true);
+    let timer: NodeJS.Timeout;
+  
+    try {
+      toast({ title: 'Uploading photo...' });
+  
+      const controller = new AbortController();
+      timer = setTimeout(() => {
+        controller.abort();
+      }, 30000);
+  
+      const storageRef = ref(storage, `avatars/${user.uid}.jpg`);
+      const uploadTask = uploadBytesResumable(storageRef, blob, { contentType: 'image/jpeg' });
+  
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on('state_changed',
+          () => {}, // Progress can be handled here if needed
+          (error) => {
+            if (error.code === 'storage/canceled') {
+              toast({ title: "Upload Timeout", description: "The upload took too long, please try again.", variant: "destructive" });
+            } else {
+              toast({ title: "Upload Failed", description: "Could not upload photo. Please check your connection and try again.", variant: "destructive" });
+            }
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              
+              if (auth.currentUser) {
+                await updateProfile(auth.currentUser, { photoURL: downloadURL });
+              }
+  
+              const batch = writeBatch(db);
+              const userDocRef = doc(db, "users", user.uid);
+              const userDocSnap = await getDoc(userDocRef);
+              const hadPhoto = !!userDocSnap.data()?.photoURL;
+              const updateData: { photoURL: string; lifetimePoints?: any } = { photoURL: downloadURL };
+  
+              if (!hadPhoto && storageKey === 'studentAvatar') {
+                updateData.lifetimePoints = increment(PHOTO_UPLOAD_BONUS);
+                const historyRef = doc(collection(db, 'point_history'));
+                batch.set(historyRef, {
+                  studentId: user.uid,
+                  studentName: user.displayName,
+                  points: PHOTO_UPLOAD_BONUS,
+                  reason: 'Profile Photo Bonus',
+                  type: 'engagement',
+                  timestamp: Timestamp.now()
+                });
+                toast({
+                  title: 'BONUS!',
+                  description: `You've earned ${PHOTO_UPLOAD_BONUS} points for adding a profile photo!`,
+                  className: 'bg-yellow-500 text-white',
+                });
+              }
+              
+              batch.update(userDocRef, updateData);
+              await batch.commit();
+  
+              onAvatarChange(downloadURL);
+              toast({ title: "Success!", description: "Profile photo updated." });
+              resolve();
+            } catch (error) {
+              toast({ title: "Update Failed", description: "Photo uploaded, but profile update failed.", variant: "destructive" });
+              reject(error);
+            }
+          }
+        );
+      });
+  
+    } catch (err) {
+      console.error("Photo save failed", err);
+      toast({ title: "Error", description: "Could not save photo. Please try again.", variant: "destructive" });
+    } finally {
+        if(timer) clearTimeout(timer);
+        setIsProcessingPhoto(false);
+        setIsCropOpen(false);
+        onOpenChange(false);
+        setIsEditorOpen(false);
+    }
   }
 
   return (
