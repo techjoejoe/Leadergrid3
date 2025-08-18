@@ -1,4 +1,3 @@
-
 'server';
 /**
  * @fileOverview A flow for uploading files to Firebase Storage.
@@ -7,12 +6,17 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getStorage } from 'firebase-admin/storage';
+import { initializeApp, getApps } from 'firebase-admin/app';
 
 // Ensure you have initialized firebase-admin in your project for this to work.
 // This is typically done in a central file that runs on server startup.
+if (!getApps().length) {
+  initializeApp();
+}
+
 
 const UploadFileInputSchema = z.object({
-  fileDataUrl: z.string().describe('The file encoded as a data URL.'),
+  fileDataUrl: z.string().describe("The file encoded as a data URL that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
   path: z.string().describe('The path in Firebase Storage to upload the file to.'),
   contentType: z.string().describe('The MIME type of the file.'),
 });

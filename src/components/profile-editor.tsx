@@ -32,9 +32,9 @@ import 'react-image-crop/dist/ReactCrop.css';
 
 
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
-import { auth, db, storage } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
-import { getDownloadURL, ref as storageRef, uploadString } from 'firebase/storage';
+import { uploadFile } from '@/ai/flows/upload-file-flow';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(1, 'Display name is required.'),
@@ -178,11 +178,13 @@ export function ProfileEditor({
         const dataUrl = canvas.toDataURL('image/jpeg');
 
         const filePath = `avatars/${user.uid}.jpg`;
-        const fileRef = storageRef(storage, filePath);
         
-        // Use uploadString with a data URL for a more reliable upload from canvas
-        const uploadResult = await uploadString(fileRef, dataUrl, 'data_url');
-        const downloadURL = await getDownloadURL(uploadResult.ref);
+        // Use the Genkit flow to upload the file
+        const { downloadURL } = await uploadFile({
+          fileDataUrl: dataUrl,
+          path: filePath,
+          contentType: 'image/jpeg',
+        });
         
         // Update user profile
         if (auth.currentUser) {
