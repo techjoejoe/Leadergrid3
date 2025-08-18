@@ -194,13 +194,13 @@ export function ProfileEditor({
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = !!croppedDataUrl;
 
-        // Step 1: UPLOAD a new photo if one exists.
+        // Step 1: UPLOAD a new photo if one exists and wait for the public URL.
         // This must be done FIRST to get the public URL.
         if (photoChanged) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
             await uploadString(fileRef, croppedDataUrl, 'data_url');
-            newPhotoURL = await getDownloadURL(fileRef);
+            newPhotoURL = await getDownloadURL(fileRef); // Wait for the URL
         }
 
         // Step 2: Prepare batch write for Firestore.
@@ -210,6 +210,7 @@ export function ProfileEditor({
         if (nameChanged) {
             updates.displayName = values.displayName;
         }
+        // Use the new URL if it was generated, otherwise keep the existing one
         if (newPhotoURL) {
             updates.photoURL = newPhotoURL;
         }
@@ -228,7 +229,6 @@ export function ProfileEditor({
                 const classId = enrollmentDoc.data().classId;
                 if (classId) {
                     const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                    // Check if roster doc exists before attempting to update it
                     const rosterSnap = await getDoc(rosterDocRef);
                     if (rosterSnap.exists()){
                         batch.update(rosterDocRef, updates);
