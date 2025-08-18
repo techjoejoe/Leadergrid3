@@ -192,28 +192,23 @@ export function ProfileEditor({
     try {
         const batch = writeBatch(db);
         let newPhotoURL: string | null = null;
-        let photoChanged = false;
+        
+        const nameChanged = values.displayName !== currentDisplayName;
+        const photoChanged = !!croppedDataUrl;
 
-        // 1. If there's a new cropped image, upload it to Firebase Storage
-        if (croppedDataUrl) {
+        // 1. If there's a new cropped image, upload it to Firebase Storage to get the URL
+        if (photoChanged) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
             await uploadString(fileRef, croppedDataUrl, 'data_url');
             newPhotoURL = await getDownloadURL(fileRef);
-            photoChanged = true;
         }
         
         // 2. Prepare the data to be updated
-        const updates: { displayName: string, photoURL?: string } = {
-          displayName: values.displayName,
-        };
+        const updates: { displayName?: string, photoURL?: string } = {};
+        if (nameChanged) updates.displayName = values.displayName;
+        if (photoChanged && newPhotoURL) updates.photoURL = newPhotoURL;
         
-        if (photoChanged && newPhotoURL) {
-            updates.photoURL = newPhotoURL;
-        }
-        
-        const nameChanged = values.displayName !== currentDisplayName;
-
         // 3. If any data changed, perform the batch write
         if (nameChanged || photoChanged) {
             // Update user document in 'users' collection
