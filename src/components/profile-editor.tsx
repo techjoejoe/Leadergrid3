@@ -190,36 +190,39 @@ export function ProfileEditor({
     setIsLoading(true);
 
     try {
-        const batch = writeBatch(db);
-        let newPhotoURL: string | null = user.photoURL; // Start with existing photoURL
-        
+        let newPhotoURL = user.photoURL; // Default to existing URL
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = !!croppedDataUrl;
 
-        // 1. If there's a new cropped image, upload it to Firebase Storage to get the URL
+        // Step 1: If a new photo was cropped, upload it to Storage and get the new URL.
+        // This must be done FIRST.
         if (photoChanged) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
             await uploadString(fileRef, croppedDataUrl, 'data_url');
-            newPhotoURL = await getDownloadURL(fileRef);
+            newPhotoURL = await getDownloadURL(fileRef); // Await the URL
         }
-        
-        // 2. Prepare the data to be updated
-        const updates: { displayName?: string, photoURL?: string } = {};
-        if (nameChanged) updates.displayName = values.displayName;
-        if (photoChanged && newPhotoURL) updates.photoURL = newPhotoURL;
-        
-        // 3. If any data changed, perform the batch write
+
+        // Step 2: If name or photo has changed, prepare and execute the batch write.
         if (nameChanged || (photoChanged && newPhotoURL)) {
+            const batch = writeBatch(db);
+            const updates: { displayName?: string, photoURL?: string } = {};
+
+            if (nameChanged) {
+                updates.displayName = values.displayName;
+            }
+            if (photoChanged && newPhotoURL) {
+                updates.photoURL = newPhotoURL;
+            }
+
             // Update user document in 'users' collection
             const userDocRef = doc(db, "users", user.uid);
             batch.update(userDocRef, updates);
 
-            // Find all classes the user is enrolled in
+            // Find all classes the user is enrolled in to update rosters
             const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
             const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 
-            // Update the user's data in each class roster
             for (const enrollmentDoc of enrollmentsSnapshot.docs) {
                 const classId = enrollmentDoc.data().classId;
                 if (classId) {
@@ -231,41 +234,40 @@ export function ProfileEditor({
                     }
                 }
             }
-            // Commit all the updates at once
+            
+            // Commit all database changes at once
             await batch.commit();
 
-            // Also update the profile in Firebase Authentication
+            // Also update the profile in Firebase Authentication itself
             if (auth.currentUser) {
                 await updateProfile(auth.currentUser, updates);
             }
         }
 
-        // 4. Notify parent components of changes for immediate UI update
-        if (nameChanged) onNameChange(values.displayName);
-        if (photoChanged && newPhotoURL) onPhotoChange(newPhotoURL);
+        // Step 3: Notify parent components of changes for immediate UI update
+        if (nameChanged) {
+            onNameChange(values.displayName);
+        }
+        if (photoChanged && newPhotoURL) {
+            onPhotoChange(newPhotoURL);
+        }
 
         toast({
             title: 'Success!',
             description: 'Your profile has been updated.',
         });
-        onOpenChange(false);
+        onOpenChange(false); // Close dialog on success
 
     } catch (error: any) {
-        if (error.code === 'auth/requires-recent-login') {
-            toast({
-                title: 'Authentication Required',
-                description: 'This is a sensitive action. Please log out and log back in to update your profile.',
-                variant: 'destructive',
-                duration: 8000,
-            });
-        } else {
-            console.error("Error updating profile:", error);
-            toast({
-                title: 'Error updating profile',
-                description: 'Could not update your profile. Please try again.',
-                variant: 'destructive',
-            });
-        }
+        console.error("Error updating profile:", error);
+        toast({
+            title: 'Error updating profile',
+            description: error.code === 'auth/requires-recent-login'
+                ? 'This is a sensitive action. Please log out and log back in to update your profile.'
+                : 'Could not update your profile. Please try again.',
+            variant: 'destructive',
+            duration: 8000,
+        });
     } finally {
         setIsLoading(false);
     }
