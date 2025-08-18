@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, User as UserIcon, Upload, Check } from 'lucide-react';
+import { Loader2, Save, User as UserIcon, Upload, Check, Scissors } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -90,13 +90,13 @@ export function ProfileEditor({
 
   // Photo Cropping State
   const [imgSrc, setImgSrc] = useState('');
+  const [croppedDataUrl, setCroppedDataUrl] = useState('');
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [aspect, setAspect] = useState<number | undefined>(1);
-  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
   
   const imgRef = useRef<HTMLImageElement>(null);
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<ProfileFormValues>({
@@ -107,13 +107,21 @@ export function ProfileEditor({
     },
   });
 
+  const resetPhotoState = () => {
+    setImgSrc('');
+    setShowCropper(false);
+    setCroppedDataUrl('');
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+     if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }
+
   useEffect(() => {
     setIsEditorOpen(open);
     if (!open) {
-        // Reset image state when dialog closes
-        setImgSrc('');
-        setCrop(undefined);
-        setCompletedCrop(undefined);
+       resetPhotoState();
     }
   }, [open]);
 
@@ -128,11 +136,13 @@ export function ProfileEditor({
   
   function onSelectFile(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files.length > 0) {
+      setCroppedDataUrl(''); // Clear previous crop result
       setCrop(undefined); // Makes crop preview update between images.
       const reader = new FileReader();
-      reader.addEventListener('load', () =>
-        setImgSrc(reader.result?.toString() || ''),
-      );
+      reader.addEventListener('load', () => {
+        setImgSrc(reader.result?.toString() || '');
+        setShowCropper(true);
+      });
       reader.readAsDataURL(e.target.files[0]);
     }
   }
@@ -144,121 +154,97 @@ export function ProfileEditor({
     }
   }
 
-  function onCropComplete(crop: Crop) {
-    setCompletedCrop(crop);
-  }
-
-  async function handleSaveCrop() {
-    if (!user || !completedCrop || !imgRef.current || !previewCanvasRef.current) {
+  async function handleConfirmCrop() {
+    if (!completedCrop || !imgRef.current) {
         toast({ title: 'Error', description: 'Cannot process image. Please select and crop an image first.', variant: 'destructive' });
         return;
     }
-    
-    setIsProcessingPhoto(true);
-
-    try {
-        const canvas = previewCanvasRef.current;
-        const image = imgRef.current;
-        const scaleX = image.naturalWidth / image.width;
-        const scaleY = image.naturalHeight / image.height;
-        const cropX = completedCrop.x * scaleX;
-        const cropY = completedCrop.y * scaleY;
-        const cropWidth = completedCrop.width * scaleX;
-        const cropHeight = completedCrop.height * scaleY;
-
-        canvas.width = cropWidth;
-        canvas.height = cropHeight;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            throw new Error('Failed to get canvas context.');
-        }
-        ctx.drawImage(image, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-        
-        const dataUrl = canvas.toDataURL('image/jpeg');
-
-        const filePath = `avatars/${user.uid}`;
-        const fileRef = ref(storage, filePath);
-        
-        // Use the client-side Firebase SDK to upload the file
-        await uploadString(fileRef, dataUrl, 'data_url');
-        const downloadURL = await getDownloadURL(fileRef);
-        
-        // Update user profile
-        if (auth.currentUser) {
-            await updateProfile(auth.currentUser, { photoURL: downloadURL });
-        }
-        
-        const batch = writeBatch(db);
-        const userDocRef = doc(db, 'users', user.uid);
-        batch.update(userDocRef, { photoURL: downloadURL });
-
-        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
-        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
-            const classId = enrollmentDoc.data().classId;
-            const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-            const rosterSnap = await getDoc(rosterDocRef);
-            if (rosterSnap.exists()) {
-                batch.update(rosterDocRef, { photoURL: downloadURL });
-            }
-        }
-        await batch.commit();
-
-        toast({ title: 'Success', description: 'Your profile photo has been updated!' });
-        onPhotoChange(downloadURL);
-        onOpenChange(false);
-
-
-    } catch (error) {
-        console.error('Photo upload error:', error);
-        toast({ title: 'Upload Failed', description: 'Could not upload your photo. Please try again.', variant: 'destructive' });
-    } finally {
-        setIsProcessingPhoto(false);
+     // Create a temporary canvas to get the cropped image data
+    const canvas = document.createElement('canvas');
+    const image = imgRef.current;
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    canvas.width = completedCrop.width * scaleX;
+    canvas.height = completedCrop.height * scaleY;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('No 2d context');
     }
-}
 
+    ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    setCroppedDataUrl(canvas.toDataURL('image/png'));
+    setShowCropper(false);
+  }
 
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
     setIsLoading(true);
+
     try {
-      if (values.displayName !== currentDisplayName) {
         const batch = writeBatch(db);
+        let newPhotoURL = user.photoURL;
 
-        // Update Firebase Auth profile
-        if(auth.currentUser) {
-            await updateProfile(auth.currentUser, { displayName: values.displayName });
-        }
+        // 1. If there's a new cropped image, upload it
+        if (croppedDataUrl) {
+            const filePath = `avatars/${user.uid}`;
+            const fileRef = ref(storage, filePath);
+            await uploadString(fileRef, croppedDataUrl, 'data_url');
+            newPhotoURL = await getDownloadURL(fileRef);
 
-        // Update user document in 'users' collection
-        const userDocRef = doc(db, "users", user.uid);
-        batch.update(userDocRef, { displayName: values.displayName });
-
-        // Update user's name in all class rosters they are enrolled in
-        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
-        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-
-        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
-            const classId = enrollmentDoc.data().classId;
-            if (classId) {
-                const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                const rosterSnap = await getDoc(rosterDocRef);
-                if (rosterSnap.exists()){
-                  batch.update(rosterDocRef, { displayName: values.displayName });
-                }
+            if (auth.currentUser) {
+                await updateProfile(auth.currentUser, { photoURL: newPhotoURL });
             }
         }
         
+        // 2. Update display name and photoURL across all documents if they've changed
+        if (values.displayName !== currentDisplayName || newPhotoURL !== user.photoURL) {
+            const updates: { displayName?: string, photoURL?: string } = {};
+            if(values.displayName !== currentDisplayName) updates.displayName = values.displayName;
+            if(newPhotoURL !== user.photoURL) updates.photoURL = newPhotoURL;
+
+            // Update user document in 'users' collection
+            const userDocRef = doc(db, "users", user.uid);
+            batch.update(userDocRef, updates);
+
+            // Update user's data in all class rosters they are enrolled in
+            const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
+            const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
+
+            for (const enrollmentDoc of enrollmentsSnapshot.docs) {
+                const classId = enrollmentDoc.data().classId;
+                if (classId) {
+                    const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+                    const rosterSnap = await getDoc(rosterDocRef);
+                    if (rosterSnap.exists()){
+                        batch.update(rosterDocRef, updates);
+                    }
+                }
+            }
+        }
+
         await batch.commit();
-        onNameChange(values.displayName);
-      }
-      
-      toast({
-        title: 'Success!',
-        description: 'Your profile has been updated.',
-      });
-      onOpenChange(false);
+
+        // 3. Notify parent components of changes
+        if (values.displayName !== currentDisplayName) onNameChange(values.displayName);
+        if (newPhotoURL !== user.photoURL && newPhotoURL) onPhotoChange(newPhotoURL);
+
+        toast({
+            title: 'Success!',
+            description: 'Your profile has been updated.',
+        });
+        onOpenChange(false);
+
     } catch (error: any) {
         if (error.code === 'auth/requires-recent-login') {
             toast({
@@ -366,11 +352,11 @@ export function ProfileEditor({
 
                         {/* Right side: Photo Editor */}
                         <div className="space-y-4">
-                            <FormItem>
+                             <FormItem>
                                 <FormLabel>Profile Photo</FormLabel>
                                 <div className="flex items-center gap-4">
                                     <Avatar className="h-16 w-16">
-                                        <AvatarImage src={user.photoURL || ''} alt={currentDisplayName} />
+                                        <AvatarImage src={croppedDataUrl || user.photoURL || ''} alt={currentDisplayName} />
                                         <AvatarFallback><UserIcon className="h-8 w-8" /></AvatarFallback>
                                     </Avatar>
                                     <Input
@@ -387,46 +373,39 @@ export function ProfileEditor({
                                 </div>
                             </FormItem>
                         
-                            {!!imgSrc && (
-                            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                                <ReactCrop
-                                    crop={crop}
-                                    onChange={(_, percentCrop) => setCrop(percentCrop)}
-                                    onComplete={onCropComplete}
-                                    aspect={aspect}
-                                    minHeight={100}
-                                >
-                                    <img
-                                        ref={imgRef}
-                                        alt="Crop me"
-                                        src={imgSrc}
-                                        onLoad={onImageLoad}
-                                        className="max-h-[40vh]"
-                                    />
-                                </ReactCrop>
-                                {completedCrop && (
-                                  <canvas
-                                    ref={previewCanvasRef}
-                                    className="hidden"
-                                  />
-                                )}
-                                <div className="flex flex-col items-center gap-4">
-                                    <Button 
-                                        type="button"
-                                        onClick={handleSaveCrop} 
-                                        disabled={isProcessingPhoto}
-                                        className="w-full"
+                            {showCropper && imgSrc && (
+                                <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                                    <ReactCrop
+                                        crop={crop}
+                                        onChange={(_, percentCrop) => setCrop(percentCrop)}
+                                        onComplete={(c) => setCompletedCrop(c)}
+                                        aspect={aspect}
+                                        circularCrop={true}
+                                        minHeight={100}
                                     >
-                                        {isProcessingPhoto ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                                        Set New Profile Photo
+                                        <img
+                                            ref={imgRef}
+                                            alt="Crop me"
+                                            src={imgSrc}
+                                            onLoad={onImageLoad}
+                                            className="max-h-[40vh]"
+                                        />
+                                    </ReactCrop>
+                                    <Button 
+                                        type="button" 
+                                        onClick={handleConfirmCrop} 
+                                        className="w-full"
+                                        disabled={!completedCrop?.width || !completedCrop?.height}
+                                    >
+                                        <Scissors className="mr-2 h-4 w-4" />
+                                        Confirm Crop
                                     </Button>
                                 </div>
-                            </div>
                             )}
                         </div>
                     </div>
                      <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+                        <Button type="button" variant="secondary" onClick={() => { onOpenChange(false); resetPhotoState(); }}>Cancel</Button>
                         <Button type="submit" disabled={isLoading}>
                             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                             Save Profile Changes
@@ -440,4 +419,3 @@ export function ProfileEditor({
     </Dialog>
     );
 }
-
