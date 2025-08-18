@@ -204,13 +204,16 @@ export function ProfileEditor({
         }
         
         // 2. Prepare the data to be updated
-        const updates: { displayName: string, photoURL: string | null } = {
+        const updates: { displayName: string, photoURL?: string | null } = {
           displayName: values.displayName,
-          photoURL: newPhotoURL
         };
-
+        
         const nameChanged = values.displayName !== currentDisplayName;
-        const photoChanged = newPhotoURL !== user.photoURL;
+        const photoChanged = newPhotoURL !== user.photoURL && newPhotoURL !== null;
+
+        if (photoChanged) {
+            updates.photoURL = newPhotoURL;
+        }
         
         // 3. If any data changed, perform the batch write
         if (nameChanged || photoChanged) {
