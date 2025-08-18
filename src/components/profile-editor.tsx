@@ -194,7 +194,8 @@ export function ProfileEditor({
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = !!croppedDataUrl;
 
-        // Step 1 (Critical): If there's a new photo, UPLOAD IT FIRST and AWAIT the new URL.
+        // Step 1: UPLOAD a new photo if one exists.
+        // This must be done FIRST to get the public URL.
         if (photoChanged) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
@@ -202,19 +203,19 @@ export function ProfileEditor({
             newPhotoURL = await getDownloadURL(fileRef);
         }
 
-        // Step 2: If name or photo changed, prepare and execute the batch write.
-        if (nameChanged || (photoChanged && newPhotoURL)) {
-            const batch = writeBatch(db);
-            const updates: { displayName?: string, photoURL?: string } = {};
+        // Step 2: Prepare batch write for Firestore.
+        const batch = writeBatch(db);
+        const updates: { displayName?: string, photoURL?: string } = {};
 
-            if (nameChanged) {
-                updates.displayName = values.displayName;
-            }
-            // Use the new URL from Step 1 if it exists, otherwise, this field is not updated.
-            if (newPhotoURL) {
-                updates.photoURL = newPhotoURL;
-            }
+        if (nameChanged) {
+            updates.displayName = values.displayName;
+        }
+        if (newPhotoURL) {
+            updates.photoURL = newPhotoURL;
+        }
 
+        // Only proceed with DB writes if there are actual changes
+        if (Object.keys(updates).length > 0) {
             // Update user document in 'users' collection
             const userDocRef = doc(db, "users", user.uid);
             batch.update(userDocRef, updates);
@@ -238,13 +239,13 @@ export function ProfileEditor({
             // Commit all database changes at once
             await batch.commit();
 
-            // Also update the profile in Firebase Authentication itself
+            // Step 3: Also update the profile in Firebase Authentication itself
             if (auth.currentUser) {
                 await updateProfile(auth.currentUser, updates);
             }
         }
 
-        // Step 3: Notify parent components of changes for immediate UI update
+        // Step 4: Notify parent components of changes for immediate UI update
         if (nameChanged) {
             onNameChange(values.displayName);
         }
@@ -426,3 +427,5 @@ export function ProfileEditor({
     </Dialog>
     );
 }
+
+    
