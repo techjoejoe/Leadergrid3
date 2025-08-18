@@ -3,9 +3,6 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  experimental: {
-    // Other experimental features can go here.
-  },
   // This is required to allow the Next.js dev server to accept requests from
   // your Cloud Workstation.
   allowedDevOrigins: ["*.cloudworkstations.dev"],
