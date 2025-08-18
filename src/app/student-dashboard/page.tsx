@@ -170,6 +170,11 @@ export default function StudentDashboardPage() {
                     router.push('/dashboard');
                     return;
                 }
+                
+                if (!userDocSnap.exists()) {
+                    router.push('/student-login');
+                    return;
+                }
 
                 setUser(currentUser);
                 setPhotoURL(currentUser.photoURL);
