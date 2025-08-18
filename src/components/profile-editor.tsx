@@ -194,41 +194,43 @@ export function ProfileEditor({
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = !!croppedDataUrl;
 
-        // Step 1: UPLOAD a new photo if one exists and wait for the public URL.
-        // This must be done FIRST to get the public URL.
+        // Step 1: UPLOAD photo if a new one was provided. This MUST happen first.
         if (photoChanged) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
+            // Wait for the upload to complete
             await uploadString(fileRef, croppedDataUrl, 'data_url');
-            newPhotoURL = await getDownloadURL(fileRef); // Wait for the URL
+            // Wait to get the public download URL
+            newPhotoURL = await getDownloadURL(fileRef);
         }
 
-        // Step 2: Prepare batch write for Firestore.
+        // Step 2: Prepare a batch write for all Firestore updates.
         const batch = writeBatch(db);
         const updates: { displayName?: string; photoURL?: string } = {};
 
         if (nameChanged) {
             updates.displayName = values.displayName;
         }
-        // Use the new URL if it was generated
-        if (newPhotoURL) {
+        if (newPhotoURL) { // Use the new URL from Step 1
             updates.photoURL = newPhotoURL;
         }
 
-        // Only proceed with DB writes if there are actual changes
+        // Only proceed if there are actual changes.
         if (Object.keys(updates).length > 0) {
-            // Update user document in 'users' collection
+            // Update the main user document
             const userDocRef = doc(db, "users", user.uid);
             batch.update(userDocRef, updates);
 
-            // Find all classes the user is enrolled in to update rosters
+            // Find all classes the user is enrolled in
             const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
             const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 
+            // Add an update for each class roster document to the batch
             for (const enrollmentDoc of enrollmentsSnapshot.docs) {
                 const classId = enrollmentDoc.data().classId;
                 if (classId) {
                     const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+                    // Check if roster doc exists before trying to update it
                     const rosterSnap = await getDoc(rosterDocRef);
                     if (rosterSnap.exists()){
                         batch.update(rosterDocRef, updates);
@@ -240,15 +242,14 @@ export function ProfileEditor({
             await batch.commit();
         }
 
-        // Step 3: Also update the profile in Firebase Authentication itself, only if there are changes
+        // Step 3: Update Firebase Authentication profile
         if (auth.currentUser && (nameChanged || newPhotoURL)) {
              await updateProfile(auth.currentUser, {
-                displayName: values.displayName,
-                photoURL: newPhotoURL || auth.currentUser.photoURL // Use new URL, or keep existing one
+                displayName: nameChanged ? values.displayName : auth.currentUser.displayName,
+                photoURL: newPhotoURL || auth.currentUser.photoURL
              });
         }
         
-
         // Step 4: Notify parent components of changes for immediate UI update
         if (nameChanged) {
             onNameChange(values.displayName);
@@ -261,7 +262,7 @@ export function ProfileEditor({
             title: 'Success!',
             description: 'Your profile has been updated.',
         });
-        onOpenChange(false); // Close dialog on success
+        onOpenChange(false);
 
     } catch (error: any) {
         console.error("Error updating profile:", error);
