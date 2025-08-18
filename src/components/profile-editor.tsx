@@ -197,15 +197,10 @@ export function ProfileEditor({
 
         // 1. If there's a new cropped image, upload it to Firebase Storage
         if (croppedDataUrl) {
-            const filePath = `avatars/${user.uid}`;
+            const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
             await uploadString(fileRef, croppedDataUrl, 'data_url');
             newPhotoURL = await getDownloadURL(fileRef);
-
-            // Update the profile in Firebase Authentication
-            if (auth.currentUser) {
-                await updateProfile(auth.currentUser, { photoURL: newPhotoURL });
-            }
         }
         
         // 2. Prepare the data to be updated
@@ -239,6 +234,11 @@ export function ProfileEditor({
             }
             // Commit all the updates at once
             await batch.commit();
+
+            // Also update the profile in Firebase Authentication
+            if (auth.currentUser) {
+                await updateProfile(auth.currentUser, updates);
+            }
         }
 
         // 4. Notify parent components of changes for immediate UI update
@@ -426,4 +426,3 @@ export function ProfileEditor({
     );
 }
 
-    
