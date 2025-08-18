@@ -195,32 +195,38 @@ export function ProfileEditor({
         const batch = writeBatch(db);
         let newPhotoURL = user.photoURL;
 
-        // 1. If there's a new cropped image, upload it
+        // 1. If there's a new cropped image, upload it to Firebase Storage
         if (croppedDataUrl) {
             const filePath = `avatars/${user.uid}`;
             const fileRef = ref(storage, filePath);
             await uploadString(fileRef, croppedDataUrl, 'data_url');
             newPhotoURL = await getDownloadURL(fileRef);
 
+            // Update the profile in Firebase Authentication
             if (auth.currentUser) {
                 await updateProfile(auth.currentUser, { photoURL: newPhotoURL });
             }
         }
         
-        // 2. Update display name and photoURL across all documents if they've changed
-        if (values.displayName !== currentDisplayName || newPhotoURL !== user.photoURL) {
-            const updates: { displayName?: string, photoURL?: string } = {};
-            if(values.displayName !== currentDisplayName) updates.displayName = values.displayName;
-            if(newPhotoURL !== user.photoURL) updates.photoURL = newPhotoURL;
+        // 2. Prepare the data to be updated
+        const updates: { displayName?: string, photoURL?: string } = {};
+        const nameChanged = values.displayName !== currentDisplayName;
+        const photoChanged = newPhotoURL !== user.photoURL;
+        
+        if (nameChanged) updates.displayName = values.displayName;
+        if (photoChanged) updates.photoURL = newPhotoURL;
 
-            // Update user document in 'users' collection
+        // 3. If any data changed, perform the batch write
+        if (nameChanged || photoChanged) {
+             // Update user document in 'users' collection
             const userDocRef = doc(db, "users", user.uid);
             batch.update(userDocRef, updates);
 
-            // Update user's data in all class rosters they are enrolled in
+            // Find all classes the user is enrolled in
             const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
             const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 
+            // Update the user's data in each class roster
             for (const enrollmentDoc of enrollmentsSnapshot.docs) {
                 const classId = enrollmentDoc.data().classId;
                 if (classId) {
@@ -231,13 +237,13 @@ export function ProfileEditor({
                     }
                 }
             }
+            // Commit all the updates at once
+            await batch.commit();
         }
 
-        await batch.commit();
-
-        // 3. Notify parent components of changes
-        if (values.displayName !== currentDisplayName) onNameChange(values.displayName);
-        if (newPhotoURL !== user.photoURL && newPhotoURL) onPhotoChange(newPhotoURL);
+        // 4. Notify parent components of changes for immediate UI update
+        if (nameChanged) onNameChange(values.displayName);
+        if (photoChanged && newPhotoURL) onPhotoChange(newPhotoURL);
 
         toast({
             title: 'Success!',
@@ -419,3 +425,5 @@ export function ProfileEditor({
     </Dialog>
     );
 }
+
+    
