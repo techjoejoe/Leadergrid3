@@ -86,7 +86,6 @@ export function ProfileEditor({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
-  const [isEditorOpen, setIsEditorOpen] = useState(open);
 
   // Photo Cropping State
   const [imgSrc, setImgSrc] = useState('');
@@ -119,20 +118,19 @@ export function ProfileEditor({
   }
 
   useEffect(() => {
-    setIsEditorOpen(open);
     if (!open) {
        resetPhotoState();
     }
   }, [open]);
 
   useEffect(() => {
-    if (isEditorOpen) {
+    if (open) {
       form.reset({
         displayName: currentDisplayName,
         email: currentEmail,
       });
     }
-  }, [isEditorOpen, currentDisplayName, currentEmail, form]);
+  }, [open, currentDisplayName, currentEmail, form]);
   
   function onSelectFile(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files.length > 0) {
@@ -193,7 +191,8 @@ export function ProfileEditor({
 
     try {
         const batch = writeBatch(db);
-        let newPhotoURL: string | null = user.photoURL;
+        let newPhotoURL: string | null = null;
+        let photoChanged = false;
 
         // 1. If there's a new cropped image, upload it to Firebase Storage
         if (croppedDataUrl) {
@@ -201,23 +200,23 @@ export function ProfileEditor({
             const fileRef = ref(storage, filePath);
             await uploadString(fileRef, croppedDataUrl, 'data_url');
             newPhotoURL = await getDownloadURL(fileRef);
+            photoChanged = true;
         }
         
         // 2. Prepare the data to be updated
-        const updates: { displayName: string, photoURL?: string | null } = {
+        const updates: { displayName: string, photoURL?: string } = {
           displayName: values.displayName,
         };
         
-        const nameChanged = values.displayName !== currentDisplayName;
-        const photoChanged = newPhotoURL !== user.photoURL && newPhotoURL !== null;
-
-        if (photoChanged) {
+        if (photoChanged && newPhotoURL) {
             updates.photoURL = newPhotoURL;
         }
         
+        const nameChanged = values.displayName !== currentDisplayName;
+
         // 3. If any data changed, perform the batch write
         if (nameChanged || photoChanged) {
-             // Update user document in 'users' collection
+            // Update user document in 'users' collection
             const userDocRef = doc(db, "users", user.uid);
             batch.update(userDocRef, updates);
 
@@ -230,6 +229,7 @@ export function ProfileEditor({
                 const classId = enrollmentDoc.data().classId;
                 if (classId) {
                     const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+                    // Check if roster doc exists before attempting to update it
                     const rosterSnap = await getDoc(rosterDocRef);
                     if (rosterSnap.exists()){
                         batch.update(rosterDocRef, updates);
@@ -296,7 +296,7 @@ export function ProfileEditor({
   }
 
   return (
-    <Dialog open={isEditorOpen} onOpenChange={(isOpen) => { setIsEditorOpen(isOpen); onOpenChange(isOpen); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         {!user ? (
           <DialogHeader>
@@ -415,7 +415,7 @@ export function ProfileEditor({
                         </div>
                     </div>
                      <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => { onOpenChange(false); resetPhotoState(); }}>Cancel</Button>
+                        <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
                         <Button type="submit" disabled={isLoading}>
                             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                             Save Profile Changes
