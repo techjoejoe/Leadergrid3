@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { UserNav } from '@/components/user-nav';
@@ -23,6 +22,7 @@ export default function DashboardLayout({
     const [user, setUser] = useState<User | null>(null);
     const [initials, setInitials] = useState("AD");
     const [displayName, setDisplayName] = useState("Admin");
+    const [photoURL, setPhotoURL] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const router = useRouter();
@@ -46,6 +46,7 @@ export default function DashboardLayout({
                             const data = doc.data();
                             const name = data.displayName || currentUser.email || 'Admin';
                             setDisplayName(name);
+                            setPhotoURL(data.photoURL);
                             setInitials(name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
                         }
                     });
@@ -71,6 +72,10 @@ export default function DashboardLayout({
             setInitials(name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || 'AD');
         }
     }
+    
+    const handlePhotoChange = (newUrl: string) => {
+        setPhotoURL(newUrl);
+    };
     
     if (isLoading) {
         return (
@@ -113,6 +118,7 @@ export default function DashboardLayout({
                     initials={initials}
                     onEditProfile={() => setIsProfileEditorOpen(true)}
                     isSuperAdmin={isSuperAdmin}
+                    photoURL={photoURL}
                 />
             </div>
         </header>
@@ -125,6 +131,7 @@ export default function DashboardLayout({
                 open={isProfileEditorOpen} 
                 onOpenChange={setIsProfileEditorOpen}
                 onNameChange={handleNameChange}
+                onPhotoChange={handlePhotoChange}
                 currentDisplayName={displayName}
                 currentEmail={user.email || ""}
             />
@@ -132,5 +139,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-    

@@ -191,7 +191,7 @@ export function ProfileEditor({
 
     try {
         const batch = writeBatch(db);
-        let newPhotoURL: string | null = null;
+        let newPhotoURL: string | null = user.photoURL; // Start with existing photoURL
         
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = !!croppedDataUrl;

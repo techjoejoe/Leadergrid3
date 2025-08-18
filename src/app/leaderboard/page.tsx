@@ -127,7 +127,7 @@ function LeaderboardPageContents() {
             pointField = 'classPoints';
         } else {
             const usersRef = collection(db, 'users');
-            q = query(usersRef, orderBy("lifetimePoints", "desc"), limit(50));
+            q = query(usersRef, where("role", "==", "student"), orderBy("lifetimePoints", "desc"), limit(50));
         }
         
         const unsubscribeLeaderboard = onSnapshot(q, (querySnapshot) => {

@@ -25,9 +25,10 @@ interface UserNavProps {
   initials: string;
   onEditProfile: () => void;
   isSuperAdmin?: boolean;
+  photoURL?: string | null;
 }
 
-export function UserNav({ user, displayName, initials, onEditProfile, isSuperAdmin = false }: UserNavProps) {
+export function UserNav({ user, displayName, initials, onEditProfile, isSuperAdmin = false, photoURL }: UserNavProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -61,7 +62,7 @@ export function UserNav({ user, displayName, initials, onEditProfile, isSuperAdm
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user.photoURL || ''} alt={displayName} />
+              <AvatarImage src={photoURL || ''} alt={displayName} />
               <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
             </Avatar>
           </Button>
