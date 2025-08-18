@@ -1,0 +1,12 @@
+diff --git a/node_modules/@opentelemetry/context-async-hooks/package.json b/node_modules/@opentelemetry/context-async-hooks/package.json
+index 5e11467..2481855 100644
+--- a/node_modules/@opentelemetry/context-async-hooks/package.json
++++ b/node_modules/@opentelemetry/context-async-hooks/package.json
+@@ -23,5 +23,6 @@
+     "@opentelemetry/core": ">=1.0.0 <1.29.0"
+   },
+   "homepage": "https://github.com/open-telemetry/opentelemetry-js/tree/main/packages/opentelemetry-context-async-hooks",
+-  "sideEffects": false
++  "sideEffects": false,
++  "browser": "./build/src/browser/AsyncHooksContextManager.js"
+ }
