@@ -166,7 +166,8 @@ export function ProfileEditor({
     canvas.height = completedCrop.height * scaleY;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-        throw new Error('No 2d context');
+        toast({ title: 'Error', description: 'Failed to process image for cropping.', variant: 'destructive' });
+        return;
     }
 
     ctx.drawImage(
