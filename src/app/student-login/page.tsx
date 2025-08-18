@@ -86,18 +86,20 @@ export default function StudentLoginPage() {
         setIsLoading(true);
         setError(null);
         try {
+            // 1. Create user in Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
             const user = userCredential.user;
             
+            // 2. Update their Auth profile
             await updateProfile(user, {
                 displayName: values.name
             });
 
+            // 3. Create the user document in Firestore using the user's UID as the document ID
             const batch = writeBatch(db);
-            const userDocRef = doc(db, "users", user.uid);
+            const userDocRef = doc(db, "users", user.uid); // CRITICAL FIX: Use UID for doc ID
             const now = Timestamp.fromDate(new Date());
 
-            // Set initial user data
             batch.set(userDocRef, {
                 uid: user.uid,
                 displayName: values.name,
@@ -105,9 +107,10 @@ export default function StudentLoginPage() {
                 role: 'student',
                 lifetimePoints: 100,
                 createdAt: now,
+                photoURL: null, // Initialize photoURL as null
             });
 
-            // Create point history record for the sign-up bonus
+            // 4. Create point history record for the sign-up bonus
             const historyRef = doc(collection(db, 'point_history'));
             batch.set(historyRef, {
                 studentId: user.uid,
@@ -118,10 +121,12 @@ export default function StudentLoginPage() {
                 timestamp: now
             });
             
+            // 5. Commit all changes
             await batch.commit();
             
             toast({ title: "Sign Up Successful", description: "Welcome to LeaderGrid! You've earned 100 points." });
             router.push('/student-dashboard');
+
         } catch (error: any) {
              let errorMessage = "Could not create account. Please try again.";
             if (error.code === 'auth/email-already-in-use') {

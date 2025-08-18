@@ -190,20 +190,19 @@ export function ProfileEditor({
     setIsLoading(true);
 
     try {
-        let newPhotoURL = user.photoURL; // Default to existing URL
+        let newPhotoURL: string | null = null;
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = !!croppedDataUrl;
 
-        // Step 1: If a new photo was cropped, upload it to Storage and get the new URL.
-        // This must be done FIRST.
+        // Step 1 (Critical): If there's a new photo, UPLOAD IT FIRST and AWAIT the new URL.
         if (photoChanged) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
             await uploadString(fileRef, croppedDataUrl, 'data_url');
-            newPhotoURL = await getDownloadURL(fileRef); // Await the URL
+            newPhotoURL = await getDownloadURL(fileRef);
         }
 
-        // Step 2: If name or photo has changed, prepare and execute the batch write.
+        // Step 2: If name or photo changed, prepare and execute the batch write.
         if (nameChanged || (photoChanged && newPhotoURL)) {
             const batch = writeBatch(db);
             const updates: { displayName?: string, photoURL?: string } = {};
@@ -211,7 +210,8 @@ export function ProfileEditor({
             if (nameChanged) {
                 updates.displayName = values.displayName;
             }
-            if (photoChanged && newPhotoURL) {
+            // Use the new URL from Step 1 if it exists, otherwise, this field is not updated.
+            if (newPhotoURL) {
                 updates.photoURL = newPhotoURL;
             }
 

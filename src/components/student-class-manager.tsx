@@ -92,9 +92,12 @@ export function StudentClassManager({ joinedClasses, activeClass, onJoinClass, o
             const userDocSnap = await getDoc(userDocRef);
             if(userDocSnap.exists()) {
                 const rosterRef = doc(db, 'classes', classDoc.id, 'roster', user.uid);
+                const userData = userDocSnap.data();
                 batch.set(rosterRef, {
-                    ...userDocSnap.data(),
-                    id: user.uid,
+                    uid: user.uid,
+                    displayName: userData.displayName,
+                    email: userData.email,
+                    photoURL: userData.photoURL,
                     classPoints: 0 // Start with 0 points in the new class
                 });
             }
