@@ -177,7 +177,7 @@ export function ProfileEditor({
         
         const dataUrl = canvas.toDataURL('image/jpeg');
 
-        const filePath = `avatars/${user.uid}.jpg`;
+        const filePath = `avatars/${user.uid}`;
         const fileRef = ref(storage, filePath);
         
         // Use the client-side Firebase SDK to upload the file
@@ -441,4 +441,3 @@ export function ProfileEditor({
     );
 }
 
-    
