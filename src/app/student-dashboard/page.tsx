@@ -118,7 +118,7 @@ const PodiumCard = ({ user, rank }: { user: LeaderboardEntry, rank: number}) => 
                 isSecond && `h-40 w-40 sm:h-48 sm:w-48 animate-glow-silver bg-gradient-to-br from-slate-200 via-slate-400 to-gray-500 shadow-[0_0_25px_rgba(203,213,225,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
                 isThird && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-bronze bg-gradient-to-br from-amber-500 via-amber-700 to-orange-900 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
             )}>
-                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarImage src={user.avatar || ''} alt={user.name} />
                 <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full"><UserIcon className="h-24 w-24" /></AvatarFallback>
             </Avatar>
             <div className="relative w-full">
@@ -153,6 +153,10 @@ export default function StudentDashboardPage() {
     const stableSetActiveClass = useCallback((cls: ClassInfo | null) => {
         setActiveClass(cls);
     }, []);
+    
+    const handlePhotoChange = (newUrl: string) => {
+        setPhotoURL(newUrl);
+    };
 
     useEffect(() => {
         setIsClient(true);
@@ -234,12 +238,13 @@ export default function StudentDashboardPage() {
                 const unsubLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
                      const data = snapshot.docs.map((doc, index) => {
                         const userData = doc.data();
+                        const name = userData.displayName || 'Anonymous';
                         return {
                             id: doc.id,
-                            name: userData.displayName || 'Anonymous',
+                            name: name,
                             points: userData.lifetimePoints || 0,
                             avatar: userData.photoURL || null,
-                            initial: (userData.displayName || '??').substring(0, 2).toUpperCase(),
+                            initial: (name).substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         };
                     });
@@ -342,13 +347,14 @@ export default function StudentDashboardPage() {
                 const classLeaderboard: LeaderboardEntry[] = [];
                 snapshot.docs.forEach((doc, index) => {
                     const studentData = doc.data();
+                    const name = studentData.displayName || 'Anonymous';
                     if (studentData) { // Check if data exists
                         classLeaderboard.push({
                             id: doc.id,
-                            name: studentData.displayName || 'Anonymous',
+                            name: name,
                             points: studentData.classPoints || 0,
                             avatar: studentData.photoURL || null,
-                            initial: (studentData.displayName || '??').substring(0, 2).toUpperCase(),
+                            initial: (name).substring(0, 2).toUpperCase(),
                             rank: index + 1,
                         });
                     }
@@ -683,7 +689,7 @@ export default function StudentDashboardPage() {
             open={isProfileEditorOpen} 
             onOpenChange={setIsProfileEditorOpen}
             onNameChange={setDisplayName}
-            onPhotoChange={setPhotoURL}
+            onPhotoChange={handlePhotoChange}
             currentDisplayName={displayName}
             currentEmail={displayEmail}
         />

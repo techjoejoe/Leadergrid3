@@ -210,7 +210,7 @@ export function ProfileEditor({
         if (photoChanged && newPhotoURL) updates.photoURL = newPhotoURL;
         
         // 3. If any data changed, perform the batch write
-        if (nameChanged || photoChanged) {
+        if (nameChanged || (photoChanged && newPhotoURL)) {
             // Update user document in 'users' collection
             const userDocRef = doc(db, "users", user.uid);
             batch.update(userDocRef, updates);

@@ -118,7 +118,7 @@ function LeaderboardPageContents() {
         // Fetch class details if classId is present
         if (classId) {
             const classDocRef = doc(db, 'classes', classId);
-            onSnapshot(classDocRef, (classDocSnap) => {
+            const unsubClassDetails = onSnapshot(classDocRef, (classDocSnap) => {
                 if (classDocSnap.exists()) {
                     setClassDetails(classDocSnap.data() as ClassDetails);
                 }
@@ -130,7 +130,7 @@ function LeaderboardPageContents() {
             q = query(usersRef, orderBy("lifetimePoints", "desc"), limit(50));
         }
         
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const unsubscribeLeaderboard = onSnapshot(q, (querySnapshot) => {
             const data: LeaderboardEntry[] = [];
             querySnapshot.forEach((doc, index) => {
                 const userData = doc.data();
@@ -153,7 +153,9 @@ function LeaderboardPageContents() {
             setIsLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribeLeaderboard();
+        };
     }, [classId]);
 
     if (isLoading) {
