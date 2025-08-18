@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, User as UserIcon, Upload, Check, Scissors } from 'lucide-react';
+import { Loader2, Save, User as UserIcon, Upload, Scissors } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -204,13 +204,14 @@ export function ProfileEditor({
         }
         
         // 2. Prepare the data to be updated
-        const updates: { displayName?: string, photoURL?: string | null } = {};
+        const updates: { displayName: string, photoURL: string | null } = {
+          displayName: values.displayName,
+          photoURL: newPhotoURL
+        };
+
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = newPhotoURL !== user.photoURL;
         
-        if (nameChanged) updates.displayName = values.displayName;
-        if (photoChanged) updates.photoURL = newPhotoURL;
-
         // 3. If any data changed, perform the batch write
         if (nameChanged || photoChanged) {
              // Update user document in 'users' collection
