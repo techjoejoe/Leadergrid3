@@ -205,12 +205,12 @@ export function ProfileEditor({
 
         // Step 2: Prepare batch write for Firestore.
         const batch = writeBatch(db);
-        const updates: { displayName?: string, photoURL?: string } = {};
+        const updates: { displayName?: string; photoURL?: string } = {};
 
         if (nameChanged) {
             updates.displayName = values.displayName;
         }
-        // Use the new URL if it was generated, otherwise keep the existing one
+        // Use the new URL if it was generated
         if (newPhotoURL) {
             updates.photoURL = newPhotoURL;
         }
@@ -238,12 +238,16 @@ export function ProfileEditor({
             
             // Commit all database changes at once
             await batch.commit();
-
-            // Step 3: Also update the profile in Firebase Authentication itself
-            if (auth.currentUser) {
-                await updateProfile(auth.currentUser, updates);
-            }
         }
+
+        // Step 3: Also update the profile in Firebase Authentication itself, only if there are changes
+        if (auth.currentUser && (nameChanged || newPhotoURL)) {
+             await updateProfile(auth.currentUser, {
+                displayName: values.displayName,
+                photoURL: newPhotoURL || auth.currentUser.photoURL // Use new URL, or keep existing one
+             });
+        }
+        
 
         // Step 4: Notify parent components of changes for immediate UI update
         if (nameChanged) {
@@ -427,5 +431,3 @@ export function ProfileEditor({
     </Dialog>
     );
 }
-
-    
