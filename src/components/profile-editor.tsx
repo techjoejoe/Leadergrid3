@@ -193,7 +193,7 @@ export function ProfileEditor({
 
     try {
         const batch = writeBatch(db);
-        let newPhotoURL = user.photoURL;
+        let newPhotoURL: string | null = user.photoURL;
 
         // 1. If there's a new cropped image, upload it to Firebase Storage
         if (croppedDataUrl) {
@@ -204,7 +204,7 @@ export function ProfileEditor({
         }
         
         // 2. Prepare the data to be updated
-        const updates: { displayName?: string, photoURL?: string } = {};
+        const updates: { displayName?: string, photoURL?: string | null } = {};
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = newPhotoURL !== user.photoURL;
         
@@ -425,4 +425,3 @@ export function ProfileEditor({
     </Dialog>
     );
 }
-
