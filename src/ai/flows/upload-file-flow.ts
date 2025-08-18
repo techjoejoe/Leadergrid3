@@ -6,12 +6,15 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getStorage } from 'firebase-admin/storage';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 
 // Ensure you have initialized firebase-admin in your project for this to work.
 // This is typically done in a central file that runs on server startup.
 if (!getApps().length) {
-  initializeApp();
+  initializeApp({
+    credential: applicationDefault(),
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  });
 }
 
 
