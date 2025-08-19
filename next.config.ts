@@ -5,7 +5,13 @@ const nextConfig: NextConfig = {
   /* config options here */
   // This is required to allow the Next.js dev server to accept requests from
   // your Cloud Workstation.
-  allowedDevOrigins: ["*.cloudworkstations.dev", "*.web.app", "*.firebaseapp.com"],
+  allowedDevOrigins: [
+    "*.cloudworkstations.dev", 
+    "*.web.app", 
+    "*.firebaseapp.com",
+    // Adding the specific origin from the logs to ensure connectivity.
+    "6000-firebase-studio-1755027599040.cluster-2xid2zxbenc4ixa74rpk7q7fyk.cloudworkstations.dev"
+  ],
   typescript: {
     ignoreBuildErrors: true,
   },
