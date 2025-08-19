@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -27,6 +28,7 @@ const AvatarImage = React.forwardRef<
   <AvatarPrimitive.Image
     ref={ref}
     className={cn("aspect-square h-full w-full", className)}
+    loading="lazy" // Add lazy loading
     {...props}
   />
 ))
@@ -48,5 +50,3 @@ const AvatarFallback = React.forwardRef<
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
 export { Avatar, AvatarImage, AvatarFallback }
-
-    

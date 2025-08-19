@@ -1,24 +1,28 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ClassroomManager } from "@/components/classroom-manager";
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, SearchX, QrCode, Crown, Pencil } from "lucide-react";
 import Link from "next/link";
-import { ReportCharts } from "@/components/report-charts";
-import { ScanHistoryReport } from "@/components/scan-history-report";
 import { Separator } from "@/components/ui/separator";
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import type { Class } from '@/components/create-class-form';
 import { useParams } from 'next/navigation';
-import { QrCodeManager } from '@/components/qr-code-manager';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy load heavy components
+const ClassroomManager = lazy(() => import('@/components/classroom-manager').then(module => ({ default: module.ClassroomManager })));
+const QrCodeManager = lazy(() => import('@/components/qr-code-manager').then(module => ({ default: module.QrCodeManager })));
+const ReportCharts = lazy(() => import('@/components/report-charts').then(module => ({ default: module.ReportCharts })));
+const ScanHistoryReport = lazy(() => import('@/components/scan-history-report').then(module => ({ default: module.ScanHistoryReport })));
+
 
 export default function ClassDetailsPage() {
     const params = useParams();
@@ -147,7 +151,9 @@ export default function ClassDetailsPage() {
                     <CardDescription>Manage students, award points, and view progress for this class.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ClassroomManager classId={classId} />
+                    <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                        <ClassroomManager classId={classId} />
+                    </Suspense>
                 </CardContent>
             </Card>
             <Separator />
@@ -159,7 +165,9 @@ export default function ClassDetailsPage() {
                     <CardDescription>Create and manage QR codes for this class or for general use.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                   <QrCodeManager classId={classId} />
+                   <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+                        <QrCodeManager classId={classId} />
+                   </Suspense>
                 </CardContent>
             </Card>
              <Card>
@@ -169,8 +177,12 @@ export default function ClassDetailsPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-6 pt-4">
-                        <ReportCharts />
-                        <ScanHistoryReport classId={classId} />
+                        <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+                            <ReportCharts />
+                        </Suspense>
+                        <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
+                            <ScanHistoryReport classId={classId} />
+                        </Suspense>
                     </div>
                 </CardContent>
             </Card>

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,7 +63,7 @@ interface CheckInRecord {
     isOnTime: boolean;
 }
 
-export function ClassroomManager({ classId }: { classId: string }) {
+export const ClassroomManager = memo(function ClassroomManager({ classId }: { classId: string }) {
   const [enrolledStudents, setEnrolledStudents] = useState<RosterEntry[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<RosterEntry | null>(null);
@@ -666,4 +666,4 @@ export function ClassroomManager({ classId }: { classId: string }) {
       </Dialog>
     </div>
   );
-}
+});

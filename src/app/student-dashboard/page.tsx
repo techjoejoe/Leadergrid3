@@ -39,13 +39,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, onSnapshot, Timestamp, getDocs, limit } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import type { ClassInfo } from '@/components/join-class-dialog';
 import { StudentClassManager } from '@/components/student-class-manager';
 import { ProfileEditor } from '@/components/profile-editor';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface StudentData {
     points: number; 
@@ -159,6 +160,14 @@ export default function StudentDashboardPage() {
         setPhotoURL(newUrl);
     };
 
+    // Preload user's photo
+    useEffect(() => {
+        if (photoURL) {
+            const img = new window.Image();
+            img.src = photoURL;
+        }
+    }, [photoURL]);
+
     useEffect(() => {
         setIsClient(true);
     }, []);
@@ -185,7 +194,7 @@ export default function StudentDashboardPage() {
                 setPhotoURL(currentUser.photoURL);
                 setIsLoading(true);
 
-                // Setup listener for user document
+                 // Setup listener for user document
                 const unsubUser = onSnapshot(userDocRef, (doc) => {
                     if (doc.exists()) {
                         const userData = doc.data();
@@ -197,41 +206,6 @@ export default function StudentDashboardPage() {
                         router.push('/student-login');
                     }
                 });
-                
-                // Fetch user's badges
-                const unsubUserBadges = onSnapshot(query(collection(db, "user_badges"), where("userId", "==", currentUser.uid)), (snapshot) => {
-                     const fetchedBadges = snapshot.docs.map(doc => {
-                         const data = doc.data();
-                         return {
-                           id: doc.id,
-                           name: data.badgeName,
-                           imageUrl: data.badgeImageUrl,
-                           hint: data.badgeName.toLowerCase().split(' ').slice(0,2).join(' ')
-                         } as Badge;
-                     });
-                     setUserBadges(fetchedBadges);
-                });
-
-                // Setup listener for point history
-                 const historyRef = collection(db, "point_history");
-                 const q = query(historyRef, where("studentId", "==", currentUser.uid));
-                 const unsubHistory = onSnapshot(q, (snapshot) => {
-                     let history: PointHistoryRecord[] = snapshot.docs.map(doc => {
-                         const data = doc.data();
-                         return {
-                             id: doc.id,
-                             reason: data.reason,
-                             points: data.points,
-                             date: formatDistanceToNow((data.timestamp as Timestamp).toDate(), { addSuffix: true }),
-                             type: data.type,
-                             timestamp: data.timestamp
-                         }
-                     });
-                     history.sort((a, b) => b.timestamp.toMillis() - a.timestamp.toMillis());
-                     setPointHistory(history.slice(0, 50));
-                 }, (error) => {
-                    console.error("Firestore Error fetching point history: ", error);
-                 });
 
                 // Fetch top 50 students for company leaderboard
                 const usersRef = collection(db, 'users');
@@ -253,11 +227,8 @@ export default function StudentDashboardPage() {
                     setIsLoading(false);
                 });
 
-
                 return () => {
                     unsubUser();
-                    unsubUserBadges();
-                    unsubHistory();
                     unsubLeaderboard();
                 };
 
@@ -268,6 +239,73 @@ export default function StudentDashboardPage() {
 
         return () => unsubscribe();
     }, [isClient, router, stableSetActiveClass]);
+
+    // Combine multiple listeners into fewer, more efficient ones
+    useEffect(() => {
+        if (!isClient || !user) return;
+
+        const unsubscribers: (() => void)[] = [];
+
+        // Single user data listener
+        const userRef = doc(db, 'users', user.uid);
+        const unsubUser = onSnapshot(userRef, (doc) => {
+            if (doc.exists()) {
+                const userData = doc.data();
+                setStudentData(prev => ({ ...prev, points: userData.lifetimePoints || 0 }));
+                setDisplayName(userData.displayName || 'Student');
+                setPhotoURL(userData.photoURL);
+            }
+        });
+        unsubscribers.push(unsubUser);
+
+        // Batch fetch instead of real-time for less critical data
+        const fetchBadgesAndHistory = async () => {
+            try {
+                // Fetch badges (limit to recent ones)
+                const badgesQuery = query(
+                    collection(db, "user_badges"), 
+                    where("userId", "==", user.uid),
+                    limit(20) // Limit badges
+                );
+                const badgesSnapshot = await getDocs(badgesQuery);
+                const badges = badgesSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    name: doc.data().badgeName,
+                    imageUrl: doc.data().badgeImageUrl,
+                    hint: doc.data().badgeName.toLowerCase().split(' ').slice(0,2).join(' ')
+                }));
+                setUserBadges(badges);
+
+                // Fetch recent point history only (limit 20)
+                const historyQuery = query(
+                    collection(db, "point_history"), 
+                    where("studentId", "==", user.uid),
+                    orderBy("timestamp", "desc"),
+                    limit(20)
+                );
+                const historySnapshot = await getDocs(historyQuery);
+                const history = historySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        reason: data.reason,
+                        points: data.points,
+                        date: formatDistanceToNow((data.timestamp as Timestamp).toDate(), { addSuffix: true }),
+                        type: data.type,
+                        timestamp: data.timestamp
+                    };
+                });
+                setPointHistory(history);
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+            }
+        };
+
+        fetchBadgesAndHistory();
+
+        return () => unsubscribers.forEach(unsub => unsub());
+    }, [isClient, user]);
+
 
     // New effect to handle client-side only state
     useEffect(() => {
