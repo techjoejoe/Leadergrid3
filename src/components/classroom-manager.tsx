@@ -178,10 +178,11 @@ export function ClassroomManager({ classId }: { classId: string }) {
 
         // 3. Add to class-specific roster subcollection with backfilled points
         const rosterDocRef = doc(db, "classes", classId, "roster", student.id);
-        batch.set(rosterDocRef, {
+        const rosterEntryData: RosterEntry = {
             ...student,
-            classPoints: initialClassPoints
-        });
+            classPoints: initialClassPoints,
+        }
+        batch.set(rosterDocRef, rosterEntryData);
         
         // 4. Audit Log
         const currentUser = auth.currentUser;
@@ -424,7 +425,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                                 <div key={student.id} className="flex items-center justify-between p-2 rounded-md hover:bg-muted">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
-                                            <AvatarImage src={student.photoURL} alt={student.displayName} />
+                                            <AvatarImage src={student.photoURL} alt={student.displayName || ''} />
                                             <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
                                         <div>
@@ -465,7 +466,7 @@ export function ClassroomManager({ classId }: { classId: string }) {
                         <TableCell>
                             <div className="flex items-center gap-4">
                             <Avatar>
-                                <AvatarImage src={student.photoURL} alt={student.displayName} />
+                                <AvatarImage src={student.photoURL} alt={student.displayName || ''} />
                                 <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{student.displayName || 'Unnamed User'}</span>

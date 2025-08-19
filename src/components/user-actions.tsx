@@ -80,6 +80,12 @@ interface UserActionsProps {
   children?: React.ReactNode;
 }
 
+const escapeCSV = (str: string | undefined | null) => {
+    if (str === undefined || str === null) return '';
+    const escaped = `"${String(str).replace(/"/g, '""')}"`;
+    return escaped;
+};
+
 export function UserActions({
   mode,
   selectedUser,
@@ -111,12 +117,6 @@ export function UserActions({
     resolver: zodResolver(addUserSchema),
     defaultValues: { displayName: '', email: '', password: '', role: 'student', initialPoints: 0 },
   });
-  
-  const escapeCSV = (str: string | undefined | null) => {
-    if (str === undefined || str === null) return '""';
-    const escaped = `"${String(str).replace(/"/g, '""')}"`;
-    return escaped;
-  };
   
   const handleGenerateReport = async () => {
     if (!selectedUser) return;
@@ -203,7 +203,7 @@ export function UserActions({
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
-        const filename = `report_${selectedUser.displayName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.csv`;
+        const filename = `report_${selectedUser.displayName?.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.csv`;
         link.setAttribute("download", filename);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
@@ -294,7 +294,7 @@ export function UserActions({
             id: user.uid,
             displayName: values.displayName,
             email: values.email,
-            role: values.role,
+            role: values.role as 'student' | 'admin',
             lifetimePoints: values.initialPoints,
         };
         batch.set(newUserRef, { ...newUser, createdAt: Timestamp.now(), photoURL: null });

@@ -131,6 +131,12 @@ export function ProfileEditor({
         const nameChanged = values.displayName !== currentDisplayName;
         const photoChanged = !!croppedDataUrl;
 
+        if (!nameChanged && !photoChanged) {
+            toast({ title: 'No changes to save.'});
+            onOpenChange(false);
+            return;
+        }
+
         // Step 1: UPLOAD photo if a new one was provided. This MUST happen first.
         if (photoChanged && croppedDataUrl) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
@@ -151,36 +157,32 @@ export function ProfileEditor({
         if (newPhotoURL) { // Use the new URL from Step 1
             updates.photoURL = newPhotoURL;
         }
+        
+        // Update the main user document
+        const userDocRef = doc(db, "users", user.uid);
+        batch.update(userDocRef, updates);
 
-        // Only proceed if there are actual changes.
-        if (Object.keys(updates).length > 0) {
-            // Update the main user document
-            const userDocRef = doc(db, "users", user.uid);
-            batch.update(userDocRef, updates);
+        // Find all classes the user is enrolled in
+        const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
+        const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 
-            // Find all classes the user is enrolled in
-            const enrollmentsQuery = query(collection(db, 'class_enrollments'), where('studentId', '==', user.uid));
-            const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
-
-            // Add an update for each class roster document to the batch
-            for (const enrollmentDoc of enrollmentsSnapshot.docs) {
-                const classId = enrollmentDoc.data().classId;
-                if (classId) {
-                    const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
-                    // Check if roster doc exists before trying to update it
-                    const rosterSnap = await getDoc(rosterDocRef);
-                    if (rosterSnap.exists()){
-                        batch.update(rosterDocRef, updates);
-                    }
+        // Add an update for each class roster document to the batch
+        for (const enrollmentDoc of enrollmentsSnapshot.docs) {
+            const classId = enrollmentDoc.data().classId;
+            if (classId) {
+                const rosterDocRef = doc(db, 'classes', classId, 'roster', user.uid);
+                const rosterSnap = await getDoc(rosterDocRef);
+                if (rosterSnap.exists()){
+                    batch.update(rosterDocRef, updates);
                 }
             }
-            
-            // Commit all database changes at once
-            await batch.commit();
         }
+        
+        // Commit all database changes at once
+        await batch.commit();
 
         // Step 3: Update Firebase Authentication profile
-        if (auth.currentUser && (nameChanged || newPhotoURL)) {
+        if (auth.currentUser) {
              await updateProfile(auth.currentUser, {
                 displayName: nameChanged ? values.displayName : auth.currentUser.displayName,
                 photoURL: newPhotoURL || auth.currentUser.photoURL

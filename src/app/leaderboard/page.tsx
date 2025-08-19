@@ -19,7 +19,7 @@ interface LeaderboardEntry {
   id: string;
   name: string;
   points: number;
-  initial: string;
+  initials: string;
   photoURL?: string;
 }
 
@@ -66,7 +66,7 @@ const PodiumPlace = ({ user, place }: { user: LeaderboardEntry, place: number })
                 isThird && `h-32 w-32 sm:h-40 sm:w-40 animate-glow-bronze bg-gradient-to-br from-amber-500 via-amber-700 to-orange-900 shadow-[0_0_25px_rgba(217,119,6,0.7),inset_0_2px_4px_rgba(0,0,0,0.4)]`,
              )}>
                 <AvatarImage src={user.photoURL} alt={user.name} />
-                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full"><User className="h-24 w-24" /></AvatarFallback>
+                <AvatarFallback className="text-3xl bg-secondary/50 text-white rounded-full">{user.initials || <User className="h-24 w-24" />}</AvatarFallback>
             </Avatar>
             <div className="relative w-full">
                 <h3 className="mt-2 font-bold text-base sm:text-lg drop-shadow-sm z-10 truncate max-w-full px-1">{formatName(user.name)}</h3>
@@ -140,7 +140,7 @@ function LeaderboardPageContents() {
                         id: doc.id,
                         name: name,
                         points: userData[pointField] || 0,
-                        initial: (name).substring(0, 2).toUpperCase(),
+                        initials: name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase(),
                         rank: index + 1,
                         photoURL: userData.photoURL
                     });
@@ -216,7 +216,7 @@ function LeaderboardPageContents() {
                     <div key={user.rank} className="relative aspect-square overflow-hidden rounded-xl group transition-all hover:scale-105">
                         <Avatar className="h-full w-full">
                            <AvatarImage src={user.photoURL} alt={user.name} />
-                           <AvatarFallback className="rounded-xl text-3xl"><User /></AvatarFallback>
+                           <AvatarFallback className="rounded-xl text-3xl">{user.initials || <User />}</AvatarFallback>
                         </Avatar>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                         <div className="absolute top-2 left-2 text-2xl font-bold text-white/80 drop-shadow-md">{!isNaN(user.rank) ? user.rank : ''}</div>
