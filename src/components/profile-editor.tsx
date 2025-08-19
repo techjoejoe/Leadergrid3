@@ -153,11 +153,12 @@ export function ProfileEditor({
   }
 
   async function handleConfirmCrop() {
-    if (!completedCrop || !imgRef.current) {
+    if (typeof window === 'undefined' || !completedCrop || !imgRef.current) {
         toast({ title: 'Error', description: 'Cannot process image. Please select and crop an image first.', variant: 'destructive' });
         return;
     }
-     // Create a temporary canvas to get the cropped image data
+    
+    // Create a temporary canvas to get the cropped image data
     const canvas = document.createElement('canvas');
     const image = imgRef.current;
     const scaleX = image.naturalWidth / image.width;
@@ -165,6 +166,7 @@ export function ProfileEditor({
     canvas.width = completedCrop.width * scaleX;
     canvas.height = completedCrop.height * scaleY;
     const ctx = canvas.getContext('2d');
+    
     if (!ctx) {
         toast({ title: 'Error', description: 'Failed to process image for cropping.', variant: 'destructive' });
         return;
