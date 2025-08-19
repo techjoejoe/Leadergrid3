@@ -54,6 +54,7 @@ import { Loader2, PlusCircle, Trash2, FileDown, Edit, Pencil } from 'lucide-reac
 import type { Student } from '@/app/dashboard/students/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { format } from 'date-fns';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 const pointsSchema = z.object({
   points: z.coerce.number().int().min(1, 'Points must be a positive number.'),
@@ -63,6 +64,7 @@ const pointsSchema = z.object({
 const addUserSchema = z.object({
   displayName: z.string().min(1, 'Name is required.'),
   email: z.string().email('Invalid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
   role: z.enum(['student', 'admin']),
   initialPoints: z.coerce.number().int().min(0, 'Initial points cannot be negative.'),
 });
@@ -107,14 +109,8 @@ export function UserActions({
 
   const addUserForm = useForm<AddUserFormValues>({
     resolver: zodResolver(addUserSchema),
-    defaultValues: { displayName: '', email: '', role: 'student', initialPoints: 0 },
+    defaultValues: { displayName: '', email: '', password: '', role: 'student', initialPoints: 0 },
   });
-
-  const handleOpenPointsDialog = (type: 'add' | 'subtract') => {
-    setAdjustmentType(type);
-    pointsForm.reset({ reason: '', points: 10 });
-    setIsPointsDialogOpen(true);
-  };
   
   const escapeCSV = (str: string | undefined | null) => {
     if (str === undefined || str === null) return '""';
@@ -268,8 +264,6 @@ export function UserActions({
         description: `${selectedUser.displayName} received ${pointsToAdjust} points.`,
       });
 
-      // Optimistically update UI - this requires lifting state up or refetching
-      // For simplicity, we'll rely on a page refresh or state management solution
       setIsPointsDialogOpen(false);
       pointsForm.reset();
     } catch (error) {
@@ -287,21 +281,23 @@ export function UserActions({
   const onAddUserSubmit = async (values: AddUserFormValues) => {
     setIsLoading(true);
     const currentUser = auth.currentUser;
-    // This is a simplified version. A real implementation would use Firebase Admin SDK on the backend
-    // to create a user with an email and password, then create their Firestore doc.
-    // For this prototype, we'll just create the Firestore document.
+
     try {
+        const tempAuth = auth;
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
+        const user = userCredential.user;
+
         const batch = writeBatch(db);
-        const newUserRef = doc(collection(db, 'users'));
+        const newUserRef = doc(db, 'users', user.uid);
 
         const newUser: Student = {
-            id: newUserRef.id,
+            id: user.uid,
             displayName: values.displayName,
             email: values.email,
             role: values.role,
             lifetimePoints: values.initialPoints,
         };
-        batch.set(newUserRef, { ...newUser, createdAt: Timestamp.now() });
+        batch.set(newUserRef, { ...newUser, createdAt: Timestamp.now(), photoURL: null });
 
         if (values.initialPoints > 0) {
             const historyRef = doc(collection(db, 'point_history'));
@@ -331,13 +327,15 @@ export function UserActions({
         await batch.commit();
 
         toast({ title: 'User Created', description: `${values.displayName} has been added to the system.` });
-        onUserAdded?.(newUser);
+        if (onUserAdded) {
+            onUserAdded(newUser);
+        }
         setIsAddUserDialogOpen(false);
         addUserForm.reset();
 
     } catch (error) {
          console.error('Error creating user:', error);
-         toast({ title: 'Error', description: 'Could not create the user.', variant: 'destructive' });
+         toast({ title: 'Error', description: 'Could not create the user. The email might already be in use.', variant: 'destructive' });
     } finally {
         setIsLoading(false);
     }
@@ -361,6 +359,9 @@ export function UserActions({
               )} />
               <FormField name="email" control={addUserForm.control} render={({ field }) => (
                 <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField name="password" control={addUserForm.control} render={({ field }) => (
+                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField name="role" control={addUserForm.control} render={({ field }) => (
                 <FormItem>
