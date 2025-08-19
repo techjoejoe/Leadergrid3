@@ -394,7 +394,6 @@ export function ProfileEditor({
                                         style={{ height: 400, width: "100%" }}
                                         zoomTo={0.5}
                                         initialAspectRatio={1}
-                                        preview=".img-preview"
                                         src={image}
                                         viewMode={1}
                                         minCropBoxHeight={10}
