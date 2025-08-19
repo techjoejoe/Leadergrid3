@@ -27,8 +27,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, User as UserIcon, Upload, Scissors } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import ReactCrop, { type Crop, centerCrop, makeAspectCrop } from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import Cropper from 'react-cropper';
+import 'cropperjs/dist/cropper.css';
 
 
 import { User, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
@@ -53,27 +53,6 @@ interface ProfileEditorProps {
   currentEmail: string;
 }
 
-function centerAspectCrop(
-  mediaWidth: number,
-  mediaHeight: number,
-  aspect: number
-) {
-  return centerCrop(
-    makeAspectCrop(
-      {
-        unit: '%',
-        width: 90,
-      },
-      aspect,
-      mediaWidth,
-      mediaHeight
-    ),
-    mediaWidth,
-    mediaHeight
-  );
-}
-
-
 export function ProfileEditor({ 
     user,
     open, 
@@ -88,14 +67,9 @@ export function ProfileEditor({
   const [isLoadingPassword, setIsLoadingPassword] = useState(false);
 
   // Photo Cropping State
-  const [imgSrc, setImgSrc] = useState('');
-  const [croppedDataUrl, setCroppedDataUrl] = useState('');
-  const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<Crop>();
-  const [aspect, setAspect] = useState<number | undefined>(1);
-  const [showCropper, setShowCropper] = useState(false);
-  
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [image, setImage] = useState<string | null>(null);
+  const [croppedDataUrl, setCroppedDataUrl] = useState<string | null>(null);
+  const cropperRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const form = useForm<ProfileFormValues>({
@@ -107,11 +81,8 @@ export function ProfileEditor({
   });
 
   const resetPhotoState = () => {
-    setImgSrc('');
-    setShowCropper(false);
-    setCroppedDataUrl('');
-    setCrop(undefined);
-    setCompletedCrop(undefined);
+    setImage(null);
+    setCroppedDataUrl(null);
      if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -132,61 +103,24 @@ export function ProfileEditor({
     }
   }, [open, currentDisplayName, currentEmail, form]);
   
-  function onSelectFile(e: React.ChangeEvent<HTMLInputElement>) {
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setCroppedDataUrl(''); // Clear previous crop result
-      setCrop(undefined); // Makes crop preview update between images.
+      setCroppedDataUrl(null); // Clear previous crop result
       const reader = new FileReader();
       reader.addEventListener('load', () => {
-        setImgSrc(reader.result?.toString() || '');
-        setShowCropper(true);
+        setImage(reader.result as string);
       });
       reader.readAsDataURL(e.target.files[0]);
     }
-  }
+  };
 
-  function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-    if (aspect) {
-      const { width, height } = e.currentTarget;
-      setCrop(centerAspectCrop(width, height, aspect));
+  const getCropData = () => {
+    if (typeof cropperRef.current?.cropper !== "undefined") {
+      const dataUrl = cropperRef.current?.cropper.getCroppedCanvas().toDataURL();
+      setCroppedDataUrl(dataUrl);
+      setImage(null); // Close the cropper view
     }
-  }
-
-  async function handleConfirmCrop() {
-    if (typeof window === 'undefined' || !completedCrop || !imgRef.current) {
-        toast({ title: 'Error', description: 'Cannot process image. Please select and crop an image first.', variant: 'destructive' });
-        return;
-    }
-    
-    // Create a temporary canvas to get the cropped image data
-    const canvas = document.createElement('canvas');
-    const image = imgRef.current;
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    canvas.width = completedCrop.width * scaleX;
-    canvas.height = completedCrop.height * scaleY;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) {
-        toast({ title: 'Error', description: 'Failed to process image for cropping.', variant: 'destructive' });
-        return;
-    }
-
-    ctx.drawImage(
-        image,
-        completedCrop.x * scaleX,
-        completedCrop.y * scaleY,
-        completedCrop.width * scaleX,
-        completedCrop.height * scaleY,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    setCroppedDataUrl(canvas.toDataURL('image/png'));
-    setShowCropper(false);
-  }
+  };
 
   const handleUpdateProfile = async (values: ProfileFormValues) => {
     if (!user) return;
@@ -198,7 +132,7 @@ export function ProfileEditor({
         const photoChanged = !!croppedDataUrl;
 
         // Step 1: UPLOAD photo if a new one was provided. This MUST happen first.
-        if (photoChanged) {
+        if (photoChanged && croppedDataUrl) {
             const filePath = `avatars/${user.uid}/${Date.now()}.png`;
             const fileRef = ref(storage, filePath);
             // Wait for the upload to complete
@@ -389,29 +323,28 @@ export function ProfileEditor({
                                 </div>
                             </FormItem>
                         
-                            {showCropper && imgSrc && (
+                            {image && (
                                 <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                                    <ReactCrop
-                                        crop={crop}
-                                        onChange={(_, percentCrop) => setCrop(percentCrop)}
-                                        onComplete={(c) => setCompletedCrop(c)}
-                                        aspect={aspect}
-                                        circularCrop={true}
-                                        minHeight={100}
-                                    >
-                                        <img
-                                            ref={imgRef}
-                                            alt="Crop me"
-                                            src={imgSrc}
-                                            onLoad={onImageLoad}
-                                            className="max-h-[40vh]"
-                                        />
-                                    </ReactCrop>
+                                    <Cropper
+                                        ref={cropperRef}
+                                        style={{ height: 400, width: "100%" }}
+                                        zoomTo={0.5}
+                                        initialAspectRatio={1}
+                                        preview=".img-preview"
+                                        src={image}
+                                        viewMode={1}
+                                        minCropBoxHeight={10}
+                                        minCropBoxWidth={10}
+                                        background={false}
+                                        responsive={true}
+                                        autoCropArea={1}
+                                        checkOrientation={false} 
+                                        guides={true}
+                                    />
                                     <Button 
                                         type="button" 
-                                        onClick={handleConfirmCrop} 
+                                        onClick={getCropData}
                                         className="w-full"
-                                        disabled={!completedCrop?.width || !completedCrop?.height}
                                     >
                                         <Scissors className="mr-2 h-4 w-4" />
                                         Confirm Crop
