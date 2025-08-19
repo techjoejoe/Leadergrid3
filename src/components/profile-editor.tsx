@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -106,16 +107,6 @@ export function ProfileEditor({
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
         const file = e.target.files[0];
-        
-        // Check file size (1MB limit)
-        if (file.size > 1024 * 1024) {
-          toast({
-            title: 'File Too Large',
-            description: 'Please select an image smaller than 1MB.',
-            variant: 'destructive',
-          });
-          return;
-        }
         
         // Check file type
         if (!file.type.startsWith('image/')) {
