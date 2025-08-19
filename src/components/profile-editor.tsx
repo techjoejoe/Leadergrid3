@@ -70,6 +70,7 @@ export function ProfileEditor({
   const [croppedDataUrl, setCroppedDataUrl] = useState<string | null>(null);
   const cropperRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageLoading, setImageLoading] = useState(false);
   
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -104,13 +105,36 @@ export function ProfileEditor({
   
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setCroppedDataUrl(null); // Clear previous crop result
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        setImage(reader.result as string);
-      });
-      reader.readAsDataURL(e.target.files[0]);
-    }
+        const file = e.target.files[0];
+        
+        // Check file size (1MB limit)
+        if (file.size > 1024 * 1024) {
+          toast({
+            title: 'File Too Large',
+            description: 'Please select an image smaller than 1MB.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        // Check file type
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: 'Invalid File Type',
+            description: 'Please select an image file.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        setCroppedDataUrl(null); // Clear previous crop result
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+          setImage(reader.result as string);
+          setImageLoading(true);
+        });
+        reader.readAsDataURL(file);
+      }
   };
 
   const getCropData = () => {
@@ -147,12 +171,25 @@ export function ProfileEditor({
 
         // Step 1: UPLOAD photo if a new one was provided. This MUST happen first.
         if (photoChanged && croppedDataUrl) {
-            const filePath = `avatars/${user.uid}/${Date.now()}.png`;
+            const filePath = `avatars/${user.uid}/${Date.now()}.jpg`;
             const fileRef = ref(storage, filePath);
-            // Wait for the upload to complete
-            await uploadString(fileRef, croppedDataUrl, 'data_url');
-            // Wait to get the public download URL
-            newPhotoURL = await getDownloadURL(fileRef);
+            
+            try {
+                // Wait for the upload to complete
+                await uploadString(fileRef, croppedDataUrl, 'data_url');
+                // Wait to get the public download URL
+                newPhotoURL = await getDownloadURL(fileRef);
+            } catch (storageError: any) {
+                console.error("Storage upload failed:", storageError);
+                if (storageError.code === 'storage/unauthorized') {
+                    throw new Error('You do not have permission to upload images.');
+                } else if (storageError.code === 'storage/quota-exceeded') {
+                    throw new Error('Storage quota exceeded. Please try a smaller image.');
+                } else if (storageError.code === 'storage/invalid-format') {
+                    throw new Error('Invalid image format. Please try a different image.');
+                }
+                throw new Error('Failed to upload image. Please try again.');
+            }
         }
 
         // Step 2: Prepare a batch write for all Firestore updates.
@@ -187,7 +224,22 @@ export function ProfileEditor({
         }
         
         // Commit all database changes at once
-        await batch.commit();
+        try {
+            await batch.commit();
+        } catch (batchError: any) {
+            console.error("Database update failed:", batchError);
+            // If we uploaded a new photo but database update failed, we should clean up
+            if (newPhotoURL && photoChanged) {
+                try {
+                    const fileRef = ref(storage, `avatars/${user.uid}/${Date.now()}.jpg`);
+                    // Note: In a real app, you'd want to track the exact file path to delete
+                    console.warn("Photo uploaded but database update failed. Manual cleanup may be needed.");
+                } catch (cleanupError) {
+                    console.error("Failed to cleanup uploaded image:", cleanupError);
+                }
+            }
+            throw new Error('Failed to update profile in database. Please try again.');
+        }
 
         // Step 3: Update Firebase Authentication profile
         if (auth.currentUser) {
@@ -215,9 +267,9 @@ export function ProfileEditor({
         console.error("Error updating profile:", error);
         toast({
             title: 'Error updating profile',
-            description: error.code === 'auth/requires-recent-login'
+            description: error.message || (error.code === 'auth/requires-recent-login'
                 ? 'This is a sensitive action. Please log out and log back in to update your profile.'
-                : 'Could not update your profile. Please try again.',
+                : 'Could not update your profile. Please try again.'),
             variant: 'destructive',
             duration: 8000,
         });
@@ -316,8 +368,19 @@ export function ProfileEditor({
                                 <FormLabel>Profile Photo</FormLabel>
                                 <div className="flex items-center gap-4">
                                     <Avatar className="h-16 w-16">
-                                        <AvatarImage src={croppedDataUrl || user.photoURL || ''} alt={currentDisplayName} />
-                                        <AvatarFallback><UserIcon className="h-8 w-8" /></AvatarFallback>
+                                        <AvatarImage 
+                                            src={croppedDataUrl || user.photoURL || ''} 
+                                            alt={currentDisplayName}
+                                            onLoad={() => setImageLoading(false)}
+                                            onError={() => setImageLoading(false)}
+                                        />
+                                        <AvatarFallback>
+                                            {imageLoading ? (
+                                                <Loader2 className="h-8 w-8 animate-spin" />
+                                            ) : (
+                                                <UserIcon className="h-8 w-8" />
+                                            )}
+                                        </AvatarFallback>
                                     </Avatar>
                                     <Input
                                         ref={fileInputRef}

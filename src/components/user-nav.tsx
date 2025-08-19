@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from "next/link";
@@ -62,7 +63,13 @@ export function UserNav({ user, displayName, initials, onEditProfile, isSuperAdm
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={photoURL || ''} alt={displayName} />
+              <AvatarImage 
+                src={photoURL || ''} 
+                alt={displayName || 'User'}
+                onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                }}
+              />
               <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
             </Avatar>
           </Button>

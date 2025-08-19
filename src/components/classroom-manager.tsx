@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -466,7 +467,13 @@ export function ClassroomManager({ classId }: { classId: string }) {
                         <TableCell>
                             <div className="flex items-center gap-4">
                             <Avatar>
-                                <AvatarImage src={student.photoURL} alt={student.displayName || ''} />
+                                <AvatarImage 
+                                    src={student.photoURL || ''} 
+                                    alt={student.displayName || 'User'}
+                                    onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                    }}
+                                />
                                 <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{student.displayName || 'Unnamed User'}</span>

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from "react";
@@ -200,7 +201,13 @@ export default function StudentsPage() {
                                 <TableCell className="font-medium">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
-                                            <AvatarImage src={student.photoURL} alt={student.displayName} />
+                                            <AvatarImage 
+                                                src={student.photoURL || ''} 
+                                                alt={student.displayName || 'User'}
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
                                             <AvatarFallback><UserIcon className="h-4 w-4" /></AvatarFallback>
                                         </Avatar>
                                         {student.displayName}

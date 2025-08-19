@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import {
@@ -461,7 +462,13 @@ export default function StudentDashboardPage() {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                                     <Avatar>
-                                        <AvatarImage src={photoURL || ''} alt={displayName} />
+                                        <AvatarImage 
+                                            src={photoURL || ''} 
+                                            alt={displayName || 'User'}
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                            }}
+                                        />
                                         <AvatarFallback><UserIcon className="h-5 w-5" /></AvatarFallback>
                                     </Avatar>
                                 </Button>
@@ -508,7 +515,13 @@ export default function StudentDashboardPage() {
                                 </CardHeader>
                                 <CardContent className="grid grid-cols-2 items-center justify-center gap-4 p-6 pt-0">
                                     <Avatar className="h-36 w-36 border-4 border-primary/20 rounded-md">
-                                        <AvatarImage src={photoURL || ''} alt={displayName} />
+                                        <AvatarImage 
+                                            src={photoURL || ''} 
+                                            alt={displayName || 'User'}
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                            }}
+                                        />
                                         <AvatarFallback className="rounded-md text-3xl"><UserIcon className="h-20 w-20" /></AvatarFallback>
                                     </Avatar>
                                     <div className="space-y-4">
