@@ -315,7 +315,7 @@ export function ProfileEditor({
                                         ref={fileInputRef}
                                         id="photo-upload"
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/png, image/jpeg"
                                         className="hidden"
                                         onChange={onSelectFile}
                                     />
