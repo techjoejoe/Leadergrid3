@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -116,9 +115,18 @@ export function ProfileEditor({
 
   const getCropData = () => {
     if (typeof cropperRef.current?.cropper !== "undefined") {
-      const dataUrl = cropperRef.current?.cropper.getCroppedCanvas().toDataURL();
+      // Get cropped canvas with size limits
+      const canvas = cropperRef.current?.cropper.getCroppedCanvas({
+        width: 256,  // Limit size to 256x256
+        height: 256,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+      });
+      
+      // Convert to JPEG with compression to reduce file size
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // 80% quality
       setCroppedDataUrl(dataUrl);
-      setImage(null); // Close the cropper view
+      setImage(null);
     }
   };
 
